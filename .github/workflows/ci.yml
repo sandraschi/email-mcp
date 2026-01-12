@@ -1,0 +1,94 @@
+name: Email MCP CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/email_mcp/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/email_mcp/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - '.github/workflows/ci.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install hatchling
+        pip install -e ".[dev,test]"
+
+    - name: Run tests
+      run: pytest tests/ -v --cov=src --cov-report=html --cov-report=xml --cov-fail-under=80
+
+    - name: Lint with Ruff
+      run: ruff check src/ tests/
+
+    - name: Format check with Ruff
+      run: ruff format --check src/ tests/
+
+    - name: Type check with MyPy
+      run: mypy src/
+
+    - name: Build package
+      run: python -m build
+
+    - name: Build MCPB package
+      run: python build_mcpb.py
+
+    - name: Test MCP server import
+      run: python -c "from src.email_mcp.server import app; print('Server import successful')"
+
+    - name: Publish to PyPI (disabled - no PyPI account yet)
+      if: false  # Disabled until PyPI account is set up
+      run: |
+        # To enable PyPI publishing:
+        # 1. Create account at https://pypi.org/account/register/
+        # 2. Generate API token at https://pypi.org/manage/account/token/
+        # 3. Add PYPI_API_TOKEN secret to GitHub repository
+        # 4. Change condition from "false" to: github.ref == 'refs/heads/main' && startsWith(github.ref, 'refs/tags/v')
+        pip install twine
+        twine upload dist/* --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
+
+    - name: Security scan with Bandit
+      run: |
+        pip install bandit
+        bandit -r src/ -f json -o bandit-report.json || true
+      continue-on-error: true
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+    - name: Upload security scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: bandit-report.json
+      continue-on-error: true

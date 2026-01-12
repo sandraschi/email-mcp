@@ -1,0 +1,100 @@
+{
+  "examples": [
+    {
+      "title": "Send Basic Email via SMTP",
+      "description": "Send a simple text email using SMTP",
+      "code": "send_email(\n    to=\"user@example.com\",\n    subject=\"Hello World\",\n    body=\"This is a test email from Email MCP Server\"\n)",
+      "category": "sending"
+    },
+    {
+      "title": "Send HTML Email",
+      "description": "Send an email with HTML formatting",
+      "code": "send_email(\n    to=\"user@example.com\",\n    subject=\"Welcome Message\",\n    body=\"Please view this email in HTML mode\",\n    html=\"<h1>Welcome!</h1><p>Thank you for joining our service.</p><ul><li>Feature 1</li><li>Feature 2</li></ul>\"\n)",
+      "category": "sending"
+    },
+    {
+      "title": "Send with CC/BCC",
+      "description": "Send email with carbon copy recipients",
+      "code": "send_email(\n    to=\"primary@example.com\",\n    cc=[\"manager@example.com\"],\n    bcc=[\"admin@example.com\"],\n    subject=\"Team Update\",\n    body=\"Important information for the team\"\n)",
+      "category": "sending"
+    },
+    {
+      "title": "Use Specific Email Service",
+      "description": "Send email via SendGrid instead of default SMTP",
+      "code": "send_email(\n    to=\"user@example.com\",\n    subject=\"Transactional Email\",\n    body=\"Your order has been processed\",\n    service=\"sendgrid\"\n)",
+      "category": "sending"
+    },
+    {
+      "title": "Check Inbox for Unread Emails",
+      "description": "Retrieve unread emails from inbox",
+      "code": "result = check_inbox(limit=10, unread_only=True)\nprint(f\"Found {result['count']} unread emails\")\nfor email in result['emails']:\n    print(f\"From: {email['from']}, Subject: {email['subject']}\")",
+      "category": "receiving"
+    },
+    {
+      "title": "Check Specific Email Folder",
+      "description": "Check emails in Sent folder",
+      "code": "result = check_inbox(folder=\"Sent\", limit=5)\nprint(f\"Found {result['count']} sent emails\")",
+      "category": "receiving"
+    },
+    {
+      "title": "Filter Emails by Date",
+      "description": "Get emails from the last week",
+      "code": "from datetime import datetime, timedelta\nweek_ago = (datetime.now() - timedelta(days=7)).strftime(\"%Y-%m-%d\")\nresult = check_inbox(after_date=week_ago)\nprint(f\"Emails from last week: {result['count']}\")",
+      "category": "receiving"
+    },
+    {
+      "title": "Send to Slack Webhook",
+      "description": "Send email content to Slack channel",
+      "code": "send_email(\n    to=\"#general\",\n    subject=\"System Alert\",\n    body=\"Server CPU usage is high\",\n    service=\"slack\"\n)",
+      "category": "webhooks"
+    },
+    {
+      "title": "Send to Discord Webhook",
+      "description": "Send email content to Discord channel",
+      "code": "send_email(\n    to=\"#alerts\",\n    subject=\"Deployment Complete\",\n    body=\"New version deployed successfully\",\n    service=\"discord\"\n)",
+      "category": "webhooks"
+    },
+    {
+      "title": "List Available Services",
+      "description": "Get list of configured email services",
+      "code": "services = list_services()\nprint(f\"Total services: {services['count']}\")\nfor name, info in services['services'].items():\n    print(f\"{name}: {info['type']} - {'enabled' if info['enabled'] else 'disabled'}\")",
+      "category": "management"
+    },
+    {
+      "title": "Check Service Health",
+      "description": "Test connectivity to all email services",
+      "code": "status = email_status()\nprint(f\"Total services: {status['total_services']}\")\nprint(f\"Connected: {status['connected_services']}\")\nfor name, info in status['services'].items():\n    status_text = 'connected' if info['connected'] else 'disconnected'\n    print(f\"{name}: {status_text}\")",
+      "category": "management"
+    },
+    {
+      "title": "Configure Gmail SMTP",
+      "description": "Add Gmail SMTP service configuration",
+      "code": "configure_service(\n    name=\"gmail-smtp\",\n    type=\"smtp\",\n    config={\n        \"server\": \"smtp.gmail.com\",\n        \"port\": 587,\n        \"username\": \"user@gmail.com\",\n        \"password\": \"app-password\"\n    }\n)",
+      "category": "management"
+    },
+    {
+      "title": "Configure SendGrid API",
+      "description": "Add SendGrid transactional email service",
+      "code": "configure_service(\n    name=\"sendgrid-api\",\n    type=\"api\",\n    config={\n        \"api_key\": \"your-sendgrid-api-key\",\n        \"from_email\": \"noreply@yourdomain.com\",\n        \"service_type\": \"sendgrid\"\n    }\n)",
+      "category": "management"
+    },
+    {
+      "title": "Configure Slack Webhook",
+      "description": "Add Slack webhook for notifications",
+      "code": "configure_service(\n    name=\"slack-webhook\",\n    type=\"webhook\",\n    config={\n        \"webhook_url\": \"https://example.com/docs/slack-incoming-webhook",\n        \"service_type\": \"slack\"\n    }\n)",
+      "category": "management"
+    },
+    {
+      "title": "Configure MailHog for Testing",
+      "description": "Add local MailHog service for development",
+      "code": "configure_service(\n    name=\"mailhog-local\",\n    type=\"local\",\n    config={\n        \"smtp_host\": \"localhost\",\n        \"smtp_port\": 1025,\n        \"http_url\": \"http://localhost:8025\",\n        \"service_type\": \"mailhog\"\n    }\n)",
+      "category": "management"
+    }
+  ],
+  "categories": {
+    "sending": "Email sending operations",
+    "receiving": "Inbox checking and email retrieval",
+    "webhooks": "Webhook integrations for notifications",
+    "management": "Service configuration and monitoring"
+  }
+}

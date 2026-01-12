@@ -1,0 +1,146 @@
+{
+  "manifest_version": "0.2",
+  "name": "email-mcp",
+  "version": "0.2.1",
+  "description": "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations",
+  "author": {
+    "name": "FlowEngineer"
+  },
+  "server": {
+    "type": "python",
+    "entry_point": "src/email_mcp/server.py",
+    "mcp_config": {
+      "command": "python",
+      "args": ["-m", "email_mcp.server"],
+      "env": {
+        "PYTHONPATH": "${PWD}/src",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  },
+  "user_config": {
+    "smtp_server": {
+      "type": "string",
+      "title": "SMTP Server",
+      "description": "SMTP server hostname (e.g., smtp.gmail.com)",
+      "required": false,
+      "default": ""
+    },
+    "smtp_port": {
+      "type": "string",
+      "title": "SMTP Port",
+      "description": "SMTP server port (usually 587 for TLS)",
+      "default": "587"
+    },
+    "smtp_username": {
+      "type": "string",
+      "title": "SMTP Username",
+      "description": "Email address for SMTP authentication",
+      "required": false,
+      "default": ""
+    },
+    "smtp_password": {
+      "type": "string",
+      "title": "SMTP Password/App Password",
+      "description": "Password or App Password for SMTP authentication",
+      "required": false,
+      "default": "",
+      "secret": true
+    },
+    "imap_server": {
+      "type": "string",
+      "title": "IMAP Server",
+      "description": "IMAP server hostname (e.g., imap.gmail.com)",
+      "required": false,
+      "default": ""
+    },
+    "imap_username": {
+      "type": "string",
+      "title": "IMAP Username",
+      "description": "Email address for IMAP authentication",
+      "required": false,
+      "default": ""
+    },
+    "imap_password": {
+      "type": "string",
+      "title": "IMAP Password/App Password",
+      "description": "Password or App Password for IMAP authentication",
+      "required": false,
+      "default": "",
+      "secret": true
+    },
+    "sendgrid_api_key": {
+      "type": "string",
+      "title": "SendGrid API Key",
+      "description": "SendGrid API key for transactional email",
+      "required": false,
+      "default": "",
+      "secret": true
+    },
+    "mailgun_api_key": {
+      "type": "string",
+      "title": "Mailgun API Key",
+      "description": "Mailgun API key for transactional email",
+      "required": false,
+      "default": "",
+      "secret": true
+    },
+    "resend_api_key": {
+      "type": "string",
+      "title": "Resend API Key",
+      "description": "Resend API key for transactional email",
+      "required": false,
+      "default": "",
+      "secret": true
+    },
+    "slack_webhook_url": {
+      "type": "string",
+      "title": "Slack Webhook URL",
+      "description": "Slack webhook URL for sending emails to Slack",
+      "required": false,
+      "default": "",
+      "secret": true
+    },
+    "discord_webhook_url": {
+      "type": "string",
+      "title": "Discord Webhook URL",
+      "description": "Discord webhook URL for sending emails to Discord",
+      "required": false,
+      "default": "",
+      "secret": true
+    },
+    "default_service": {
+      "type": "string",
+      "title": "Default Email Service",
+      "description": "Default service to use for sending emails",
+      "default": "smtp",
+      "enum": ["smtp", "sendgrid", "mailgun", "resend", "slack", "discord"]
+    }
+  },
+  "tools": [
+    {
+      "name": "send_email",
+      "description": "Send emails via multiple service types (SMTP, API, webhook)"
+    },
+    {
+      "name": "check_inbox",
+      "description": "Check inbox via IMAP or service-specific APIs"
+    },
+    {
+      "name": "email_status",
+      "description": "Get server configuration and connectivity status"
+    },
+    {
+      "name": "configure_service",
+      "description": "Configure different email services dynamically at runtime"
+    },
+    {
+      "name": "list_services",
+      "description": "List available and configured email services"
+    },
+    {
+      "name": "email_help",
+      "description": "Get help and documentation for email operations"
+    }
+  ]
+}

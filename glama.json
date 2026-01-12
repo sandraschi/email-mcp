@@ -1,0 +1,288 @@
+{
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "name": "email-mcp",
+  "description": "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations",
+  "version": "0.2.1",
+  "status": "beta",
+  "maturity_note": "Core SMTP/IMAP functionality stable, API services and webhooks in active development",
+  "author": "FlowEngineer",
+  "maintainers": ["sandraschi"],
+  "repository": "https://github.com/sandraschi/email-mcp",
+  "license": "MIT",
+  "language": "python",
+  "framework": "fastmcp",
+  "type": "mcp_server",
+  "transport": ["stdio"],
+  "tools": 6,
+  "keywords": [
+    "email",
+    "smtp",
+    "imap",
+    "sendgrid",
+    "mailgun",
+    "resend",
+    "mailhog",
+    "webhooks",
+    "slack",
+    "discord",
+    "transactional-email",
+    "testing",
+    "fastmcp",
+    "communication"
+  ],
+  "categories": [
+    "communication",
+    "developer-tools",
+    "api",
+    "testing"
+  ],
+  "review": {
+    "enabled": true,
+    "scope": ["src/email_mcp/", "tests/", "examples/"],
+    "exclude": ["__pycache__/", "*.pyc", ".git/", "node_modules/"],
+    "rules": {
+      "security": {
+        "enabled": true,
+        "level": "high",
+        "checks": [
+          "credential_exposure",
+          "api_key_leaks",
+          "smtp_injection",
+          "email_header_injection",
+          "webhook_url_exposure",
+          "password_logging"
+        ]
+      },
+      "performance": {
+        "enabled": true,
+        "level": "medium",
+        "checks": [
+          "connection_leaks",
+          "blocking_operations",
+          "memory_usage",
+          "async_best_practices",
+          "error_handling"
+        ]
+      },
+      "maintainability": {
+        "enabled": true,
+        "level": "medium",
+        "checks": [
+          "code_complexity",
+          "duplicate_code",
+          "missing_docstrings",
+          "type_hints",
+          "logging_practices"
+        ]
+      },
+      "reliability": {
+        "enabled": true,
+        "level": "high",
+        "checks": [
+          "error_handling",
+          "service_failover",
+          "connection_timeouts",
+          "graceful_degradation",
+          "retry_logic"
+        ]
+      }
+    }
+  },
+  "documentation": {
+    "enabled": true,
+    "auto_generate": true,
+    "format": "markdown",
+    "include": {
+      "api_reference": true,
+      "usage_examples": true,
+      "architecture_diagram": true,
+      "service_config_guide": true,
+      "troubleshooting": true
+    },
+    "style": {
+      "language": "english",
+      "technical_level": "intermediate",
+      "include_code_examples": true,
+      "generate_diagrams": true
+    }
+  },
+  "testing": {
+    "enabled": true,
+    "framework": "pytest",
+    "coverage": {
+      "enabled": true,
+      "minimum": 85,
+      "report_format": ["html", "xml"]
+    },
+    "types": {
+      "unit": true,
+      "integration": true,
+      "smtp_tests": true,
+      "api_tests": true,
+      "webhook_tests": true
+    }
+  },
+  "code_quality": {
+    "enabled": true,
+    "linter": "ruff",
+    "formatter": "ruff",
+    "type_checker": "mypy",
+    "rules": {
+      "max_line_length": 100,
+      "max_function_length": 50,
+      "max_class_length": 300,
+      "max_complexity": 10
+    }
+  },
+  "mcp_specific": {
+    "server_type": "tool_server",
+    "protocol_version": "2024-11-05",
+    "capabilities": [
+      "tools",
+      "resources"
+    ],
+    "tool_count": 6,
+    "features": [
+      "multi_service_email",
+      "smtp_imap_support",
+      "transactional_apis",
+      "webhook_integrations",
+      "local_testing",
+      "dynamic_configuration"
+    ]
+  },
+  "features": {
+    "multi_service_support": {
+      "enabled": true,
+      "services": ["smtp", "api", "local", "webhook"],
+      "providers": ["gmail", "outlook", "yahoo", "icloud", "protonmail", "sendgrid", "mailgun", "resend", "amazon_ses", "postmark", "mailhog", "mailpit", "mailcatcher", "inbucket", "slack", "discord", "telegram", "github"]
+    },
+    "email_sending": {
+      "enabled": true,
+      "protocols": ["smtp", "api", "webhook"],
+      "features": ["html", "text", "cc", "bcc", "attachments"],
+      "limitations": ["attachments not yet implemented"]
+    },
+    "email_receiving": {
+      "enabled": true,
+      "protocols": ["imap", "api"],
+      "features": ["search", "folders", "filtering", "pagination"],
+      "search_capabilities": ["subject", "body", "sender", "date", "unread"]
+    },
+    "service_management": {
+      "enabled": true,
+      "features": ["dynamic_config", "health_checks", "service_discovery", "runtime_reconfiguration"],
+      "monitoring": ["connection_status", "service_health", "error_rates"]
+    },
+    "developer_tools": {
+      "enabled": true,
+      "features": ["local_testing", "webhook_integrations", "api_testing", "development_mode"],
+      "testing_services": ["mailhog", "mailpit", "mailcatcher"]
+    }
+  },
+  "dependencies": {
+    "runtime": [
+      "fastmcp>=0.9.0",
+      "pydantic>=2.0.0",
+      "structlog>=24.0.0",
+      "httpx>=0.25.0"
+    ],
+    "development": [
+      "pytest>=7.0.0",
+      "pytest-asyncio>=0.21.0",
+      "pytest-cov>=4.0.0",
+      "black>=23.0.0",
+      "ruff>=0.1.0",
+      "mypy>=1.0.0"
+    ],
+    "optional": [
+      "cryptography>=3.4.0"
+    ]
+  },
+  "build_system": {
+    "type": "hatchling",
+    "package_name": "email_mcp",
+    "entry_points": {
+      "console_scripts": [
+        "email-mcp = email_mcp.server:main"
+      ]
+    }
+  },
+  "ai_assistance": {
+    "code_generation": {
+      "enabled": true,
+      "style": "modern_python",
+      "patterns": ["async_await", "type_hints", "dataclasses"]
+    },
+    "code_review": {
+      "enabled": true,
+      "focus_areas": ["security", "performance", "email_protocols", "error_handling"]
+    },
+    "documentation": {
+      "enabled": true,
+      "auto_update": true,
+      "include_examples": true
+    },
+    "service_integration": {
+      "enabled": true,
+      "email_services": ["smtp", "imap", "sendgrid", "mailgun", "resend"],
+      "webhook_services": ["slack", "discord"]
+    }
+  },
+  "beta_status": {
+    "overall_status": "beta",
+    "release_notes": "SMTP/IMAP core functionality stable, API services and advanced features in development",
+    "production_ready_features": [
+      "smtp_email_sending",
+      "imap_inbox_checking",
+      "basic_service_configuration",
+      "gmail_outlook_support"
+    ],
+    "needs_improvement": [
+      "attachment_handling",
+      "advanced_imap_search",
+      "webhook_error_handling",
+      "service_failover_logic"
+    ],
+    "development_approach": {
+      "incremental_rollout": true,
+      "user_feedback_driven": true,
+      "service_expansion": true
+    }
+  },
+  "development_acceleration": {
+    "ai_virtual_elbow_grease": {
+      "enabled": true,
+      "purpose": "Accelerate email service integrations and protocol implementations",
+      "applications": [
+        "api_service_integration",
+        "webhook_implementation",
+        "error_handling_improvements",
+        "protocol_extensions"
+      ]
+    }
+  },
+  "development_status": {
+    "working_well": ["smtp_sending", "imap_reading", "gmail_integration", "basic_configuration"],
+    "needs_virtual_elbow_grease": ["attachment_support", "advanced_search", "webhook_reliability", "api_failover"]
+  },
+  "service_requirements": {
+    "external_services": {
+      "optional": [
+        "sendgrid_api_key",
+        "mailgun_api_key",
+        "resend_api_key",
+        "slack_webhook_url",
+        "discord_webhook_url"
+      ],
+      "required_for_full_functionality": [
+        "smtp_credentials"
+      ]
+    },
+    "local_services": {
+      "mailhog": "localhost:1025",
+      "mailpit": "localhost:1025",
+      "mailcatcher": "localhost:1025"
+    }
+  }
+}

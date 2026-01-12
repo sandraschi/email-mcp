@@ -1,0 +1,86 @@
+{
+  "mcpServers": {
+    "email-mcp": {
+      "command": "python",
+      "args": ["-m", "email_mcp.server"],
+      "cwd": "D:/Dev/repos/email-mcp",
+      "env": {
+        "PYTHONPATH": "D:/Dev/repos/email-mcp/src",
+        "PYTHONUNBUFFERED": "1",
+
+        "// SMTP/IMAP Configuration (choose one or more)": "",
+        "SMTP_SERVER": "",
+        "SMTP_PORT": "587",
+        "SMTP_USER": "",
+        "SMTP_PASSWORD": "",
+        "SMTP_FROM": "",
+        "IMAP_SERVER": "",
+        "IMAP_PORT": "993",
+        "IMAP_USER": "",
+        "IMAP_PASSWORD": "",
+
+        "// API Services (uncomment and fill as needed)": "",
+        "// SENDGRID_API_KEY": "your-sendgrid-api-key",
+        "// SENDGRID_FROM_EMAIL": "noreply@yourdomain.com",
+        "// MAILGUN_API_KEY": "your-mailgun-api-key",
+        "// MAILGUN_DOMAIN": "yourdomain.com",
+        "// MAILGUN_FROM_EMAIL": "noreply@yourdomain.com",
+        "// RESEND_API_KEY": "your-resend-api-key",
+        "// RESEND_FROM_EMAIL": "noreply@yourdomain.com",
+
+        "// Local Testing Services (uncomment for development)": "",
+        "// MAILHOG_ENABLED": "true",
+        "// MAILHOG_SMTP_HOST": "localhost",
+        "// MAILHOG_SMTP_PORT": "1025",
+        "// MAILHOG_HTTP_URL": "http://localhost:8025",
+
+        "// Webhook Services (uncomment for notifications)": "",
+        "// SLACK_WEBHOOK_URL": "https://example.com/docs/slack-incoming-webhook",
+        "// DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/.../..."
+      }
+    }
+  },
+
+  "// Gmail Example (replace with your credentials)": {
+    "mcpServers": {
+      "email-mcp": {
+        "command": "python",
+        "args": ["-m", "email_mcp.server"],
+        "cwd": "D:/Dev/repos/email-mcp",
+        "env": {
+          "PYTHONPATH": "D:/Dev/repos/email-mcp/src",
+          "SMTP_SERVER": "smtp.gmail.com",
+          "SMTP_PORT": "587",
+          "SMTP_USER": "your-email@gmail.com",
+          "SMTP_PASSWORD": "your-app-password",
+          "SMTP_FROM": "your-email@gmail.com",
+          "IMAP_SERVER": "imap.gmail.com",
+          "IMAP_PORT": "993",
+          "IMAP_USER": "your-email@gmail.com",
+          "IMAP_PASSWORD": "your-app-password"
+        }
+      }
+    }
+  },
+
+  "// SendGrid + MailHog Example": {
+    "mcpServers": {
+      "email-mcp": {
+        "command": "python",
+        "args": ["-m", "email_mcp.server"],
+        "cwd": "D:/Dev/repos/email-mcp",
+        "env": {
+          "PYTHONPATH": "D:/Dev/repos/email-mcp/src",
+          "SENDGRID_API_KEY": "your-sendgrid-api-key",
+          "SENDGRID_FROM_EMAIL": "noreply@yourdomain.com",
+          "MAILHOG_ENABLED": "true",
+          "MAILHOG_SMTP_HOST": "localhost",
+          "MAILHOG_SMTP_PORT": "1025",
+          "MAILHOG_HTTP_URL": "http://localhost:8025",
+          "SLACK_WEBHOOK_URL": "https://example.com/docs/slack-incoming-webhook"
+        }
+      }
+    }
+  }
+}
+
