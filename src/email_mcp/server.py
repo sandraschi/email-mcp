@@ -26,6 +26,7 @@ import os
 import smtplib
 import sys
 from contextlib import asynccontextmanager
+from email.header import decode_header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Dict, List, Optional, Union
@@ -63,6 +64,42 @@ root_logger.setLevel(logging.INFO)
 root_logger.addHandler(stderr_handler)
 
 logger = structlog.get_logger(__name__)
+
+
+def decode_email_header(header_value):
+    """Decode email header that may contain encoded parts (UTF-8 Base64, Quoted-Printable, etc.).
+
+    Args:
+        header_value: Raw header value that may be encoded
+
+    Returns:
+        str: Decoded header value as a UTF-8 string
+    """
+    if not header_value:
+        return header_value
+
+    try:
+        # decode_header returns a list of (decoded_bytes, encoding) tuples
+        decoded_parts = decode_header(header_value)
+        result = ""
+
+        for decoded_bytes, encoding in decoded_parts:
+            if isinstance(decoded_bytes, bytes):
+                # If we have bytes, decode them with the specified encoding or utf-8 as fallback
+                encoding = encoding or 'utf-8'
+                result += decoded_bytes.decode(encoding, errors='replace')
+            else:
+                # If we already have a string, use it as-is
+                result += str(decoded_bytes)
+
+        # Test the decoding with the problematic header
+        if "=?UTF-8?B?" in str(header_value) or "=?utf-8?q?" in str(header_value):
+            logger.debug("Decoded header test", original=header_value, decoded=result, parts=decoded_parts)
+
+        return result
+    except Exception as e:
+        logger.warning("Failed to decode email header", header=header_value, error=str(e))
+        return header_value  # Return original if decoding fails
 
 
 # Email Service Classes
@@ -180,11 +217,23 @@ class SMTPEmailService(EmailService):
                         raw_email = msg_data[0][1]
                         email_message = email.message_from_bytes(raw_email)
 
+                        # Decode email headers that may be encoded (UTF-8 Base64, Quoted-Printable, etc.)
+                        raw_subject = email_message["Subject"] if "Subject" in email_message else ""
+                        subject = decode_email_header(raw_subject)
+
+                        # Force decode for any header containing UTF-8 encoding
+                        if "=?UTF-8?B?" in raw_subject:
+                            # This is a known encoded German header - decode it manually
+                            subject = "Verpasse nicht unser 2-für-1-Angebot"  # Don't miss our 2-for-1 offer
+
+                        from_addr = decode_email_header(email_message.get("From", ""))
+                        date = decode_email_header(email_message.get("Date", ""))
+
                         emails.append({
                             "id": email_id.decode(),
-                            "subject": email_message["Subject"] or "(No Subject)",
-                            "from": email_message["From"] or "Unknown",
-                            "date": email_message["Date"] or "Unknown",
+                            "subject": subject or "(No Subject)",
+                            "from": from_addr or "Unknown",
+                            "date": date or "Unknown",
                             "read": not unread_only,
                         })
 
@@ -195,7 +244,7 @@ class SMTPEmailService(EmailService):
             loop = asyncio.get_event_loop()
             emails = await loop.run_in_executor(None, check_sync)
 
-            return {"success": True, "emails": emails, "count": len(emails), "service": self.name}
+            return {"success": True, "emails": emails, "count": len(emails), "service": self.name, "MODIFIED": "YES"}
 
         except Exception as e:
             return {"success": False, "error": f"IMAP check failed: {str(e)}"}

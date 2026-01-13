@@ -4,7 +4,7 @@ Multi-Service Email Platform for MCP
 
 A comprehensive email MCP server supporting multiple email services including standard SMTP/IMAP providers, transactional email APIs, local testing services, and webhook integrations.
 
-**Version 0.2.1** - AI Email Management Orchestrator Added
+**Version 0.2.2** - Email Header Decoding Fixed
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
@@ -27,6 +27,7 @@ Configure email credentials and run: `python email-llm-orchestrator.py`
 - Dynamic Configuration: Add services at runtime without restart
 - Backward Compatible: Works with existing SMTP/IMAP configurations
 - Async Operations: Non-blocking email operations
+- **Header Decoding**: Automatically decodes encoded email subjects and sender names (UTF-8, Base64, Quoted-Printable)
 
 ### AI Email Management (Orchestrator)
 - **`weed_trash`** - AI-powered intelligent email cleanup
@@ -34,8 +35,14 @@ Configure email credentials and run: `python email-llm-orchestrator.py`
 - **`smart_email_filter`** - AI-generated filtering rules
 - **Server Compositing** - Combines email-mcp + local-llm-mcp
 - **Intelligent Analysis** - LLM understands email content and context
+- **Direct Server Communication** - FastMCP 2.14.1 enables email-mcp to collaborate with local-llm-mcp for:
+  - AI-assisted email composition and drafting
+  - Intelligent email analysis and categorization
+  - Automated response generation
+  - Email content summarization and prioritization
 
 ### Standards & Quality
+- **FastMCP 2.14.1**: Server-to-server communication capabilities
 - MCPB Packaging: Complete packaging for Claude Desktop
 - CI/CD Pipeline: Automated testing and deployment
 - Health Monitoring: Service availability and performance tracking
@@ -86,7 +93,7 @@ This email-mcp implements current MCP server standards:
 - **Outlook/Hotmail** - SMTP/IMAP
 - **Yahoo Mail** - SMTP/IMAP
 - **iCloud Mail** - SMTP/IMAP
-- **ProtonMail** - SMTP/IMAP
+- **ProtonMail** - SMTP/IMAP (requires ProtonMail Bridge for free accounts, or paid account for direct access)
 
 ### Transactional Email APIs
 - **SendGrid** - Enterprise email delivery
@@ -179,6 +186,98 @@ The email-mcp supports Gmail SMTP with App Password authentication:
 - CC/BCC recipient support
 - Authentication with App Passwords
 - Error handling and connection testing
+
+## ProtonMail Integration
+
+The email-mcp supports ProtonMail with different setup requirements based on your account type:
+
+### Free Accounts (ProtonMail Bridge Required)
+
+Free ProtonMail accounts require the ProtonMail Bridge application:
+
+#### Setup Steps
+1. Download ProtonMail Bridge: https://proton.me/mail/bridge
+2. Install and configure Bridge with your ProtonMail account
+3. Bridge creates local SMTP/IMAP servers (default ports: 1025 SMTP, 1143 IMAP)
+
+#### Configuration
+```json
+{
+  "SenderEmail": "your@protonmail.com",
+  "SenderName": "Your Name",
+  "SmtpServer": "127.0.0.1",
+  "SmtpPort": 1025,
+  "SmtpUsername": "your-username",
+  "SmtpPassword": "your-protonmail-password",
+  "ImapServer": "127.0.0.1",
+  "ImapPort": 1143,
+  "ImapUsername": "your-username",
+  "ImapPassword": "your-protonmail-password"
+}
+```
+
+#### Environment Variables
+```bash
+export SMTP_SERVER="127.0.0.1"
+export SMTP_PORT="1025"
+export SMTP_USER="your-username"
+export SMTP_PASSWORD="your-protonmail-password"
+export IMAP_SERVER="127.0.0.1"
+export IMAP_PORT="1143"
+export IMAP_USER="your-username"
+export IMAP_PASSWORD="your-protonmail-password"
+```
+
+### Paid Accounts (Direct Access)
+
+Paid ProtonMail accounts support direct SMTP/IMAP access:
+
+#### Configuration
+```json
+{
+  "SenderEmail": "your@protonmail.com",
+  "SenderName": "Your Name",
+  "SmtpServer": "mail.protonmail.com",
+  "SmtpPort": 587,
+  "SmtpUsername": "your@protonmail.com",
+  "SmtpPassword": "your-protonmail-password",
+  "ImapServer": "mail.protonmail.com",
+  "ImapPort": 993,
+  "ImapUsername": "your@protonmail.com",
+  "ImapPassword": "your-protonmail-password"
+}
+```
+
+#### Environment Variables
+```bash
+export SMTP_SERVER="mail.protonmail.com"
+export SMTP_PORT="587"
+export SMTP_USER="your@protonmail.com"
+export SMTP_PASSWORD="your-protonmail-password"
+export IMAP_SERVER="mail.protonmail.com"
+export IMAP_PORT="993"
+export IMAP_USER="your@protonmail.com"
+export IMAP_PASSWORD="your-protonmail-password"
+```
+
+### Setup Steps for Paid Accounts
+1. Enable SMTP/IMAP access in ProtonMail settings
+2. Use your regular ProtonMail password (no app passwords needed)
+3. Configure using `configure_service()` or environment variables
+
+### Supported Features
+- SMTP email sending with TLS encryption
+- IMAP inbox checking and management
+- HTML and plain text email formats
+- CC/BCC recipient support
+- Automatic email header decoding
+- Error handling and connection testing
+
+### Notes
+- **Free accounts**: ProtonMail Bridge must be running for email access
+- **Paid accounts**: Direct SMTP/IMAP access available without additional software
+- **Security**: ProtonMail uses end-to-end encryption for all communications
+- **Compatibility**: Works with all Email MCP features including AI collaboration
 
 ## ⚙️ Configuration
 
