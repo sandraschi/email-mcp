@@ -1,8 +1,8 @@
-# Email MCP Server
+# MiniMail MCP Server
 
 Multi-service email platform for MCP-compatible clients.
 
-**Version 0.3.0** - FastMCP 2.14.3 Standards Compliance
+**Version 0.3.0-alpha** - FastMCP 2.14.3 Standards Compliance
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
@@ -52,7 +52,7 @@ This minimail-mcp implements current MCP server standards:
 - Test coverage reporting
 - Security scanning with Bandit
 - Package building and MCPB creation
-- **PyPI publishing disabled** (requires PyPI account setup)
+- PyPI publishing requires account setup
 
 ### Monitoring Stack
 - Health check system for email services
@@ -111,33 +111,6 @@ pip install -e ".[dev]"
 ### Glama Client
 The server is automatically discoverable by Glama.ai's GitHub scraping system through the `glama.json` configuration.
 
-## AI Email Management Orchestrator
-
-**Revolutionary AI-powered email tools** - Combine this server with `local-llm-mcp` for intelligent email processing.
-
-### Quick Setup
-```bash
-# Install dependencies
-pip install fastmcp
-
-# Configure email (see Gmail section below)
-export SMTP_USER=your-email@gmail.com
-export SMTP_PASSWORD=your-app-password
-
-# Configure LLM (Ollama recommended)
-ollama serve  # Start Ollama server
-ollama pull llama3  # Download model
-
-# Run orchestrator
-python email-llm-orchestrator.py
-```
-
-### AI Tools Available
-- **`weed_trash`** - Intelligent email cleanup with AI analysis
-- **`email_summarizer`** - Smart inbox summaries by topic/sender
-- **`smart_email_filter`** - AI-generated filtering rules
-
-For orchestrator usage, see the tools section above.
 
 ## Gmail Integration
 
@@ -334,70 +307,43 @@ Add to your `mcp.json`:
 }
 ```
 
-## 📨 Usage Examples
+## Usage Examples
 
-### Send Emails
+### Conversational Usage
 
-```python
-# Basic SMTP email
-send_email(
-    to="user@example.com",
-    subject="Hello World",
-    body="This is a test email"
-)
-
-# HTML email with SendGrid
-send_email(
-    to="user@example.com",
-    subject="Welcome",
-    body="Welcome to our service!",
-    html="<h1>Welcome!</h1><p>Thanks for joining.</p>",
-    service="sendgrid"
-)
-
-# Email to Slack webhook
-send_email(
-    to="#general",
-    subject="Alert",
-    body="System alert message",
-    service="slack"
-)
+**Send a basic email:**
+```
+"Send an email to user@example.com with subject 'Hello World' and body 'This is a test message'"
 ```
 
-### Check Inbox
-
-```python
-# Check default IMAP inbox
-result = check_inbox(limit=10, unread_only=True)
-print(f"Found {result['count']} unread emails")
-
-# Check local testing inbox
-result = check_inbox(service="mailhog", limit=20)
-print(f"Test emails: {result['count']}")
+**Send HTML email via SendGrid:**
+```
+"Send a welcome email to newuser@company.com using SendGrid. Subject: 'Welcome to Our Service'. Include HTML content with a welcome header and thank you message."
 ```
 
-### Service Management
+**Send notification to Slack:**
+```
+"Send an alert message to the #dev-alerts Slack channel about high CPU usage detected on production server."
+```
 
-```python
-# List available services
-services = list_services()
-print(f"Available services: {list(services['services'].keys())}")
+**Check unread emails:**
+```
+"Check my inbox and show me the last 10 unread emails."
+```
 
-# Configure new service at runtime
-configure_service(
-    name="my-sendgrid",
-    type="api",
-    config={
-        "api_key": "your-key",
-        "api_url": "https://api.sendgrid.com/v3/mail/send",
-        "from_email": "noreply@domain.com",
-        "service_type": "sendgrid"
-    }
-)
+**Test email service:**
+```
+"Is my Gmail service configured correctly? Test the connection."
+```
 
-# Test service connectivity
-status = email_status(service="sendgrid")
-print(f"SendGrid connected: {status['services']['sendgrid']['connected']}")
+**Configure new service:**
+```
+"Add SendGrid as a new email service with my API key. From email should be noreply@mydomain.com."
+```
+
+**List available services:**
+```
+"What email services do I have configured?"
 ```
 
 ```
@@ -424,21 +370,21 @@ print(f"SendGrid connected: {status['services']['sendgrid']['connected']}")
 | `local` | Testing services | MailHog, Mailpit | ✅ |
 | `webhook` | Chat integrations | Slack, Discord | ❌ |
 
-## 🎯 Architecture
+## Architecture
 
-- **Multi-Service Support** - SMTP, API, Local, Webhook services
-- **Dynamic Configuration** - Add services without restart
-- **Backward Compatible** - Works with existing SMTP/IMAP configs
-- **Async Operations** - Non-blocking email operations
-- **Extensible Design** - Easy to add new service types
+- Multi-service email support (SMTP/IMAP, transactional APIs, local testing, webhooks)
+- Dynamic service configuration without restart
+- Backward compatible with existing SMTP/IMAP configurations
+- Async operations for non-blocking email handling
+- Extensible design for adding new service types
 
-## ✅ Benefits
+## Features
 
-- **Comprehensive Coverage** - Supports all major email services
-- **Developer Friendly** - Local testing and webhook integrations
-- **Flexible Configuration** - Environment variables + runtime config
-- **Performance Optimized** - Async operations, connection pooling
-- **Easy Integration** - Simple MCP protocol interface  
+- Support for multiple email service types (SMTP, API, local testing, webhooks)
+- Dynamic service configuration at runtime
+- Async operations with connection pooling
+- Email header decoding and error handling
+- Service health monitoring  
 
 ## Development
 
