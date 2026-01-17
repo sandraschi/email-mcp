@@ -1,52 +1,33 @@
-# Email MCP
+# Email MCP Server
 
-Multi-Service Email Platform for MCP
+Multi-service email platform for MCP-compatible clients.
 
-A comprehensive email MCP server supporting multiple email services including standard SMTP/IMAP providers, transactional email APIs, local testing services, and webhook integrations.
-
-**Version 0.2.2** - Email Header Decoding Fixed
+**Version 0.3.0** - FastMCP 2.14.3 Standards Compliance
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-## AI Email Management Orchestrator
-
-Combines `email-mcp` + `local-llm-mcp` for AI-assisted email processing:
-
-- **`weed_trash`** - AI-powered email cleanup with intelligent filtering
-- **`email_summarizer`** - Smart inbox summaries grouped by topic/sender
-- **`smart_email_filter`** - AI-generated filtering rules and organization
-
-Configure email credentials and run: `python email-llm-orchestrator.py`
-
 ## Features
 
-### Core Email Functionality
-- Multiple Email Services: SMTP/IMAP, SendGrid, Mailgun, Resend, Amazon SES, Postmark
-- Local Testing: MailHog, Mailpit, MailCatcher, Inbucket
-- Webhook Integrations: Slack, Discord, Telegram, GitHub
-- Dynamic Configuration: Add services at runtime without restart
-- Backward Compatible: Works with existing SMTP/IMAP configurations
-- Async Operations: Non-blocking email operations
-- **Header Decoding**: Automatically decodes encoded email subjects and sender names (UTF-8, Base64, Quoted-Printable)
+### Email Services
+- **SMTP/IMAP**: Standard email providers (Gmail, Outlook, Yahoo, iCloud, ProtonMail)
+- **Transactional APIs**: SendGrid, Mailgun, Resend, Amazon SES, Postmark
+- **Local Testing**: MailHog, Mailpit, MailCatcher, Inbucket
+- **Webhook Integration**: Slack, Discord, Telegram, GitHub
 
-### AI Email Management (Orchestrator)
-- **`weed_trash`** - AI-powered intelligent email cleanup
-- **`email_summarizer`** - Smart inbox summaries by topic and sender
-- **`smart_email_filter`** - AI-generated filtering rules
-- **Server Compositing** - Combines email-mcp + local-llm-mcp
-- **Intelligent Analysis** - LLM understands email content and context
-- **Direct Server Communication** - FastMCP 2.14.1 enables email-mcp to collaborate with local-llm-mcp for:
-  - AI-assisted email composition and drafting
-  - Intelligent email analysis and categorization
-  - Automated response generation
-  - Email content summarization and prioritization
+### Core Functionality
+- Send emails via multiple service types
+- Check inbox via IMAP and service APIs
+- Dynamic service configuration at runtime
+- Email header decoding (UTF-8, Base64, Quoted-Printable)
+- Async operations with connection pooling
+- Service health monitoring and testing
 
-### Standards & Quality
-- **FastMCP 2.14.1**: Server-to-server communication capabilities
-- MCPB Packaging: Complete packaging for Claude Desktop
-- CI/CD Pipeline: Automated testing and deployment
-- Health Monitoring: Service availability and performance tracking
-- Comprehensive Testing: Unit, integration, and service-specific tests
+### Standards Compliance
+- FastMCP 2.14.3 protocol support
+- MCPB packaging for Claude Desktop
+- Zed extension support
+- Conversational tool returns
+- Structured logging with JSON output
 
 ## Standards Compliance
 

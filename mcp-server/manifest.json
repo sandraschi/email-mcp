@@ -1,8 +1,8 @@
 {
   "manifest_version": "0.2",
   "name": "email-mcp",
-  "version": "0.2.1",
-  "description": "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations",
+  "version": "0.3.0",
+  "description": "Enterprise-grade multi-service email platform with FastMCP 2.14.3, conversational responses, and comprehensive automation workflows",
   "author": {
     "name": "FlowEngineer"
   },

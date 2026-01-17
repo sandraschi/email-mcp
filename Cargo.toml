@@ -1,6 +1,6 @@
 [package]
 name = "EmailManagement"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Sandra <sandraschipal@hotmail.com>"]
 description = "Zed extension bridge for EmailManagement MCP server"

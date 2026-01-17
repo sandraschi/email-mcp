@@ -25,6 +25,24 @@
       "category": "sending"
     },
     {
+      "title": "Send Bulk Email Campaign",
+      "description": "Send marketing emails to multiple recipients",
+      "code": "recipients = [\"customer1@example.com\", \"customer2@example.com\", \"customer3@example.com\"]\nfor email in recipients:\n    send_email(\n        to=email,\n        subject=\"Special Offer Inside!\",\n        html=newsletter_template,\n        service=\"sendgrid\"\n    )",
+      "category": "sending"
+    },
+    {
+      "title": "Send Email with Template",
+      "description": "Use templated emails for consistency",
+      "code": "template_vars = {\"name\": \"John\", \"company\": \"Acme Corp\"}\nsend_email(\n    to=\"john@customer.com\",\n    subject=\"Welcome to {{company}}\",\n    html=template.render(**template_vars),\n    service=\"mailgun\"\n)",
+      "category": "sending"
+    },
+    {
+      "title": "Send Urgent Notification",
+      "description": "Send high-priority email notifications",
+      "code": "send_email(\n    to=[\"oncall@company.com\", \"manager@company.com\"],\n    subject=\"🚨 CRITICAL: System Down\",\n    body=\"Production system is experiencing outage. Immediate attention required.\",\n    service=\"sendgrid\"\n)",
+      "category": "sending"
+    },
+    {
       "title": "Check Inbox for Unread Emails",
       "description": "Retrieve unread emails from inbox",
       "code": "result = check_inbox(limit=10, unread_only=True)\nprint(f\"Found {result['count']} unread emails\")\nfor email in result['emails']:\n    print(f\"From: {email['from']}, Subject: {email['subject']}\")",
@@ -43,6 +61,18 @@
       "category": "receiving"
     },
     {
+      "title": "Advanced Email Search",
+      "description": "Search emails with multiple filters",
+      "code": "result = check_inbox(\n    after_date=\"2024-01-01\",\n    before_date=\"2024-01-31\",\n    limit=100\n)\n\nimportant_emails = [\n    email for email in result['emails']\n    if 'urgent' in email['subject'].lower() or 'critical' in email['subject'].lower()\n]",
+      "category": "receiving"
+    },
+    {
+      "title": "Monitor Inbox Activity",
+      "description": "Continuously monitor inbox for new emails",
+      "code": "import time\n\nlast_check = 0\nwhile True:\n    result = check_inbox(unread_only=True, limit=5)\n    if result['count'] > 0:\n        for email in result['emails']:\n            if email['date'] > last_check:\n                print(f\"New email: {email['subject']} from {email['from']}\")\n                # Process new email\n        last_check = max(email['date'] for email in result['emails'])\n    time.sleep(300)  # Check every 5 minutes",
+      "category": "receiving"
+    },
+    {
       "title": "Send to Slack Webhook",
       "description": "Send email content to Slack channel",
       "code": "send_email(\n    to=\"#general\",\n    subject=\"System Alert\",\n    body=\"Server CPU usage is high\",\n    service=\"slack\"\n)",
@@ -52,6 +82,18 @@
       "title": "Send to Discord Webhook",
       "description": "Send email content to Discord channel",
       "code": "send_email(\n    to=\"#alerts\",\n    subject=\"Deployment Complete\",\n    body=\"New version deployed successfully\",\n    service=\"discord\"\n)",
+      "category": "webhooks"
+    },
+    {
+      "title": "GitHub Integration",
+      "description": "Send notifications to GitHub issues",
+      "code": "send_email(\n    to=\"issue-comment-url\",\n    subject=\"Automated Response\",\n    body=\"Thank you for your report. Our team will investigate.\",\n    service=\"github-webhook\"\n)",
+      "category": "webhooks"
+    },
+    {
+      "title": "Multi-Channel Notifications",
+      "description": "Send alerts to multiple platforms",
+      "code": "alert_message = \"Database backup failed\"\n\n# Send to multiple channels\nsend_email(to=\"#devops\", subject=\"🚨 ALERT\", body=alert_message, service=\"slack\")\nsend_email(to=\"#alerts\", subject=\"BACKUP FAILURE\", body=alert_message, service=\"discord\")\nsend_email(to=\"admin@company.com\", subject=\"Backup Alert\", body=alert_message, service=\"sendgrid\")",
       "category": "webhooks"
     },
     {
@@ -89,12 +131,105 @@
       "description": "Add local MailHog service for development",
       "code": "configure_service(\n    name=\"mailhog-local\",\n    type=\"local\",\n    config={\n        \"smtp_host\": \"localhost\",\n        \"smtp_port\": 1025,\n        \"http_url\": \"http://localhost:8025\",\n        \"service_type\": \"mailhog\"\n    }\n)",
       "category": "management"
+    },
+    {
+      "title": "Service Failover Configuration",
+      "description": "Configure backup services for reliability",
+      "code": "# Primary SendGrid service\nconfigure_service(\n    name=\"sendgrid-primary\",\n    type=\"api\",\n    config={\"api_key\": \"SG.primary-key\", \"service_type\": \"sendgrid\"}\n)\n\n# Backup Mailgun service\nconfigure_service(\n    name=\"mailgun-backup\",\n    type=\"api\",\n    config={\"api_key\": \"key-backup-key\", \"service_type\": \"mailgun\"}\n)\n\n# Local fallback for development\nconfigure_service(\n    name=\"mailhog-fallback\",\n    type=\"local\",\n    config={\"service_type\": \"mailhog\"}\n)",
+      "category": "management"
+    },
+    {
+      "title": "Environment-Based Configuration",
+      "description": "Configure services based on environment",
+      "code": "import os\n\nif os.getenv('ENVIRONMENT') == 'production':\n    configure_service(\n        name=\"prod-sendgrid\",\n        type=\"api\",\n        config={\n            \"api_key\": os.getenv('SENDGRID_PROD_KEY'),\n            \"service_type\": \"sendgrid\"\n        }\n    )\nelif os.getenv('ENVIRONMENT') == 'staging':\n    configure_service(\n        name=\"staging-mailgun\",\n        type=\"api\",\n        config={\n            \"api_key\": os.getenv('MAILGUN_STAGING_KEY'),\n            \"service_type\": \"mailgun\"\n        }\n    )\nelse:  # development\n    configure_service(\n        name=\"dev-mailhog\",\n        type=\"local\",\n        config={\"service_type\": \"mailhog\"}\n    )",
+      "category": "management"
+    },
+    {
+      "title": "Automated Email Processing",
+      "description": "Process emails automatically based on rules",
+      "code": "def process_emails():\n    unread = check_inbox(unread_only=True, limit=50)\n    \n    for email in unread['emails']:\n        if 'invoice' in email['subject'].lower():\n            # Forward to accounting\n            send_email(\n                to=\"accounting@company.com\",\n                subject=f\"Invoice: {email['subject']}\",\n                body=f\"Invoice received from {email['from']}\",\n                service=\"sendgrid\"\n            )\n        elif email['from'].endswith('@support.com'):\n            # Notify support team\n            send_email(\n                to=\"#support\",\n                subject=f\"Support: {email['subject']}\",\n                body=email.get('body', ''),\n                service=\"slack\"\n            )\n\nprocess_emails()",
+      "category": "automation"
+    },
+    {
+      "title": "Customer Welcome Sequence",
+      "description": "Send automated welcome emails to new customers",
+      "code": "def send_welcome_sequence(customer):\n    # Immediate welcome\n    send_email(\n        to=customer.email,\n        subject=\"Welcome to Our Service!\",\n        html=welcome_template.render(customer=customer),\n        service=\"sendgrid\"\n    )\n    \n    # Follow-up after 3 days\n    # (Would be scheduled via external job system)\n    \n    # Onboarding guide after 1 week\n    # (Would be scheduled via external job system)\n\nsend_welcome_sequence(new_customer)",
+      "category": "automation"
+    },
+    {
+      "title": "Error Monitoring & Alerts",
+      "description": "Send alerts when errors occur in the system",
+      "code": "def send_error_alert(error_info):\n    error_message = f\"\"\"\n    🚨 SYSTEM ERROR\n    \n    Error: {error_info['error']}\n    Location: {error_info['file']}:{error_info['line']}\n    Time: {error_info['timestamp']}\n    User: {error_info.get('user', 'system')}\n    \n    Stack Trace:\n    {error_info['traceback']}\n    \"\"\"\n    \n    send_email(\n        to=[\"devops@company.com\", \"#alerts\"],\n        subject=\"🚨 CRITICAL ERROR\",\n        body=error_message,\n        service=\"slack\"\n    )\n\n# Usage in error handler\ntry:\n    risky_operation()\nexcept Exception as e:\n    send_error_alert({\n        'error': str(e),\n        'file': __file__,\n        'line': traceback.extract_tb(sys.exc_info()[2])[-1].lineno,\n        'timestamp': datetime.now().isoformat(),\n        'traceback': traceback.format_exc()\n    })",
+      "category": "automation"
+    },
+    {
+      "title": "Daily Report Generation",
+      "description": "Send daily summary reports via email",
+      "code": "def send_daily_report():\n    # Collect metrics\n    metrics = {\n        'total_users': get_user_count(),\n        'active_sessions': get_active_sessions(),\n        'revenue': get_daily_revenue(),\n        'errors': get_error_count()\n    }\n    \n    report_body = f\"\"\"\n    📊 Daily Report - {datetime.now().strftime('%Y-%m-%d')}\n    \n    Total Users: {metrics['total_users']:,}\n    Active Sessions: {metrics['active_sessions']:,}\n    Revenue: ${metrics['revenue']:,.2f}\n    Errors: {metrics['errors']}\n    \n    System Status: {'🟢 Healthy' if metrics['errors'] < 10 else '🟡 Warning'}\n    \"\"\"\n    \n    send_email(\n        to=\"management@company.com\",\n        subject=\"📊 Daily System Report\",\n        body=report_body,\n        service=\"sendgrid\"\n    )\n\n# Schedule this to run daily at 9 AM\nsend_daily_report()",
+      "category": "automation"
+    },
+    {
+      "title": "Newsletter Campaign",
+      "description": "Send personalized newsletters to subscribers",
+      "code": "def send_newsletter_campaign(subscribers, newsletter):\n    successful = 0\n    failed = 0\n    \n    for subscriber in subscribers:\n        try:\n            personalized_content = newsletter.template.render(\n                name=subscriber.name,\n                preferences=subscriber.preferences,\n                unsubscribe_url=generate_unsubscribe_url(subscriber.id)\n            )\n            \n            send_email(\n                to=subscriber.email,\n                subject=newsletter.subject,\n                html=personalized_content,\n                service=\"mailgun\"  # Better for marketing emails\n            )\n            successful += 1\n            \n        except Exception as e:\n            print(f\"Failed to send to {subscriber.email}: {e}\")\n            failed += 1\n    \n    # Send campaign summary\n    send_email(\n        to=\"marketing@company.com\",\n        subject=\"Newsletter Campaign Complete\",\n        body=f\"Sent to {successful} subscribers, {failed} failures\",\n        service=\"sendgrid\"\n    )\n\nsend_newsletter_campaign(active_subscribers, monthly_newsletter)",
+      "category": "automation"
+    },
+    {
+      "title": "Backup Notifications",
+      "description": "Send notifications for backup operations",
+      "code": "def notify_backup_status(backup_result):\n    if backup_result['success']:\n        send_email(\n            to=\"admin@company.com\",\n            subject=\"✅ Backup Completed Successfully\",\n            body=f\"\"\"\n            Backup completed successfully!\n            \n            Size: {backup_result['size_mb']} MB\n            Duration: {backup_result['duration_seconds']} seconds\n            Location: {backup_result['location']}\n            \"\"\",\n            service=\"sendgrid\"\n        )\n    else:\n        send_email(\n            to=[\"admin@company.com\", \"#alerts\"],\n            subject=\"🚨 BACKUP FAILED\",\n            body=f\"\"\"\n            CRITICAL: Backup operation failed!\n            \n            Error: {backup_result['error']}\n            Time: {backup_result['timestamp']}\n            \n            Immediate attention required.\n            \"\"\",\n            service=\"slack\"\n        )\n\n# Usage after backup operation\nnotify_backup_status(backup_result)",
+      "category": "automation"
+    },
+    {
+      "title": "CI/CD Pipeline Notifications",
+      "description": "Send build and deployment notifications",
+      "code": "def notify_deployment(deployment_info):\n    status_emoji = \"✅\" if deployment_info['success'] else \"❌\"\n    status_text = \"Successful\" if deployment_info['success'] else \"Failed\"\n    \n    message = f\"\"\"\n    {status_emoji} Deployment {status_text}\n    \n    Project: {deployment_info['project']}\n    Branch: {deployment_info['branch']}\n    Version: {deployment_info['version']}\n    Environment: {deployment_info['environment']}\n    Duration: {deployment_info['duration']}s\n    \"\"\"\n    \n    if not deployment_info['success']:\n        message += f\"\\nError: {deployment_info['error']}\"\n    \n    send_email(\n        to=\"#deployments\",\n        subject=f\"{status_emoji} Deploy {deployment_info['project']} {deployment_info['version']}\",\n        body=message,\n        service=\"slack\"\n    )\n\nnotify_deployment({\n    'project': 'web-app',\n    'branch': 'main',\n    'version': 'v2.1.0',\n    'environment': 'production',\n    'duration': 245,\n    'success': True\n})",
+      "category": "automation"
+    },
+    {
+      "title": "Email Template System",
+      "description": "Create reusable email templates",
+      "code": "class EmailTemplates:\n    @staticmethod\n    def password_reset(user_email, reset_token):\n        return {\n            'subject': 'Password Reset Request',\n            'html': f'''\n            <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n                <h2>Reset Your Password</h2>\n                <p>You requested a password reset for {user_email}.</p>\n                <p><a href=\"https://app.company.com/reset?token={reset_token}\"\n                      style=\"background: #007bff; color: white; padding: 10px 20px; text-decoration: none;\">\n                    Reset Password\n                </a></p>\n                <p>This link expires in 24 hours.</p>\n            </div>\n            ''',\n            'service': 'sendgrid'\n        }\n    \n    @staticmethod\n    def welcome_new_user(user_name, company_name):\n        return {\n            'subject': f'Welcome to {company_name}!',\n            'html': f'''\n            <h1>Welcome, {user_name}!</h1>\n            <p>Thank you for joining {company_name}.</p>\n            <ul>\n                <li>Feature 1</li>\n                <li>Feature 2</li>\n                <li>Feature 3</li>\n            </ul>\n            ''',\n            'service': 'mailgun'\n        }\n\n# Usage\ntemplate = EmailTemplates.password_reset(user.email, reset_token)\nsend_email(to=user.email, **template)",
+      "category": "templates"
+    },
+    {
+      "title": "Internationalization Support",
+      "description": "Send emails in different languages",
+      "code": "def send_localized_email(user, template_key, language='en'):\n    translations = {\n        'en': {\n            'welcome': 'Welcome!',\n            'thank_you': 'Thank you for joining us.'\n        },\n        'es': {\n            'welcome': '¡Bienvenido!',\n            'thank_you': 'Gracias por unirte a nosotros.'\n        },\n        'de': {\n            'welcome': 'Willkommen!',\n            'thank_you': 'Danke, dass Sie sich uns angeschlossen haben.'\n        }\n    }\n    \n    content = translations.get(language, translations['en'])\n    \n    send_email(\n        to=user.email,\n        subject=content['welcome'],\n        body=content['thank_you'],\n        service=\"sendgrid\"\n    )\n\nsend_localized_email(user, 'welcome', language=user.language)",
+      "category": "templates"
+    },
+    {
+      "title": "Rate Limiting & Throttling",
+      "description": "Handle email sending limits gracefully",
+      "code": "import time\nfrom collections import defaultdict\n\nclass EmailRateLimiter:\n    def __init__(self, max_per_minute=50):\n        self.max_per_minute = max_per_minute\n        self.sent_times = defaultdict(list)\n    \n    def can_send(self, service_name):\n        now = time.time()\n        # Remove timestamps older than 1 minute\n        self.sent_times[service_name] = [\n            t for t in self.sent_times[service_name]\n            if now - t < 60\n        ]\n        return len(self.sent_times[service_name]) < self.max_per_minute\n    \n    def record_send(self, service_name):\n        self.sent_times[service_name].append(time.time())\n\nlimiter = EmailRateLimiter()\n\ndef send_with_rate_limit(to, subject, body, service):\n    if limiter.can_send(service):\n        result = send_email(to=to, subject=subject, body=body, service=service)\n        if result['success']:\n            limiter.record_send(service)\n        return result\n    else:\n        return {\n            'success': False,\n            'error': 'Rate limit exceeded. Try again later.',\n            'message': f'Rate limit exceeded for {service}'\n        }\n\nsend_with_rate_limit('user@example.com', 'Test', 'Message', 'sendgrid')",
+      "category": "advanced"
+    },
+    {
+      "title": "Email Analytics & Tracking",
+      "description": "Track email delivery and engagement",
+      "code": "def send_tracked_email(to, subject, body, campaign_id):\n    # Add tracking pixel and links\n    tracking_pixel = f'<img src=\"https://analytics.company.com/pixel/{campaign_id}?email={to}\" width=\"1\" height=\"1\" />'\n    \n    tracked_body = body + tracking_pixel\n    \n    result = send_email(\n        to=to,\n        subject=subject,\n        html=tracked_body,\n        service=\"mailgun\"  # Better tracking support\n    )\n    \n    if result['success']:\n        # Log for analytics\n        log_email_sent(campaign_id, to, result.get('message_id'))\n    \n    return result\n\nsend_tracked_email(\n    to='customer@example.com',\n    subject='Special Offer',\n    body='<p>Check out our special offer!</p>',\n    campaign_id='summer-sale-2024'\n)",
+      "category": "advanced"
+    },
+    {
+      "title": "Attachment Handling",
+      "description": "Send emails with file attachments",
+      "code": "# Note: Attachments require additional implementation\n# This is a conceptual example\n\ndef send_invoice_email(customer, invoice_pdf_path):\n    # Read invoice file\n    with open(invoice_pdf_path, 'rb') as f:\n        invoice_data = f.read()\n    \n    send_email(\n        to=customer.email,\n        subject=f'Invoice #{customer.invoice_number}',\n        body=f\"\"\"\n        Dear {customer.name},\n        \n        Please find your invoice attached.\n        \n        Invoice #: {customer.invoice_number}\n        Amount: ${customer.amount:.2f}\n        Due Date: {customer.due_date}\n        \n        Thank you for your business!\n        \"\"\",\n        attachments=[{\n            'filename': f'invoice_{customer.invoice_number}.pdf',\n            'content': invoice_data,\n            'content_type': 'application/pdf'\n        }],\n        service=\"sendgrid\"  # Supports attachments\n    )\n\nsend_invoice_email(customer, '/path/to/invoice.pdf')",
+      "category": "advanced"
+    },
+    {
+      "title": "Error Recovery & Retry Logic",
+      "description": "Handle email sending failures gracefully",
+      "code": "import asyncio\n\nasync def send_with_retry(to, subject, body, service, max_retries=3):\n    services_to_try = [service, 'sendgrid', 'mailgun', 'smtp']\n    \n    for attempt in range(max_retries):\n        for svc in services_to_try:\n            try:\n                result = send_email(\n                    to=to,\n                    subject=subject,\n                    body=body,\n                    service=svc\n                )\n                if result['success']:\n                    return result\n            except Exception as e:\n                print(f\"Attempt {attempt + 1} with {svc} failed: {e}\")\n                continue\n        \n        if attempt < max_retries - 1:\n            wait_time = 2 ** attempt  # Exponential backoff\n            print(f\"All services failed, retrying in {wait_time}s...\")\n            await asyncio.sleep(wait_time)\n    \n    return {\n        'success': False,\n        'error': f'Failed to send after {max_retries} attempts',\n        'message': f'Could not deliver email to {to}'\n    }\n\n# Usage\nresult = await send_with_retry(\n    to='important@customer.com',\n    subject='Urgent: Account Update Required',\n    body='Please update your account information.',\n    service='primary'\n)",
+      "category": "advanced"
     }
   ],
   "categories": {
-    "sending": "Email sending operations",
-    "receiving": "Inbox checking and email retrieval",
-    "webhooks": "Webhook integrations for notifications",
-    "management": "Service configuration and monitoring"
+    "sending": "Email sending operations (basic, HTML, bulk, templates)",
+    "receiving": "Inbox checking, filtering, and email retrieval operations",
+    "webhooks": "Webhook integrations for notifications and alerts",
+    "management": "Service configuration, health monitoring, and setup",
+    "automation": "Automated workflows, sequences, and batch operations",
+    "templates": "Email templates, internationalization, and branding",
+    "advanced": "Rate limiting, tracking, attachments, and error recovery"
   }
 }

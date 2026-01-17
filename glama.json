@@ -2,7 +2,7 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "name": "email-mcp",
   "description": "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "status": "beta",
   "maturity_note": "Core SMTP/IMAP functionality stable, API services and webhooks in active development",
   "author": "FlowEngineer",

@@ -1,6 +1,6 @@
 id = "email-mcp"
 name = "EmailManagement"
-version = "0.1.0"
+version = "0.3.0"
 schema_version = 1
 authors = ["Sandra <sandraschipal@hotmail.com>"]
 description = "Multi-service email automation and processing"
@@ -8,3 +8,6 @@ repository = "https://github.com/sandraschi/email-mcp"
 
 [context_servers.email-mcp]
 name = "Email Automation Tools"
+command = "python"
+args = ["-m", "email_mcp.server"]
+env = { PYTHONPATH = "${workspace}/src" }
