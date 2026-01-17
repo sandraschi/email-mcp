@@ -9,16 +9,21 @@ Supported services: SendGrid, Mailgun, Resend, Amazon SES, Postmark
 """
 
 import asyncio
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logger = logging.getLogger(__name__)
 
 
 async def main():
     """Demonstrate transactional email API operations."""
 
-    print("🚀 Transactional Email API Examples")
-    print("=" * 50)
+    logger.info("Transactional Email API Examples")
+    logger.info("=" * 50)
 
     # 1. Send email via SendGrid
-    print("\n📧 1. Sending via SendGrid...")
+    logger.info("1. Sending via SendGrid...")
     try:
         result = await send_email(
             to="customer@example.com",
@@ -37,12 +42,12 @@ async def main():
             """,
             service="sendgrid"
         )
-        print(f"✅ SendGrid email sent: {result['success']}")
+        logger.info(f"SendGrid email sent: {result['success']}")
     except Exception as e:
-        print(f"❌ SendGrid send failed: {e}")
+        logger.error(f"SendGrid send failed: {e}")
 
     # 2. Send bulk email via Mailgun
-    print("\n📧 2. Sending bulk email via Mailgun...")
+    logger.info("2. Sending bulk email via Mailgun...")
     try:
         result = await send_email(
             to=["user1@example.com", "user2@example.com", "user3@example.com"],
@@ -51,12 +56,12 @@ async def main():
             html="<h1>Monthly Newsletter</h1><p>Check out our latest updates...</p>",
             service="mailgun"
         )
-        print(f"✅ Mailgun bulk email sent: {result['success']}")
+        logger.info(f"Mailgun bulk email sent: {result['success']}")
     except Exception as e:
-        print(f"❌ Mailgun send failed: {e}")
+        logger.error(f"Mailgun send failed: {e}")
 
     # 3. Send transactional email via Resend
-    print("\n📧 3. Sending transactional email via Resend...")
+    logger.info("3. Sending transactional email via Resend...")
     try:
         result = await send_email(
             to="user@example.com",
@@ -72,31 +77,31 @@ async def main():
             """,
             service="resend"
         )
-        print(f"✅ Resend transactional email sent: {result['success']}")
+        logger.info(f"Resend transactional email sent: {result['success']}")
     except Exception as e:
-        print(f"❌ Resend send failed: {e}")
+        logger.error(f"Resend send failed: {e}")
 
     # 4. Check service status
-    print("\n🔍 4. Checking service status...")
+    logger.info("4. Checking service status...")
     try:
         status = await email_status()
-        print(f"📊 Services configured: {status['configured_services']}")
-        print(f"✅ Services connected: {status['connected_services']}")
+        logger.info(f"Services configured: {status['configured_services']}")
+        logger.info(f"Services connected: {status['connected_services']}")
 
         for svc_name, svc_status in status['services'].items():
             if svc_status['configured']:
-                status_icon = "✅" if svc_status['connected'] else "❌"
-                print(f"   {status_icon} {svc_name}: {svc_status['connected']}")
+                status_text = "connected" if svc_status['connected'] else "disconnected"
+                logger.info(f"  - {svc_name}: {status_text}")
     except Exception as e:
-        print(f"❌ Status check failed: {e}")
+        logger.error(f"Status check failed: {e}")
 
-    print("\n✅ API service examples completed!")
+    logger.info("API service examples completed!")
 
 
 if __name__ == "__main__":
-    print("This example shows how to use transactional email APIs.")
-    print("In practice, these functions are called through the MCP server.")
-    print("\nExample MCP calls:")
-    print("- send_email(to='user@example.com', subject='Welcome', body='Hi!', service='sendgrid')")
-    print("- email_status()")
-    print("- list_services()")
+    logger.info("This example shows how to use transactional email APIs.")
+    logger.info("In practice, these functions are called through the MCP server.")
+    logger.info("Example MCP calls:")
+    logger.info("- send_email(to='user@example.com', subject='Welcome', body='Hi!', service='sendgrid')")
+    logger.info("- email_status()")
+    logger.info("- list_services()")
