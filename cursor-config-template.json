@@ -1,11 +1,11 @@
 {
   "mcpServers": {
-    "email-mcp": {
+    "minimail-mcp": {
       "command": "python",
       "args": ["-m", "email_mcp.server"],
       "cwd": "D:/Dev/repos/email-mcp",
       "env": {
-        "PYTHONPATH": "D:/Dev/repos/email-mcp/src",
+        "PYTHONPATH": "D:/Dev/repos/minimail-mcp/src",
         "PYTHONUNBUFFERED": "1",
 
         "// SMTP/IMAP Configuration (choose one or more)": "",
@@ -43,12 +43,12 @@
 
   "// Gmail Example (replace with your credentials)": {
     "mcpServers": {
-      "email-mcp": {
+      "minimail-mcp": {
         "command": "python",
         "args": ["-m", "email_mcp.server"],
         "cwd": "D:/Dev/repos/email-mcp",
         "env": {
-          "PYTHONPATH": "D:/Dev/repos/email-mcp/src",
+          "PYTHONPATH": "D:/Dev/repos/minimail-mcp/src",
           "SMTP_SERVER": "smtp.gmail.com",
           "SMTP_PORT": "587",
           "SMTP_USER": "your-email@gmail.com",
@@ -65,12 +65,12 @@
 
   "// SendGrid + MailHog Example": {
     "mcpServers": {
-      "email-mcp": {
+      "minimail-mcp": {
         "command": "python",
         "args": ["-m", "email_mcp.server"],
         "cwd": "D:/Dev/repos/email-mcp",
         "env": {
-          "PYTHONPATH": "D:/Dev/repos/email-mcp/src",
+          "PYTHONPATH": "D:/Dev/repos/minimail-mcp/src",
           "SENDGRID_API_KEY": "your-sendgrid-api-key",
           "SENDGRID_FROM_EMAIL": "noreply@yourdomain.com",
           "MAILHOG_ENABLED": "true",

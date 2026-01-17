@@ -1,12 +1,12 @@
-id = "email-mcp"
+id = "minimail-mcp"
 name = "EmailManagement"
 version = "0.3.0"
 schema_version = 1
 authors = ["Sandra <sandraschipal@hotmail.com>"]
 description = "Multi-service email automation and processing"
-repository = "https://github.com/sandraschi/email-mcp"
+repository = "https://github.com/sandraschi/minimail-mcp"
 
-[context_servers.email-mcp]
+[context_servers.minimail-mcp]
 name = "Email Automation Tools"
 command = "python"
 args = ["-m", "email_mcp.server"]

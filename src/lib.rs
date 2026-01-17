@@ -9,9 +9,9 @@ impl zed::Extension for EmailManagementExtension {
         _project: &zed::Project,
     ) -> zed::Result<zed::Command> {
         match id.0.as_str() {
-            "email-mcp" => Ok(zed::Command {
+            "minimail-mcp" => Ok(zed::Command {
                 command: "uv".to_string(),
-                args: vec!["run".to_string(), "email-mcp.main:main".to_string()],
+                args: vec!["run".to_string(), "minimail-mcp.main:main".to_string()],
                 env: Default::default(),
             }),
             _ => Err(format!("Unknown server: {}", id.0)),

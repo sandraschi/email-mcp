@@ -19,7 +19,7 @@ A comprehensive email MCP server supporting multiple email services including st
 
 ## Standards Compliance
 
-This email-mcp implements current MCP server standards:
+This minimail-mcp implements current MCP server standards:
 
 ### MCPB Packaging (Claude Desktop)
 - Complete `manifest.json` with tool definitions
@@ -93,7 +93,7 @@ pip install -e ".[dev]"
 
 ## Gmail Integration
 
-The email-mcp supports Gmail SMTP with App Password authentication:
+The minimail-mcp supports Gmail SMTP with App Password authentication:
 
 ### Configuration
 ```json

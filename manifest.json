@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.2",
-  "name": "email-mcp",
+  "name": "minimail-mcp",
   "version": "0.3.0",
   "description": "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations",
   "author": {

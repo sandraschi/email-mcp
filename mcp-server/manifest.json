@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.2",
-  "name": "email-mcp",
+  "name": "minimail-mcp",
   "version": "0.3.0",
   "description": "Enterprise-grade multi-service email platform with FastMCP 2.14.3, conversational responses, and comprehensive automation workflows",
   "author": {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test runner for email-mcp."""
+"""Test runner for minimail-mcp."""
 
 import subprocess
 import sys

@@ -16,7 +16,7 @@ def build_mcpb():
     # Define paths
     root_dir = Path(__file__).parent
     mcp_server_dir = root_dir / "mcp-server"
-    output_file = root_dir / "email-mcp.mcpb"
+    output_file = root_dir / "minimail-mcp.mcpb"
 
     if not mcp_server_dir.exists():
         print(f"Error: {mcp_server_dir} directory not found")
@@ -67,7 +67,7 @@ def build_mcpb():
         sys.exit(1)
 
     print("\nPackage ready for Claude Desktop!")
-    print("Drag and drop the email-mcp.mcpb file into Claude Desktop settings.")
+    print("Drag and drop the minimail-mcp.mcpb file into Claude Desktop settings.")
     print("\nMCPB Package Contents:")
     print("  * FastMCP 2.14.3 compliant server")
     print("  * Conversational tool returns")
@@ -87,7 +87,7 @@ def build_mcpb():
     print("  - Rate limiting and batch processing")
     print("  - Real-time monitoring and health checks")
     print("\nFor advanced usage, refer to the complete repository:")
-    print("https://github.com/sandraschi/email-mcp")
+    print("https://github.com/sandraschi/minimail-mcp")
 
 if __name__ == "__main__":
     build_mcpb()

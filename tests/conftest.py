@@ -1,4 +1,4 @@
-"""Pytest configuration for email-mcp tests."""
+"""Pytest configuration for minimail-mcp tests."""
 
 import pytest
 import sys

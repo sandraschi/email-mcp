@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.1] - 2026-01-12
 
 ### Added
-- AI Email Management Orchestrator - Server composition of email-mcp + local-llm-mcp
+- AI Email Management Orchestrator - Server composition of minimail-mcp + local-llm-mcp
 - `weed_trash` tool - AI-powered email cleanup and filtering
 - `email_summarizer` tool - Smart inbox summaries grouped by topic and sender
 - `smart_email_filter` tool - AI-generated email filtering rules

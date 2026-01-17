@@ -1,4 +1,4 @@
-# email-mcp - Project Assessment
+# minimail-mcp - Project Assessment
 
 **Category**: MCP Server + AI Orchestrator
 **Assessment Date**: 2026-01-12
@@ -47,7 +47,7 @@
 - Gmail integration verified working
 
 ### AI Orchestrator Features
-- Server composition architecture (email-mcp + local-llm-mcp)
+- Server composition architecture (minimail-mcp + local-llm-mcp)
 - weed_trash AI-powered email cleanup tool
 - email_summarizer intelligent inbox summaries
 - smart_email_filter AI-generated filtering rules

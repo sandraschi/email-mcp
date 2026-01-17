@@ -14,9 +14,9 @@ This directory contains practical examples demonstrating how to use the Email MC
 
 ### Prerequisites
 
-1. **Install the email-mcp package:**
+1. **Install the minimail-mcp package:**
    ```bash
-   cd email-mcp
+   cd minimail-mcp
    pip install -e ".[dev]"
    ```
 

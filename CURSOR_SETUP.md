@@ -2,7 +2,7 @@
 
 ## 🚀 **New Multi-Service Capabilities**
 
-The email-mcp now supports **15+ email services** including:
+The minimail-mcp now supports **15+ email services** including:
 - **SMTP/IMAP**: Gmail, Outlook, Yahoo, iCloud, ProtonMail
 - **Transactional APIs**: SendGrid, Mailgun, Resend, Amazon SES
 - **Local Testing**: MailHog, Mailpit, MailCatcher, Inbucket
@@ -17,11 +17,11 @@ The email-mcp now supports **15+ email services** including:
 ```json
 {
   "mcpServers": {
-    "email-mcp": {
+    "minimail-mcp": {
       "command": "python",
       "args": ["-m", "email_mcp.server"],
       "env": {
-        "PYTHONPATH": "D:/Dev/repos/email-mcp/src"
+        "PYTHONPATH": "D:/Dev/repos/minimail-mcp/src"
       }
     }
   }

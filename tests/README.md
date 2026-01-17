@@ -184,7 +184,7 @@ async def test_slack_webhook(slack_config):
 ```yaml
 - name: Run Email MCP Tests
   run: |
-    cd email-mcp
+    cd minimail-mcp
     python tests/run_tests.py
 
 - name: Test Coverage

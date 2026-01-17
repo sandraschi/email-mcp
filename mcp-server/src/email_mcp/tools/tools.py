@@ -70,11 +70,11 @@ class EmailTools:
         if service:
             service_obj = self._get_service(service)
             if not service_obj:
-                return {"server": "email-mcp", "error": f"Service '{service}' not found"}
+                return {"server": "minimail-mcp", "error": f"Service '{service}' not found"}
 
             result = await service_obj.test_connection()
             return {
-                "server": "email-mcp",
+                "server": "minimail-mcp",
                 "version": "0.2.0",
                 "services": {service: result}
             }
@@ -88,7 +88,7 @@ class EmailTools:
                 results[name] = {"connected": False, "error": str(e)}
 
         return {
-            "server": "email-mcp",
+            "server": "minimail-mcp",
             "version": "0.2.0",
             "services": results,
             "total_services": len(results),
@@ -146,7 +146,7 @@ class EmailTools:
     async def email_help_tool(self) -> Dict[str, Any]:
         """Get help and usage information for email MCP tools."""
         return {
-            "server": "email-mcp",
+            "server": "minimail-mcp",
             "version": "0.2.0",
             "description": "Multi-service email platform supporting SMTP/IMAP, transactional APIs, local testing, and webhook integrations",
             "supported_services": {

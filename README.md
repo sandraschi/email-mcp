@@ -31,7 +31,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Standards Compliance
 
-This email-mcp implements current MCP server standards:
+This minimail-mcp implements current MCP server standards:
 
 ### MCPB Packaging (Claude Desktop)
 - Complete `manifest.json` with tool definitions
@@ -99,12 +99,12 @@ This email-mcp implements current MCP server standards:
 
 ### Standard Installation
 ```bash
-cd email-mcp
+cd minimail-mcp
 pip install -e ".[dev]"
 ```
 
 ### Claude Desktop (MCPB)
-1. Download the `email-mcp.mcpb` package (when built)
+1. Download the `minimail-mcp.mcpb` package (when built)
 2. Drag and drop into Claude Desktop settings
 3. The server will be automatically configured
 
@@ -141,7 +141,7 @@ For orchestrator usage, see the tools section above.
 
 ## Gmail Integration
 
-The email-mcp supports Gmail SMTP with App Password authentication:
+The minimail-mcp supports Gmail SMTP with App Password authentication:
 
 ### Configuration
 ```json
@@ -170,7 +170,7 @@ The email-mcp supports Gmail SMTP with App Password authentication:
 
 ## ProtonMail Integration
 
-The email-mcp supports ProtonMail with different setup requirements based on your account type:
+The minimail-mcp supports ProtonMail with different setup requirements based on your account type:
 
 ### Free Accounts (ProtonMail Bridge Required)
 
@@ -323,11 +323,11 @@ Add to your `mcp.json`:
 ```json
 {
   "mcpServers": {
-    "email-mcp": {
+    "minimail-mcp": {
       "command": "python",
       "args": ["-m", "email_mcp.server"],
       "env": {
-        "PYTHONPATH": "D:/Dev/repos/email-mcp/src"
+        "PYTHONPATH": "D:/Dev/repos/minimail-mcp/src"
       }
     }
   }
