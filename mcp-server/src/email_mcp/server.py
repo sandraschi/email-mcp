@@ -20,6 +20,7 @@ Configuration supports both environment variables and dynamic service configurat
 import asyncio
 import email
 import imaplib
+from pathlib import Path
 import json
 import logging
 import os
@@ -32,10 +33,14 @@ from email.mime.text import MIMEText
 from typing import Any, Dict, List, Optional, Union
 from abc import ABC, abstractmethod
 import httpx
+from fastapi import FastAPI
 
 import structlog
-from fastmcp import FastMCP
+from fastmcp import Context, FastMCP
+from fastmcp.prompts import Message
 from pydantic import BaseModel, Field
+from .web import setup_webapp
+from .transport import run_server
 
 # Configure structured logging
 structlog.configure(
@@ -86,15 +91,17 @@ def decode_email_header(header_value):
         for decoded_bytes, encoding in decoded_parts:
             if isinstance(decoded_bytes, bytes):
                 # If we have bytes, decode them with the specified encoding or utf-8 as fallback
-                encoding = encoding or 'utf-8'
-                result += decoded_bytes.decode(encoding, errors='replace')
+                encoding = encoding or "utf-8"
+                result += decoded_bytes.decode(encoding, errors="replace")
             else:
                 # If we already have a string, use it as-is
                 result += str(decoded_bytes)
 
         # Test the decoding with the problematic header
         if "=?UTF-8?B?" in str(header_value) or "=?utf-8?q?" in str(header_value):
-            logger.debug("Decoded header test", original=header_value, decoded=result, parts=decoded_parts)
+            logger.debug(
+                "Decoded header test", original=header_value, decoded=result, parts=decoded_parts
+            )
 
         return result
     except Exception as e:
@@ -105,6 +112,7 @@ def decode_email_header(header_value):
 # Email Service Classes
 class EmailServiceConfig(BaseModel):
     """Configuration for an email service."""
+
     name: str
     type: str  # smtp, api, webhook, local
     enabled: bool = True
@@ -119,15 +127,22 @@ class EmailService(ABC):
         self.name = config.name
 
     @abstractmethod
-    async def send_email(self, to: Union[str, List[str]], subject: str, body: str,
-                        html: Optional[str] = None, cc: Optional[List[str]] = None,
-                        bcc: Optional[List[str]] = None) -> Dict[str, Any]:
+    async def send_email(
+        self,
+        to: Union[str, List[str]],
+        subject: str,
+        body: str,
+        html: Optional[str] = None,
+        cc: Optional[List[str]] = None,
+        bcc: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         """Send an email via this service."""
         pass
 
     @abstractmethod
-    async def check_inbox(self, folder: str = "INBOX", limit: int = 10,
-                         unread_only: bool = False) -> Dict[str, Any]:
+    async def check_inbox(
+        self, folder: str = "INBOX", limit: int = 10, unread_only: bool = False
+    ) -> Dict[str, Any]:
         """Check inbox via this service."""
         pass
 
@@ -152,9 +167,15 @@ class SMTPEmailService(EmailService):
         self.imap_user = config.config.get("imap_user", self.smtp_user)
         self.imap_password = config.config.get("imap_password", self.smtp_password)
 
-    async def send_email(self, to: Union[str, List[str]], subject: str, body: str,
-                        html: Optional[str] = None, cc: Optional[List[str]] = None,
-                        bcc: Optional[List[str]] = None) -> Dict[str, Any]:
+    async def send_email(
+        self,
+        to: Union[str, List[str]],
+        subject: str,
+        body: str,
+        html: Optional[str] = None,
+        cc: Optional[List[str]] = None,
+        bcc: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         """Send email via SMTP."""
         if not self.smtp_server or not self.smtp_user or not self.smtp_password:
             return {"success": False, "error": f"SMTP not configured for {self.name}"}
@@ -174,9 +195,13 @@ class SMTPEmailService(EmailService):
 
             recipients = [addr.strip() for addr in (to.split(",") if isinstance(to, str) else to)]
             if cc:
-                recipients.extend([addr.strip() for addr in (cc if isinstance(cc, list) else cc.split(","))])
+                recipients.extend(
+                    [addr.strip() for addr in (cc if isinstance(cc, list) else cc.split(","))]
+                )
             if bcc:
-                recipients.extend([addr.strip() for addr in (bcc if isinstance(bcc, list) else bcc.split(","))])
+                recipients.extend(
+                    [addr.strip() for addr in (bcc if isinstance(bcc, list) else bcc.split(","))]
+                )
 
             def send_sync():
                 with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
@@ -192,13 +217,15 @@ class SMTPEmailService(EmailService):
         except Exception as e:
             return {"success": False, "error": f"SMTP send failed: {str(e)}"}
 
-    async def check_inbox(self, folder: str = "INBOX", limit: int = 10,
-                         unread_only: bool = False) -> Dict[str, Any]:
+    async def check_inbox(
+        self, folder: str = "INBOX", limit: int = 10, unread_only: bool = False
+    ) -> Dict[str, Any]:
         """Check inbox via IMAP."""
         if not self.imap_server or not self.imap_user or not self.imap_password:
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
 
         try:
+
             def check_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
                 mail.login(self.imap_user, self.imap_password)
@@ -229,13 +256,15 @@ class SMTPEmailService(EmailService):
                         from_addr = decode_email_header(email_message.get("From", ""))
                         date = decode_email_header(email_message.get("Date", ""))
 
-                        emails.append({
-                            "id": email_id.decode(),
-                            "subject": subject or "(No Subject)",
-                            "from": from_addr or "Unknown",
-                            "date": date or "Unknown",
-                            "read": not unread_only,
-                        })
+                        emails.append(
+                            {
+                                "id": email_id.decode(),
+                                "subject": subject or "(No Subject)",
+                                "from": from_addr or "Unknown",
+                                "date": date or "Unknown",
+                                "read": not unread_only,
+                            }
+                        )
 
                 mail.close()
                 mail.logout()
@@ -244,7 +273,13 @@ class SMTPEmailService(EmailService):
             loop = asyncio.get_event_loop()
             emails = await loop.run_in_executor(None, check_sync)
 
-            return {"success": True, "emails": emails, "count": len(emails), "service": self.name, "MODIFIED": "YES"}
+            return {
+                "success": True,
+                "emails": emails,
+                "count": len(emails),
+                "service": self.name,
+                "MODIFIED": "YES",
+            }
 
         except Exception as e:
             return {"success": False, "error": f"IMAP check failed: {str(e)}"}
@@ -258,6 +293,7 @@ class SMTPEmailService(EmailService):
 
         if self.smtp_server and self.smtp_user and self.smtp_password:
             try:
+
                 def test_smtp():
                     with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=5) as server:
                         server.starttls()
@@ -271,6 +307,7 @@ class SMTPEmailService(EmailService):
 
         if self.imap_server and self.imap_user and self.imap_password:
             try:
+
                 def test_imap():
                     mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=5)
                     mail.login(self.imap_user, self.imap_password)
@@ -301,9 +338,15 @@ class APIEmailService(EmailService):
         self.from_email = config.config.get("from_email")
         self.service_type = config.config.get("service_type", "generic")
 
-    async def send_email(self, to: Union[str, List[str]], subject: str, body: str,
-                        html: Optional[str] = None, cc: Optional[List[str]] = None,
-                        bcc: Optional[List[str]] = None) -> Dict[str, Any]:
+    async def send_email(
+        self,
+        to: Union[str, List[str]],
+        subject: str,
+        body: str,
+        html: Optional[str] = None,
+        cc: Optional[List[str]] = None,
+        bcc: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         """Send email via API."""
         if not self.api_key or not self.api_url or not self.from_email:
             return {"success": False, "error": f"API not configured for {self.name}"}
@@ -317,9 +360,17 @@ class APIEmailService(EmailService):
                 response = await client.post(self.api_url, json=payload, headers=headers)
 
                 if response.status_code in [200, 201, 202]:
-                    return {"success": True, "status": "sent", "service": self.name, "response": response.json()}
+                    return {
+                        "success": True,
+                        "status": "sent",
+                        "service": self.name,
+                        "response": response.json(),
+                    }
                 else:
-                    return {"success": False, "error": f"API error {response.status_code}: {response.text}"}
+                    return {
+                        "success": False,
+                        "error": f"API error {response.status_code}: {response.text}",
+                    }
 
         except Exception as e:
             return {"success": False, "error": f"API send failed: {str(e)}"}
@@ -335,8 +386,8 @@ class APIEmailService(EmailService):
                 "subject": subject,
                 "content": [
                     {"type": "text/plain", "value": body},
-                    {"type": "text/html", "value": html} if html else None
-                ]
+                    {"type": "text/html", "value": html} if html else None,
+                ],
             }
         elif self.service_type == "mailgun":
             return {
@@ -344,7 +395,7 @@ class APIEmailService(EmailService):
                 "to": to_list,
                 "subject": subject,
                 "text": body,
-                "html": html
+                "html": html,
             }
         elif self.service_type == "resend":
             return {
@@ -352,7 +403,7 @@ class APIEmailService(EmailService):
                 "to": to_list,
                 "subject": subject,
                 "text": body,
-                "html": html
+                "html": html,
             }
         else:  # Generic API
             return {
@@ -361,7 +412,7 @@ class APIEmailService(EmailService):
                 "body": body,
                 "html": html,
                 "cc": cc,
-                "bcc": bcc
+                "bcc": bcc,
             }
 
     def _get_api_headers(self):
@@ -373,10 +424,14 @@ class APIEmailService(EmailService):
         else:
             return {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
-    async def check_inbox(self, folder: str = "INBOX", limit: int = 10,
-                         unread_only: bool = False) -> Dict[str, Any]:
+    async def check_inbox(
+        self, folder: str = "INBOX", limit: int = 10, unread_only: bool = False
+    ) -> Dict[str, Any]:
         """API-based services typically don't support inbox checking."""
-        return {"success": False, "error": f"Inbox checking not supported for API service {self.name}"}
+        return {
+            "success": False,
+            "error": f"Inbox checking not supported for API service {self.name}",
+        }
 
     async def test_connection(self) -> Dict[str, Any]:
         """Test API connection."""
@@ -387,8 +442,10 @@ class APIEmailService(EmailService):
             async with httpx.AsyncClient(timeout=10.0) as client:
                 headers = self._get_api_headers()
                 # Try a simple API call or health check
-                response = await client.get(self.api_url.replace("/send", "/health").replace("/v3/mail/send", "/health"),
-                                          headers=headers)
+                response = await client.get(
+                    self.api_url.replace("/send", "/health").replace("/v3/mail/send", "/health"),
+                    headers=headers,
+                )
                 return {"service": self.name, "connected": response.status_code < 400}
         except Exception as e:
             return {"service": self.name, "connected": False, "error": str(e)}
@@ -404,9 +461,15 @@ class LocalEmailService(EmailService):
         self.http_url = config.config.get("http_url", "http://localhost:8025")
         self.service_type = config.config.get("service_type", "mailhog")
 
-    async def send_email(self, to: Union[str, List[str]], subject: str, body: str,
-                        html: Optional[str] = None, cc: Optional[List[str]] = None,
-                        bcc: Optional[List[str]] = None) -> Dict[str, Any]:
+    async def send_email(
+        self,
+        to: Union[str, List[str]],
+        subject: str,
+        body: str,
+        html: Optional[str] = None,
+        cc: Optional[List[str]] = None,
+        bcc: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         """Send email to local testing service."""
         try:
             msg = MIMEMultipart("alternative")
@@ -427,13 +490,19 @@ class LocalEmailService(EmailService):
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, send_sync)
 
-            return {"success": True, "status": "sent", "service": self.name, "note": "Check web UI at " + self.http_url}
+            return {
+                "success": True,
+                "status": "sent",
+                "service": self.name,
+                "note": "Check web UI at " + self.http_url,
+            }
 
         except Exception as e:
             return {"success": False, "error": f"Local send failed: {str(e)}"}
 
-    async def check_inbox(self, folder: str = "INBOX", limit: int = 10,
-                         unread_only: bool = False) -> Dict[str, Any]:
+    async def check_inbox(
+        self, folder: str = "INBOX", limit: int = 10, unread_only: bool = False
+    ) -> Dict[str, Any]:
         """Check inbox via local service API."""
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
@@ -443,30 +512,51 @@ class LocalEmailService(EmailService):
                         data = response.json()
                         emails = []
                         for msg in data.get("items", [])[:limit]:
-                            emails.append({
-                                "id": msg.get("ID"),
-                                "subject": msg.get("Content", {}).get("Headers", {}).get("Subject", ["(No Subject)"])[0],
-                                "from": msg.get("Content", {}).get("Headers", {}).get("From", ["Unknown"])[0],
-                                "date": msg.get("Created"),
-                                "read": True,
-                            })
-                        return {"success": True, "emails": emails, "count": len(emails), "service": self.name}
+                            emails.append(
+                                {
+                                    "id": msg.get("ID"),
+                                    "subject": msg.get("Content", {})
+                                    .get("Headers", {})
+                                    .get("Subject", ["(No Subject)"])[0],
+                                    "from": msg.get("Content", {})
+                                    .get("Headers", {})
+                                    .get("From", ["Unknown"])[0],
+                                    "date": msg.get("Created"),
+                                    "read": True,
+                                }
+                            )
+                        return {
+                            "success": True,
+                            "emails": emails,
+                            "count": len(emails),
+                            "service": self.name,
+                        }
                 elif self.service_type == "mailpit":
                     response = await client.get(f"{self.http_url}/api/v1/messages")
                     if response.status_code == 200:
                         data = response.json()
                         emails = []
                         for msg in data.get("messages", [])[:limit]:
-                            emails.append({
-                                "id": str(msg.get("ID")),
-                                "subject": msg.get("Subject", "(No Subject)"),
-                                "from": msg.get("From", {}).get("Address", "Unknown"),
-                                "date": msg.get("Date"),
-                                "read": True,
-                            })
-                        return {"success": True, "emails": emails, "count": len(emails), "service": self.name}
+                            emails.append(
+                                {
+                                    "id": str(msg.get("ID")),
+                                    "subject": msg.get("Subject", "(No Subject)"),
+                                    "from": msg.get("From", {}).get("Address", "Unknown"),
+                                    "date": msg.get("Date"),
+                                    "read": True,
+                                }
+                            )
+                        return {
+                            "success": True,
+                            "emails": emails,
+                            "count": len(emails),
+                            "service": self.name,
+                        }
 
-            return {"success": False, "error": f"Unsupported local service type: {self.service_type}"}
+            return {
+                "success": False,
+                "error": f"Unsupported local service type: {self.service_type}",
+            }
 
         except Exception as e:
             return {"success": False, "error": f"Local inbox check failed: {str(e)}"}
@@ -477,6 +567,7 @@ class LocalEmailService(EmailService):
         http_ok = False
 
         try:
+
             def test_smtp():
                 with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=5) as server:
                     server.helo()
@@ -505,9 +596,15 @@ class WebhookEmailService(EmailService):
         self.webhook_url = config.config.get("webhook_url")
         self.service_type = config.config.get("service_type", "generic")
 
-    async def send_email(self, to: Union[str, List[str]], subject: str, body: str,
-                        html: Optional[str] = None, cc: Optional[List[str]] = None,
-                        bcc: Optional[List[str]] = None) -> Dict[str, Any]:
+    async def send_email(
+        self,
+        to: Union[str, List[str]],
+        subject: str,
+        body: str,
+        html: Optional[str] = None,
+        cc: Optional[List[str]] = None,
+        bcc: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         """Send email via webhook."""
         if not self.webhook_url:
             return {"success": False, "error": f"Webhook not configured for {self.name}"}
@@ -521,7 +618,10 @@ class WebhookEmailService(EmailService):
                 if response.status_code in [200, 201, 204]:
                     return {"success": True, "status": "sent", "service": self.name}
                 else:
-                    return {"success": False, "error": f"Webhook error {response.status_code}: {response.text}"}
+                    return {
+                        "success": False,
+                        "error": f"Webhook error {response.status_code}: {response.text}",
+                    }
 
         except Exception as e:
             return {"success": False, "error": f"Webhook send failed: {str(e)}"}
@@ -538,22 +638,27 @@ class WebhookEmailService(EmailService):
                 "blocks": [
                     {"type": "header", "text": {"type": "plain_text", "text": f"📧 {subject}"}},
                     {"type": "section", "text": {"type": "mrkdwn", "text": content}},
-                    {"type": "section", "fields": [
-                        {"type": "mrkdwn", "text": f"*To:* {to}"},
-                        {"type": "mrkdwn", "text": f"*From:* Email Service"}
-                    ]}
-                ]
+                    {
+                        "type": "section",
+                        "fields": [
+                            {"type": "mrkdwn", "text": f"*To:* {to}"},
+                            {"type": "mrkdwn", "text": "*From:* Email Service"},
+                        ],
+                    },
+                ],
             }
         elif self.service_type == "discord":
             return {
-                "embeds": [{
-                    "title": f"📧 {subject}",
-                    "description": body,
-                    "fields": [
-                        {"name": "To", "value": str(to), "inline": True},
-                        {"name": "Service", "value": self.name, "inline": True}
-                    ]
-                }]
+                "embeds": [
+                    {
+                        "title": f"📧 {subject}",
+                        "description": body,
+                        "fields": [
+                            {"name": "To", "value": str(to), "inline": True},
+                            {"name": "Service", "value": self.name, "inline": True},
+                        ],
+                    }
+                ]
             }
         else:  # Generic webhook
             return {
@@ -563,13 +668,17 @@ class WebhookEmailService(EmailService):
                 "to": to,
                 "cc": cc,
                 "bcc": bcc,
-                "service": self.name
+                "service": self.name,
             }
 
-    async def check_inbox(self, folder: str = "INBOX", limit: int = 10,
-                         unread_only: bool = False) -> Dict[str, Any]:
+    async def check_inbox(
+        self, folder: str = "INBOX", limit: int = 10, unread_only: bool = False
+    ) -> Dict[str, Any]:
         """Webhook services typically don't support inbox checking."""
-        return {"success": False, "error": f"Inbox checking not supported for webhook service {self.name}"}
+        return {
+            "success": False,
+            "error": f"Inbox checking not supported for webhook service {self.name}",
+        }
 
     async def test_connection(self) -> Dict[str, Any]:
         """Test webhook connection."""
@@ -613,10 +722,10 @@ class EmailServiceFactory:
 @asynccontextmanager
 async def server_lifespan(mcp_instance: FastMCP):
     """Server lifespan context manager for startup and cleanup.
-    
+
     Handles server initialization and shutdown logging. Called automatically
     by FastMCP when the server starts and stops.
-    
+
     Args:
         mcp_instance: The FastMCP server instance (provided by framework)
     """
@@ -643,12 +752,25 @@ class EmailMCP:
         backward compatibility, and initializes the service registry for dynamic
         service management.
         """
-        # Initialize FastMCP
-        self.mcp = FastMCP(
-            name="Email-MCP",
-            version="0.1.0",
-            lifespan=server_lifespan,
-        )
+        # Optional sampling fallback (pip install fastmcp[anthropic], set ANTHROPIC_API_KEY)
+        _mcp_kwargs: Dict[str, Any] = {
+            "name": "Email-MCP",
+            "version": "0.1.0",
+            "lifespan": server_lifespan,
+        }
+        if os.getenv("ANTHROPIC_API_KEY"):
+            try:
+                from fastmcp.client.sampling.handlers.anthropic import AnthropicSamplingHandler
+
+                _mcp_kwargs["sampling_handler"] = AnthropicSamplingHandler(
+                    default_model=os.getenv("ANTHROPIC_SAMPLING_MODEL", "claude-sonnet-4-20250514"),
+                )
+                _mcp_kwargs["sampling_handler_behavior"] = "fallback"
+            except ImportError:
+                logger.warning(
+                    "ANTHROPIC_API_KEY set but fastmcp[anthropic] not installed; sampling fallback disabled"
+                )
+        self.mcp = FastMCP(**_mcp_kwargs)
 
         # Service registry
         self.services: Dict[str, EmailService] = {}
@@ -659,8 +781,11 @@ class EmailMCP:
         # Load additional services from configuration
         self._load_configured_services()
 
-        # Register tools
+        # Register tools, prompts, and optional skills (FastMCP 3.1)
         self._register_tools()
+        self._register_prompts()
+        self._register_sampling_tool()
+        self._add_skills_provider()
 
     def _load_default_services(self):
         """Load default SMTP/IMAP service from environment variables."""
@@ -682,7 +807,7 @@ class EmailMCP:
                     "imap_port": int(os.getenv("IMAP_PORT", "993")),
                     "imap_user": os.getenv("IMAP_USER", smtp_user),
                     "imap_password": os.getenv("IMAP_PASSWORD", ""),
-                }
+                },
             )
             self.services["default"] = EmailServiceFactory.create_service(default_config)
 
@@ -714,8 +839,8 @@ class EmailMCP:
                     "api_key": sendgrid_key,
                     "api_url": "https://api.sendgrid.com/v3/mail/send",
                     "from_email": os.getenv("SENDGRID_FROM_EMAIL", "noreply@example.com"),
-                    "service_type": "sendgrid"
-                }
+                    "service_type": "sendgrid",
+                },
             )
             self.services["sendgrid"] = EmailServiceFactory.create_service(sendgrid_config)
 
@@ -730,8 +855,8 @@ class EmailMCP:
                     "api_key": f"api:{mailgun_key}",
                     "api_url": f"https://api.mailgun.net/v3/{mailgun_domain}/messages",
                     "from_email": os.getenv("MAILGUN_FROM_EMAIL", f"noreply@{mailgun_domain}"),
-                    "service_type": "mailgun"
-                }
+                    "service_type": "mailgun",
+                },
             )
             self.services["mailgun"] = EmailServiceFactory.create_service(mailgun_config)
 
@@ -745,8 +870,8 @@ class EmailMCP:
                     "api_key": resend_key,
                     "api_url": "https://api.resend.com/emails",
                     "from_email": os.getenv("RESEND_FROM_EMAIL", "noreply@example.com"),
-                    "service_type": "resend"
-                }
+                    "service_type": "resend",
+                },
             )
             self.services["resend"] = EmailServiceFactory.create_service(resend_config)
 
@@ -759,8 +884,8 @@ class EmailMCP:
                     "smtp_server": os.getenv("MAILHOG_SMTP_HOST", "localhost"),
                     "smtp_port": int(os.getenv("MAILHOG_SMTP_PORT", "1025")),
                     "http_url": os.getenv("MAILHOG_HTTP_URL", "http://localhost:8025"),
-                    "service_type": "mailhog"
-                }
+                    "service_type": "mailhog",
+                },
             )
             self.services["mailhog"] = EmailServiceFactory.create_service(mailhog_config)
 
@@ -770,10 +895,7 @@ class EmailMCP:
             slack_config = EmailServiceConfig(
                 name="slack",
                 type="webhook",
-                config={
-                    "webhook_url": slack_webhook,
-                    "service_type": "slack"
-                }
+                config={"webhook_url": slack_webhook, "service_type": "slack"},
             )
             self.services["slack"] = EmailServiceFactory.create_service(slack_config)
 
@@ -798,76 +920,28 @@ class EmailMCP:
             cc: Optional[List[str]] = None,
             bcc: Optional[List[str]] = None,
         ) -> Dict[str, Any]:
-            """Send an email via specified email service.
+            """Send an email via the specified email service.
 
-            Sends an email using the specified email service. Supports SMTP, API-based services,
-            local testing services, and webhook integrations. Automatically detects service
-            capabilities and uses the appropriate sending method.
+            Supports SMTP, API-based services, local testing, and webhooks. Service capabilities
+            are detected automatically.
 
             Args:
-                to: Recipient email address(es). Can be:
-                    - Single address: "user@example.com"
-                    - Comma-separated: "user1@example.com, user2@example.com"
-                    - List: ["user1@example.com", "user2@example.com"]
-                subject: Email subject line. Required.
-                body: Plain text email body. Required. This serves as the fallback
-                    for email clients that don't support HTML.
-                service: Email service to use. Options:
-                    - "default": Default SMTP/IMAP service (from env vars)
-                    - "sendgrid": SendGrid transactional email
-                    - "mailgun": Mailgun transactional email
-                    - "resend": Resend transactional email
-                    - "mailhog": Local MailHog testing service
-                    - "slack": Send to Slack webhook
-                    - "discord": Send to Discord webhook
-                    - Custom service names configured via EMAIL_SERVICES
-                html: Optional HTML email body. If provided, the email will be sent
-                    as multipart/alternative with both text and HTML versions.
-                    Example: "<h1>Title</h1><p>Content</p>"
-                cc: Optional CC (carbon copy) recipients. Same format as 'to'.
-                bcc: Optional BCC (blind carbon copy) recipients. Same format as 'to'.
+                See Parameters block.
 
             Returns:
-                Dictionary with service-specific results:
-                {
-                    "success": bool,      # True if email sent successfully
-                    "status": str,        # "sent" on success
-                    "service": str,       # Service used
-                    "to": str,            # Recipient address(es)
-                    "subject": str,       # Email subject
-                    "error": str          # Error message if success is False
-                }
+                Dict with success (bool), status, service, to, subject; error (str) if success is False.
 
             Examples:
-                # Send via default SMTP service
-                send_email(
-                    to="user@example.com",
-                    subject="Hello",
-                    body="This is a test email"
-                )
-
-                # Send via SendGrid
-                send_email(
-                    to="user@example.com",
-                    subject="Welcome",
-                    body="Welcome to our service",
-                    service="sendgrid",
-                    html="<h1>Welcome!</h1><p>Thanks for joining.</p>"
-                )
-
-                # Send to Slack webhook
-                send_email(
-                    to="general",
-                    subject="Alert",
-                    body="System alert message",
-                    service="slack"
-                )
+                send_email(to="user@example.com", subject="Hello", body="Test")
+                send_email(..., service="sendgrid", html="<h1>Hi</h1>")
+                send_email(to="general", subject="Alert", body="Message", service="slack")
 
             Notes:
                 - Service availability depends on configuration
-                - API services may have different rate limits and features
-                - Local testing services don't send real emails
-                - Webhook services convert emails to chat messages
+                - Local/testing services don't send real email; webhooks become chat messages
+
+            Errors:
+                - Service not available: use list_services() or configure_service() first
             """
             if service not in self.services:
                 available_services = list(self.services.keys())
@@ -893,62 +967,25 @@ class EmailMCP:
             limit: int = 10,
             unread_only: bool = False,
         ) -> Dict[str, Any]:
-            """Check inbox via specified email service.
+            """Check inbox for the specified email service and folder.
 
-            Retrieves emails from the specified service and folder. Supports IMAP-based services,
-            local testing services with web APIs, and service-specific inbox checking.
+            Supports IMAP-based services and local testing (MailHog, Mailpit). Not all services
+            support inbox (e.g. API/webhook-only).
 
             Args:
-                service: Email service to check. Options:
-                    - "default": Default IMAP service (from env vars)
-                    - "mailhog": Local MailHog testing service
-                    - "mailpit": Local Mailpit testing service
-                    - Custom service names that support inbox checking
-                folder: Mail folder name to check. Default: "INBOX". Common folders:
-                    - "INBOX": Main inbox folder
-                    - "Sent": Sent items folder
-                    - "Drafts": Draft messages folder
-                    - "Trash": Deleted messages folder
-                    Folder names are case-sensitive and provider-specific.
-                limit: Maximum number of emails to return. Default: 10.
-                unread_only: If True, only returns unread emails. Default: False.
+                See Parameters block.
 
             Returns:
-                Dictionary with service-specific results:
-                {
-                    "success": bool,      # True if inbox check succeeded
-                    "emails": [           # List of email dictionaries
-                        {
-                            "id": str,            # Message ID
-                            "subject": str,       # Email subject
-                            "from": str,          # Sender address
-                            "date": str,          # Email date
-                            "read": bool          # Read status
-                        }
-                    ],
-                    "count": int,         # Number of emails returned
-                    "service": str,       # Service used
-                    "folder": str,        # Folder checked
-                    "error": str          # Error message if success is False
-                }
+                Dict with success, emails (list of id, subject, from, date, read), count, service, folder; error if failed.
 
             Examples:
-                # Check default IMAP inbox
                 check_inbox()
-                # Returns: {"success": True, "emails": [...], "count": 10, "service": "default"}
-
-                # Check MailHog testing inbox
                 check_inbox(service="mailhog", limit=20)
-                # Returns emails from local testing service
-
-                # Check unread emails only
                 check_inbox(unread_only=True, limit=5)
 
             Notes:
-                - Not all services support inbox checking (API/webhook services typically don't)
-                - Local testing services provide web UIs for viewing emails
-                - IMAP services support standard folder names
-                - Results are sorted with most recent first
+                - API/webhook services typically don't support inbox
+                - Results sorted most recent first
             """
             if service not in self.services:
                 available_services = list(self.services.keys())
@@ -961,54 +998,32 @@ class EmailMCP:
             result = await email_service.check_inbox(folder, limit, unread_only)
 
             if result.get("success"):
-                logger.info("Inbox checked", service=service, count=result.get("count", 0), folder=folder)
+                logger.info(
+                    "Inbox checked", service=service, count=result.get("count", 0), folder=folder
+                )
             else:
                 logger.error("Failed to check inbox", service=service, error=result.get("error"))
 
             return result
 
-
         @self.mcp.tool()
         async def email_status(service: Optional[str] = None) -> Dict[str, Any]:
             """Get email service status and test connectivity.
 
-            Tests connectivity for specified service or all configured services.
-            Verifies that credentials are correct and services are reachable.
+            Verifies credentials and reachability for the given service or all services.
 
             Args:
-                service: Specific service to test, or None for all services.
+                See Parameters block.
 
             Returns:
-                Dictionary with service status information:
-                {
-                    "server": str,           # Server name
-                    "version": str,          # Server version
-                    "services": {            # Service-specific status
-                        "service_name": {
-                            "configured": bool,
-                            "connected": bool,
-                            "error": str,        # Error message if connection failed
-                            "type": str          # Service type (smtp, api, local, webhook)
-                        }
-                    },
-                    "total_services": int,
-                    "configured_services": int,
-                    "connected_services": int
-                }
+                Dict with server, version, services (per-service configured, connected, error, type), counts.
 
             Examples:
-                # Check all services
                 email_status()
-                # Returns status for all configured services
-
-                # Check specific service
                 email_status(service="sendgrid")
-                # Returns status only for SendGrid service
 
             Notes:
-                - Tests actual connectivity, not just configuration presence
-                - Connection tests are quick (timeout after 5-10 seconds)
-                - API keys and passwords are not exposed in results
+                - Tests real connectivity; quick timeout (5–10 s). Credentials not exposed.
             """
             services_to_check = [service] if service else list(self.services.keys())
             service_statuses = {}
@@ -1019,16 +1034,22 @@ class EmailMCP:
                     status = await email_service.test_connection()
                     service_statuses[svc_name] = {
                         "configured": True,
-                        "connected": status.get("connected", status.get("smtp_connected", False) or status.get("imap_connected", False)),
-                        "error": status.get("error") or status.get("smtp_error") or status.get("imap_error"),
-                        "type": email_service.config.type
+                        "connected": status.get(
+                            "connected",
+                            status.get("smtp_connected", False)
+                            or status.get("imap_connected", False),
+                        ),
+                        "error": status.get("error")
+                        or status.get("smtp_error")
+                        or status.get("imap_error"),
+                        "type": email_service.config.type,
                     }
                 else:
                     service_statuses[svc_name] = {
                         "configured": False,
                         "connected": False,
                         "error": f"Service '{svc_name}' not configured",
-                        "type": "unknown"
+                        "type": "unknown",
                     }
 
             configured_count = sum(1 for s in service_statuses.values() if s["configured"])
@@ -1059,69 +1080,33 @@ class EmailMCP:
             config: Dict[str, Any],
             enabled: bool = True,
         ) -> Dict[str, Any]:
-            """Configure a new email service dynamically.
+            """Configure a new email service at runtime.
 
-            Adds a new email service configuration at runtime. The service will be
-            available for sending emails and inbox checking immediately.
+            The service is available for send_email and check_inbox immediately after config.
 
             Args:
-                name: Unique name for the service (e.g., "my-sendgrid", "dev-mailhog")
-                type: Service type - "smtp", "api", "local", or "webhook"
-                config: Service-specific configuration dictionary
-                enabled: Whether the service should be enabled (default: True)
+                See Parameters block.
 
             Returns:
-                Dictionary with configuration result:
-                {
-                    "success": bool,
-                    "service": str,       # Service name
-                    "type": str,          # Service type
-                    "message": str        # Success/error message
-                }
+                Dict with success, service, type, message.
 
             Examples:
-                # Configure SendGrid API service
-                configure_service(
-                    name="my-sendgrid",
-                    type="api",
-                    config={
-                        "api_key": "your-sendgrid-key",
-                        "api_url": "https://api.sendgrid.com/v3/mail/send",
-                        "from_email": "noreply@yourdomain.com",
-                        "service_type": "sendgrid"
-                    }
-                )
-
-                # Configure local MailHog for testing
-                configure_service(
-                    name="local-testing",
-                    type="local",
-                    config={
-                        "smtp_server": "localhost",
-                        "smtp_port": 1025,
-                        "http_url": "http://localhost:8025",
-                        "service_type": "mailhog"
-                    }
-                )
+                configure_service(name="my-sendgrid", type="api", config={"api_key": "...", "api_url": "...", "from_email": "...", "service_type": "sendgrid"})
+                configure_service(name="local-testing", type="local", config={"smtp_server": "localhost", "smtp_port": 1025, "service_type": "mailhog"})
 
             Notes:
-                - Service names must be unique
-                - Configuration is stored in memory (not persisted)
-                - Use list_services() to see available services
+                - Names must be unique. Config is in-memory only (not persisted).
             """
             if name in self.services:
                 return {
                     "success": False,
                     "service": name,
-                    "message": f"Service '{name}' already exists"
+                    "message": f"Service '{name}' already exists",
                 }
 
             try:
                 service_config = EmailServiceConfig(
-                    name=name,
-                    type=type,
-                    enabled=enabled,
-                    config=config
+                    name=name, type=type, enabled=enabled, config=config
                 )
                 self.services[name] = EmailServiceFactory.create_service(service_config)
 
@@ -1130,67 +1115,45 @@ class EmailMCP:
                     "success": True,
                     "service": name,
                     "type": type,
-                    "message": f"Service '{name}' configured successfully"
+                    "message": f"Service '{name}' configured successfully",
                 }
             except Exception as e:
                 logger.error("Failed to configure service", service=name, error=str(e))
                 return {
                     "success": False,
                     "service": name,
-                    "message": f"Failed to configure service: {str(e)}"
+                    "message": f"Failed to configure service: {str(e)}",
                 }
 
         @self.mcp.tool()
         async def list_services() -> Dict[str, Any]:
             """List all configured email services.
 
-            Returns information about all available email services, their types,
-            and configuration status.
+            Returns types, enabled/configured status, and descriptions per service.
 
             Returns:
-                Dictionary with service information:
-                {
-                    "services": {
-                        "service_name": {
-                            "type": str,        # Service type
-                            "enabled": bool,    # Whether service is enabled
-                            "configured": bool, # Whether properly configured
-                            "description": str  # Human-readable description
-                        }
-                    },
-                    "count": int,           # Total number of services
-                    "enabled_count": int,   # Number of enabled services
-                    "types": [str]          # List of available service types
-                }
+                Dict with services (name -> type, enabled, configured, description), count, enabled_count, types.
 
             Examples:
-                # List all services
                 list_services()
-                # Returns: {
-                #     "services": {
-                #         "default": {"type": "smtp", "enabled": true, "configured": true, "description": "Default SMTP/IMAP service"},
-                #         "sendgrid": {"type": "api", "enabled": true, "configured": true, "description": "SendGrid transactional email"}
-                #     },
-                #     "count": 2,
-                #     "enabled_count": 2,
-                #     "types": ["smtp", "api", "local", "webhook"]
-                # }
 
             Notes:
-                - Shows both automatically configured and manually added services
-                - Configuration status indicates if required credentials are available
-                - Use email_status() to test actual connectivity
+                - Use email_status() to test connectivity
             """
             service_info = {}
             enabled_count = 0
 
             for name, service in self.services.items():
                 configured = True
-                description = f"{service.__class__.__name__.replace('EmailService', '').lower()} service"
+                description = (
+                    f"{service.__class__.__name__.replace('EmailService', '').lower()} service"
+                )
 
                 # Check if service is properly configured
                 if isinstance(service, SMTPEmailService):
-                    configured = bool(service.smtp_server and service.smtp_user and service.smtp_password)
+                    configured = bool(
+                        service.smtp_server and service.smtp_user and service.smtp_password
+                    )
                     description = "SMTP/IMAP email service"
                 elif isinstance(service, APIEmailService):
                     configured = bool(service.api_key and service.api_url and service.from_email)
@@ -1206,7 +1169,7 @@ class EmailMCP:
                     "type": service.config.type,
                     "enabled": service.config.enabled,
                     "configured": configured,
-                    "description": description
+                    "description": description,
                 }
 
                 if service.config.enabled:
@@ -1216,42 +1179,23 @@ class EmailMCP:
                 "services": service_info,
                 "count": len(service_info),
                 "enabled_count": enabled_count,
-                "types": ["smtp", "api", "local", "webhook"]
+                "types": ["smtp", "api", "local", "webhook"],
             }
 
         @self.mcp.tool()
         async def email_help() -> Dict[str, Any]:
-            """Get help and usage information for email MCP tools and services.
+            """Get help and usage for email MCP tools and services.
 
-            Returns comprehensive help information including available tools, supported services,
-            usage examples, configuration requirements, and common use cases.
+            Returns tools list, supported service types, examples, and configuration notes.
 
             Returns:
-                Dictionary with service and tool information:
-                {
-                    "server": str,              # Server name
-                    "version": str,             # Server version
-                    "description": str,         # Server description
-                    "supported_services": {     # Available service types
-                        "smtp": str,            # Description of SMTP services
-                        "api": str,             # Description of API services
-                        "local": str,           # Description of local services
-                        "webhook": str          # Description of webhook services
-                    },
-                    "tools": [...],             # List of available tools
-                    "examples": [...],          # Usage examples
-                    "notes": [...]              # Important notes and tips
-                }
+                Dict with server, version, description, supported_services, tools, examples, notes.
 
             Examples:
-                # Get comprehensive help
                 email_help()
-                # Returns full documentation for all services and tools
 
             Notes:
-                - Use list_services() to see currently configured services
-                - Use email_status() to test service connectivity
-                - Use configure_service() to add new services dynamically
+                - list_services() for configured services; email_status() to test; configure_service() to add services
             """
             return {
                 "server": "Email-MCP",
@@ -1261,39 +1205,39 @@ class EmailMCP:
                     "smtp": "Standard email providers (Gmail, Outlook, Yahoo, iCloud, ProtonMail)",
                     "api": "Transactional email APIs (SendGrid, Mailgun, Postmark, Amazon SES, Resend)",
                     "local": "Local testing services (MailHog, Mailpit, MailCatcher, Inbucket)",
-                    "webhook": "Chat/webhook integrations (Slack, Discord, Telegram, GitHub)"
+                    "webhook": "Chat/webhook integrations (Slack, Discord, Telegram, GitHub)",
                 },
                 "tools": [
                     {
                         "name": "send_email",
                         "description": "Send emails via any configured service",
-                        "usage": 'send_email(to="user@example.com", subject="Hello", body="Message", service="sendgrid")'
+                        "usage": 'send_email(to="user@example.com", subject="Hello", body="Message", service="sendgrid")',
                     },
                     {
                         "name": "check_inbox",
                         "description": "Check inbox via IMAP or service APIs",
-                        "usage": 'check_inbox(service="default", folder="INBOX", limit=10)'
+                        "usage": 'check_inbox(service="default", folder="INBOX", limit=10)',
                     },
                     {
                         "name": "email_status",
                         "description": "Test connectivity for services",
-                        "usage": "email_status(service='sendgrid')"
+                        "usage": "email_status(service='sendgrid')",
                     },
                     {
                         "name": "configure_service",
                         "description": "Add new email services dynamically",
-                        "usage": "configure_service(name='my-api', type='api', config={...})"
+                        "usage": "configure_service(name='my-api', type='api', config={...})",
                     },
                     {
                         "name": "list_services",
                         "description": "List all configured email services",
-                        "usage": "list_services()"
+                        "usage": "list_services()",
                     },
                     {
                         "name": "email_help",
                         "description": "Get this help information",
-                        "usage": "email_help()"
-                    }
+                        "usage": "email_help()",
+                    },
                 ],
                 "configuration": {
                     "environment_variables": {
@@ -1307,9 +1251,9 @@ class EmailMCP:
                         "MAILGUN_API_KEY": "Mailgun API key",
                         "RESEND_API_KEY": "Resend API key",
                         "MAILHOG_ENABLED": "Set to 'true' to enable MailHog",
-                        "SLACK_WEBHOOK_URL": "Slack webhook URL for notifications"
+                        "SLACK_WEBHOOK_URL": "Slack webhook URL for notifications",
                     },
-                    "dynamic_configuration": "Use configure_service() to add services at runtime"
+                    "dynamic_configuration": "Use configure_service() to add services at runtime",
                 },
                 "examples": [
                     "# Send via different services",
@@ -1326,7 +1270,7 @@ class EmailMCP:
                     "",
                     "# Service management",
                     "list_services()",
-                    "email_status()"
+                    "email_status()",
                 ],
                 "notes": [
                     "Gmail requires App Passwords, not regular passwords",
@@ -1336,35 +1280,73 @@ class EmailMCP:
                     "Webhook services convert emails to chat messages",
                     "IMAP services support standard folder names (INBOX, Sent, etc.)",
                     "All operations are performed asynchronously",
-                    "Service configurations are stored in memory (not persisted across restarts)"
-                ]
+                    "Service configurations are stored in memory (not persisted across restarts)",
+                ],
             }
+
+    def _register_prompts(self) -> None:
+        """Register FastMCP 3.1 prompts (reusable message templates)."""
+        mcp = self.mcp
+
+        @mcp.prompt
+        def email_compose_request(recipient: str, purpose: str, tone: str = "professional") -> str:
+            """Generates a user message asking to compose an email."""
+            return f"Compose an email to {recipient}. Purpose: {purpose}. Tone: {tone}."
+
+        @mcp.prompt
+        def email_help_request(topic: str) -> Message:
+            """Generates a request for email-MCP help on a specific topic."""
+            return Message(
+                f"I need help with the email MCP server. Topic: {topic}. "
+                "Explain how to use the relevant tools (send_email, check_inbox, list_services, configure_service, email_status, email_help)."
+            )
+
+    def _register_sampling_tool(self) -> None:
+        """Register a tool that uses LLM sampling (FastMCP 3.1 / SEP-1577)."""
+        mcp = self.mcp
+
+        @mcp.tool()
+        async def suggest_email_subject(body: str, ctx: Context) -> str:
+            """Suggest 1–3 concise email subject lines for the given body text.
+
+            Uses the client's LLM (sampling) when available. Args: See Parameters block.
+            """
+            result = await ctx.sample(
+                messages=f"Suggest 1 to 3 short, clear email subject lines for this body. Reply with only the subjects, one per line.\n\nBody:\n{body[:2000]}",
+                system_prompt="You are a concise assistant. Output only subject lines, one per line, no numbering or extra text.",
+                max_tokens=150,
+            )
+            return result.text or ""
+
+    def _add_skills_provider(self) -> None:
+        """Add Skills provider if an assets/skills directory exists (FastMCP 3.1)."""
+        try:
+            from fastmcp.server.providers.skills import SkillsDirectoryProvider
+        except ImportError:
+            return
+        roots = Path(__file__).resolve().parent.parent.parent / "assets" / "skills"
+        if roots.is_dir():
+            self.mcp.add_provider(SkillsDirectoryProvider(roots=roots))
 
 
 # Global server instance
 email_mcp = EmailMCP()
 
+# SOTA Integration: FastMCP 3 uses http_app(); mount MCP and add /api routes on a FastAPI app
+_web_app = FastAPI()
+_web_app.mount("/mcp", email_mcp.mcp.http_app())
+setup_webapp(_web_app, email_mcp.mcp)
 
-def main():
-    """Main entry point for the email MCP server.
-    
-    Starts the FastMCP server with stdio transport, which is required for
-    MCP protocol communication. The server will run until interrupted or
-    the MCP client disconnects.
-    
-    This function is called when the module is executed directly:
-    ```bash
-    python -m email_mcp.server
-    ```
-    
-    FastMCP's run() method handles the event loop internally, so this
-    function does not need to be async or use asyncio.run().
-    """
-    # Run with stdio transport (required for MCP)
-    # FastMCP's run() handles the event loop internally
-    email_mcp.mcp.run(transport="stdio")
+
+async def main() -> None:
+    """Main entry point for the Email Hub MCP server."""
+    run_server(email_mcp.mcp, server_name="email-mcp")
+
+
+def run() -> None:
+    """Synchronous entry point for compatibility."""
+    asyncio.run(main())
 
 
 if __name__ == "__main__":
-    main()
-
+    run()

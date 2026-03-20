@@ -95,14 +95,50 @@ This minimail-mcp implements current MCP server standards:
 - **Telegram** - Bot message forwarding
 - **GitHub** - Email to issue/PR comments
 
-## Installation
+## 🚀 Installation
 
-### Standard Installation
+### Prerequisites
+- [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
+- Python 3.12+
+
+### 📦 Quick Start
+Run immediately via `uvx`:
 ```bash
-cd minimail-mcp
-pip install -e ".[dev]"
+uvx email-mcp
 ```
 
+### 🎯 Claude Desktop Integration
+Add to your `claude_desktop_config.json`:
+```json
+"mcpServers": {
+  "email-mcp": {
+    "command": "uv",
+    "args": ["--directory", "D:/Dev/repos/email-mcp", "run", "email-mcp"]
+  }
+}
+```
+## 🚀 Installation
+
+### Prerequisites
+- [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
+- Python 3.12+
+
+### 📦 Quick Start
+Run immediately via `uvx`:
+```bash
+uvx email-mcp
+```
+
+### 🎯 Claude Desktop Integration
+Add to your `claude_desktop_config.json`:
+```json
+"mcpServers": {
+  "email-mcp": {
+    "command": "uv",
+    "args": ["--directory", "D:/Dev/repos/email-mcp", "run", "email-mcp"]
+  }
+}
+```
 ### Claude Desktop (MCPB)
 1. Download the `minimail-mcp.mcpb` package (when built)
 2. Drag and drop into Claude Desktop settings
@@ -414,3 +450,14 @@ When ready to publish to PyPI:
 
 MIT
 
+
+## 🌐 Webapp Dashboard
+
+This MCP server includes a free, premium web interface for monitoring and control.
+By default, the web dashboard runs on port **10812**.
+*(Assigned ports: **10812** (Web dashboard frontend), **10813** (Web dashboard backend))*
+
+To start the webapp:
+1. Navigate to the `webapp` (or `web`, `frontend`) directory.
+2. Run `start.bat` (Windows) or `./start.ps1` (PowerShell).
+3. Open `http://localhost:10812` in your browser.

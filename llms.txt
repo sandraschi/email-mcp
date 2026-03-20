@@ -1,0 +1,22 @@
+# email-mcp
+> Multi-service email platform for MCP-compatible clients. **Version 0.3.0-alpha** - FastMCP 2.14.3 Standards Compliance See [CHANGELOG.md](CHANGELOG.md) for version history. - **SMTP/IMAP**: Standard e...
+
+This project includes automated llms.txt generation for AI accessibility.
+
+## Docs
+- [Readme](README.md): Multi-service email platform for MCP-compatible clients.
+- [Cursor Setup](CURSOR_SETUP.md): The minimail-mcp now supports **15+ email services** including:
+- [Changelog](CHANGELOG.md): All notable changes to this project will be documented in this file.
+- [Assessment](ASSESSMENT.md): **Category**: MCP Server + AI Orchestrator
+
+## Examples
+- [Examples](examples/): Example code and implementations
+
+## Configuration
+- [Pyproject](pyproject.toml): Python project configuration and dependencies
+- [Package](webapp\package.json): Node.js project configuration and dependencies
+- [Cargo](Cargo.toml): Rust project configuration and dependencies
+- [Config](.git\config): Application configuration files
+
+## Optional
+- [Changelog](CHANGELOG.md): Project changelog information

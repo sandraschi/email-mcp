@@ -21,7 +21,7 @@ The minimail-mcp now supports **15+ email services** including:
       "command": "python",
       "args": ["-m", "email_mcp.server"],
       "env": {
-        "PYTHONPATH": "D:/Dev/repos/minimail-mcp/src"
+        "PYTHONPATH": "D:/Dev/repos/email-mcp/src"
       }
     }
   }

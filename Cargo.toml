@@ -1,5 +1,5 @@
 [package]
-name = "EmailManagement"
+name = "email_management"
 version = "0.3.0"
 edition = "2021"
 authors = ["Sandra <sandraschipal@hotmail.com>"]
