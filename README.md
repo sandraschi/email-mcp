@@ -2,7 +2,7 @@
 
 Multi-service email platform for MCP-compatible clients.
 
-**Version 0.3.0-alpha** - FastMCP 2.14.3 Standards Compliance
+**Version 0.3.1** — FastMCP 3.1+; mailing list tools; MCP sampling + prompts + skills (optional)
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
@@ -17,6 +17,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 ### Core Functionality
 - Send emails via multiple service types
 - Check inbox via IMAP and service APIs
+- **Mailing list presets** (`mailing_lists_catalog`, `mailing_list_latest`): named folders/filters (e.g. newsletters) via `EMAIL_MCP_MAILING_LISTS` JSON
 - Dynamic service configuration at runtime
 - Email header decoding (UTF-8, Base64, Quoted-Printable)
 - Async operations with connection pooling
@@ -325,6 +326,28 @@ Configure chat/webhook integrations:
 export SLACK_WEBHOOK_URL="https://example.com/docs/slack-incoming-webhook"
 ```
 
+### Mailing lists (newsletters)
+
+Point each subscription at an **IMAP folder** (recommended: Gmail filter → label → folder name) or use **optional** `from_contains` / `subject_contains` to post-filter after fetch.
+
+**Env:** `EMAIL_MCP_MAILING_LISTS` — JSON array, or `EMAIL_MCP_MAILING_LISTS_FILE` — path to the same JSON.
+
+```json
+[
+  {
+    "id": "alphasignal",
+    "service": "default",
+    "folder": "INBOX",
+    "limit": 5,
+    "unread_only": true,
+    "from_contains": null,
+    "subject_contains": null
+  }
+]
+```
+
+Tools: `mailing_lists_catalog()` then `mailing_list_latest(list_id="alphasignal")`. For one-off filters, use `check_inbox(folder="...", from_contains="...", subject_contains="...")`.
+
 ### Cursor IDE Configuration
 
 Add to your `mcp.json`:
@@ -424,17 +447,25 @@ Add to your `mcp.json`:
 
 ## Development
 
+From a clone of the repo (fork URL if you use a fork):
+
 ```powershell
-# Install
-pip install -e ".[dev]"
+git clone https://github.com/sandraschi/email-mcp.git
+Set-Location email-mcp
+# Install (uv)
+uv sync --extra test --extra dev
 
-# Run tests
-pytest
+# Lint / test / run MCP (see justfile)
+uv run ruff check src tests
+uv run --extra test pytest tests
 
-# Format code
-black src/
-ruff check src/
+# Sync packaged tree: src/email_mcp → mcp-server/src/email_mcp (server, mailing_lists, skills)
+uv run python copy_server.py
 ```
+
+With [just](https://github.com/casey/just): `just sync`, `just check`, `just copy-mcp`, `just run`.
+
+**MCP extras (optional):** `suggest_email_subject` and `email_agentic_assist` use **sampling** when the host supports it; **prompts** (`email_compose_request`, `email_help_request`) and **`skills/`** (`skill://email-mcp/...`) are optional — core SMTP/IMAP works without them.
 
 ### PyPI Publishing Setup (Optional)
 
