@@ -12,5 +12,9 @@ export default defineConfig({
   server: {
     port: 10812,
     host: "127.0.0.1",
-  }
+    proxy: {
+      "/api": "http://127.0.0.1:10813",
+      "/mcp": "http://127.0.0.1:10813",
+    },
+  },
 });

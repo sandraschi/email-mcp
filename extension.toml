@@ -1,6 +1,6 @@
 id = "minimail-mcp"
 name = "EmailManagement"
-version = "0.3.0"
+version = "0.3.1"
 schema_version = 1
 authors = ["Sandra <sandraschipal@hotmail.com>"]
 description = "Multi-service email automation and processing"

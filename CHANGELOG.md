@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-03-20
+
+### Added
+- **Mailing list presets**: `EMAIL_MCP_MAILING_LISTS` / `EMAIL_MCP_MAILING_LISTS_FILE` (JSON), tools `mailing_lists_catalog`, `mailing_list_latest`; optional `from_contains` / `subject_contains` on `check_inbox` (IMAP + local MailHog/Mailpit).
+- **`src/email_mcp/mailing_lists.py`** — Pydantic-validated list entries.
+- **`justfile`** — `sync`, `copy-mcp`, `lint`, `fmt`, `test`, `check`, `run`.
+- **`copy_server.py`** — Syncs `server.py`, `mailing_lists.py`, and `skills/` into `mcp-server/src/email_mcp/`.
+
+### Changed
+- **`glama.json` / `manifest.json`**: version **0.3.1**, tool count **10**; sampling + prompts + skills documented in Glama capabilities.
+- **`pytest.ini`**: `[pytest]` section, `asyncio_mode = auto` (for pytest-asyncio).
+
+### Notes
+- **Sampling / agentic / prompts / skills**: unchanged — `suggest_email_subject`, `email_agentic_assist`, prompts, `email_mcp/skills/` remain optional UX helpers (not required for core SMTP/IMAP).
+
 ## [0.3.0] - 2026-01-17
 
 ### Added

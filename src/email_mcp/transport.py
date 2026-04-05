@@ -85,10 +85,10 @@ Examples:
   python -m {server_name.replace("-", "_")} --stdio
 
   # HTTP mode (web apps)
-  python -m {server_name.replace("-", "_")} --http --port 8080
+  python -m {server_name.replace("-", "_")} --http --port 10813
 
   # Via environment
-  MCP_TRANSPORT=http MCP_PORT=8080 python -m {server_name.replace("-", "_")}
+  MCP_TRANSPORT=http MCP_PORT=10813 python -m {server_name.replace("-", "_")}
 """,
     )
 

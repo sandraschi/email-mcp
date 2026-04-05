@@ -2,7 +2,7 @@
 
 Multi-service email platform for MCP-compatible clients.
 
-**Version 0.3.1** — FastMCP 3.1+; mailing list tools; MCP sampling + prompts + skills (optional)
+**Version 0.3.1**  FastMCP 3.1+; mailing list tools; MCP sampling + prompts + skills (optional)
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
@@ -96,19 +96,19 @@ This minimail-mcp implements current MCP server standards:
 - **Telegram** - Bot message forwarding
 - **GitHub** - Email to issue/PR comments
 
-## 🚀 Installation
+##  Installation
 
 ### Prerequisites
 - [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
 - Python 3.12+
 
-### 📦 Quick Start
+###  Quick Start
 Run immediately via `uvx`:
 ```bash
 uvx email-mcp
 ```
 
-### 🎯 Claude Desktop Integration
+###  Claude Desktop Integration
 Add to your `claude_desktop_config.json`:
 ```json
 "mcpServers": {
@@ -118,19 +118,19 @@ Add to your `claude_desktop_config.json`:
   }
 }
 ```
-## 🚀 Installation
+##  Installation
 
 ### Prerequisites
 - [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
 - Python 3.12+
 
-### 📦 Quick Start
+###  Quick Start
 Run immediately via `uvx`:
 ```bash
 uvx email-mcp
 ```
 
-### 🎯 Claude Desktop Integration
+###  Claude Desktop Integration
 Add to your `claude_desktop_config.json`:
 ```json
 "mcpServers": {
@@ -270,7 +270,7 @@ export IMAP_PASSWORD="your-protonmail-password"
 - **Security**: ProtonMail uses end-to-end encryption for all communications
 - **Compatibility**: Works with all Email MCP features including AI collaboration
 
-## ⚙️ Configuration
+##  Configuration
 
 ### Basic SMTP/IMAP (Backward Compatible)
 
@@ -328,9 +328,9 @@ export SLACK_WEBHOOK_URL="https://example.com/docs/slack-incoming-webhook"
 
 ### Mailing lists (newsletters)
 
-Point each subscription at an **IMAP folder** (recommended: Gmail filter → label → folder name) or use **optional** `from_contains` / `subject_contains` to post-filter after fetch.
+Point each subscription at an **IMAP folder** (recommended: Gmail filter  label  folder name) or use **optional** `from_contains` / `subject_contains` to post-filter after fetch.
 
-**Env:** `EMAIL_MCP_MAILING_LISTS` — JSON array, or `EMAIL_MCP_MAILING_LISTS_FILE` — path to the same JSON.
+**Env:** `EMAIL_MCP_MAILING_LISTS`  JSON array, or `EMAIL_MCP_MAILING_LISTS_FILE`  path to the same JSON.
 
 ```json
 [
@@ -407,7 +407,7 @@ Add to your `mcp.json`:
 
 ```
 
-## 🛠️ API Reference
+##  API Reference
 
 ### Tools
 
@@ -424,10 +424,10 @@ Add to your `mcp.json`:
 
 | Type | Description | Examples | Inbox Support |
 |------|-------------|----------|----------------|
-| `smtp` | Standard SMTP/IMAP | Gmail, Outlook, Yahoo | ✅ |
-| `api` | Transactional APIs | SendGrid, Mailgun, Resend | ❌ |
-| `local` | Testing services | MailHog, Mailpit | ✅ |
-| `webhook` | Chat integrations | Slack, Discord | ❌ |
+| `smtp` | Standard SMTP/IMAP | Gmail, Outlook, Yahoo |  |
+| `api` | Transactional APIs | SendGrid, Mailgun, Resend |  |
+| `local` | Testing services | MailHog, Mailpit |  |
+| `webhook` | Chat integrations | Slack, Discord |  |
 
 ## Architecture
 
@@ -459,13 +459,13 @@ uv sync --extra test --extra dev
 uv run ruff check src tests
 uv run --extra test pytest tests
 
-# Sync packaged tree: src/email_mcp → mcp-server/src/email_mcp (server, mailing_lists, skills)
+# Sync packaged tree: src/email_mcp  mcp-server/src/email_mcp (server, mailing_lists, skills)
 uv run python copy_server.py
 ```
 
 With [just](https://github.com/casey/just): `just sync`, `just check`, `just copy-mcp`, `just run`.
 
-**MCP extras (optional):** `suggest_email_subject` and `email_agentic_assist` use **sampling** when the host supports it; **prompts** (`email_compose_request`, `email_help_request`) and **`skills/`** (`skill://email-mcp/...`) are optional — core SMTP/IMAP works without them.
+**MCP extras (optional):** `suggest_email_subject` and `email_agentic_assist` use **sampling** when the host supports it; **prompts** (`email_compose_request`, `email_help_request`) and **`skills/`** (`skill://email-mcp/...`) are optional  core SMTP/IMAP works without them.
 
 ### PyPI Publishing Setup (Optional)
 
@@ -482,7 +482,7 @@ When ready to publish to PyPI:
 MIT
 
 
-## 🌐 Webapp Dashboard
+##  Webapp Dashboard
 
 This MCP server includes a free, premium web interface for monitoring and control.
 By default, the web dashboard runs on port **10812**.

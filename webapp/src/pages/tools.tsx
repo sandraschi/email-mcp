@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Wrench, Play, CheckCircle2, AlertCircle } from "lucide-react";
+import { Wrench, Play, CheckCircle2, Loader2 } from "lucide-react";
+import { fetchWithAuth } from "@/lib/api";
 
 export function Tools() {
     const [tools, setTools] = useState<any[]>([]);
@@ -9,21 +10,14 @@ export function Tools() {
 
     useEffect(() => {
         // Fetch tools from the standard SOTA backend endpoint
-        fetch("/api/tools")
-            .then(res => res.json())
+        fetchWithAuth("/api/tools")
             .then(data => {
                 setTools(data.tools || []);
                 setLoading(false);
             })
-            .catch(() => {
-                // Fallback tools if API is not yet standard
-                setTools([
-                    { name: "send_email", description: "Send a new email message" },
-                    { name: "list_messages", description: "List messages in a mailbox" },
-                    { name: "get_message", description: "Get the content of a specific message" },
-                    { name: "search_emails", description: "Search for emails matching a query" },
-                    { name: "manage_mailboxes", description: "Create or delete mailboxes" }
-                ]);
+            .catch(err => {
+                console.error("Failed to fetch tools:", err);
+                setTools([]);
                 setLoading(false);
             });
     }, []);
@@ -61,7 +55,8 @@ export function Tools() {
             </div>
 
             {loading && (
-                <div className="flex items-center justify-center p-12">
+                <div className="flex flex-col items-center justify-center p-12 space-y-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                     <p className="text-slate-500">Scanning for email tools...</p>
                 </div>
             )}

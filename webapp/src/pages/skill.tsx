@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BookOpen, Loader2 } from "lucide-react";
+import { fetchWithAuth } from "@/lib/api";
 
 interface SkillEntry {
   name: string;
@@ -16,26 +17,30 @@ export function Skill() {
   const [contentLoading, setContentLoading] = useState(false);
 
   useEffect(() => {
-    fetch("/api/skills")
-      .then((res) => (res.ok ? res.json() : { skills: [] }))
+    fetchWithAuth("/api/skills")
       .then((data) => {
         setSkills(data.skills || []);
         if (data.skills?.length && !selected) setSelected(data.skills[0].name);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        console.error("Failed to fetch skills:", err);
+        setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
     if (!selected) return;
     setContentLoading(true);
-    fetch(`/api/skills/${encodeURIComponent(selected)}`)
-      .then((res) => (res.ok ? res.json() : { content: "" }))
+    fetchWithAuth(`/api/skills/${encodeURIComponent(selected)}`)
       .then((data) => {
         setContent(data.content ?? "");
         setContentLoading(false);
       })
-      .catch(() => setContentLoading(false));
+      .catch((err) => {
+        console.error("Failed to fetch skill content:", err);
+        setContentLoading(false);
+      });
   }, [selected]);
 
   return (
