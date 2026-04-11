@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastmcp>=3.1.0,<4",
     "pydantic>=2.0.0",
-    "structlog>=24.0.0",
+    "structlog>=25.5.0",
     "httpx>=0.25.0",
     "ruff>=0.15.2",
 ]
