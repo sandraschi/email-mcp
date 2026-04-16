@@ -21,7 +21,26 @@ Write-Host "Starting Python backend on port $BackendPort ..." -ForegroundColor C
 # Backend package lives at repo root src/email_mcp (not under webapp/)
 $backendCmd = "`$env:PYTHONPATH = '$ProjectRoot;$ProjectRoot\src'; Set-Location '$ProjectRoot'; uv run uvicorn email_mcp.server:app --host 127.0.0.1 --port $BackendPort --log-level info"
 
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd -WindowStyle Normal
+Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd -WorkingDirectory $ProjectRoot -WindowStyle Normal
+
+# Wait until uvicorn accepts TCP (dashboard /api/* requires Basic auth — port open is enough)
+$ready = $false
+for ($i = 0; $i -lt 90; $i++) {
+    try {
+        $c = [System.Net.Sockets.TcpClient]::new()
+        $c.Connect("127.0.0.1", $BackendPort)
+        $c.Close()
+        $ready = $true
+        break
+    } catch {
+        Start-Sleep -Seconds 1
+    }
+}
+if (-not $ready) {
+    Write-Host "Backend did not listen on 127.0.0.1:$BackendPort within 90s. Check the uvicorn window for errors." -ForegroundColor Red
+    exit 1
+}
+Write-Host "Backend is ready." -ForegroundColor Green
 
 # 4. Run server (Vite dev)
 Write-Host "Starting Vite frontend on port $WebPort ..." -ForegroundColor Green

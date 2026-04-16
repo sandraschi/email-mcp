@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **`webapp/start.ps1`**: Uvicorn child uses **`-WorkingDirectory`** at the repo root; script **polls until TCP accepts on the backend port** (up to 90s) before launching Vite so the dev proxy does not hit **`ECONNREFUSED`** while the server is still importing. On failure, exit with a message to inspect the uvicorn window.
+
 ## [0.3.1] - 2026-03-20
 
 ### Added

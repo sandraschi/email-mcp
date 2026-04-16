@@ -1,9 +1,17 @@
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
+build-backend = "hatchling.build"
+
 [project]
-name = "minimail-mcp"
+name = "schip-mcp-email"
 version = "0.3.1"
 description = "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations"
 readme = "README.md"
 requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+    { name = "Sandra Schipal", email = "sandra@schipal.at" }
+]
 dependencies = [
     "fastapi>=0.115.0",
     "fastmcp>=3.1.0,<4",
@@ -11,6 +19,7 @@ dependencies = [
     "structlog>=24.0.0",
     "httpx>=0.25.0",
     "ruff>=0.15.2",
+    "prefab-ui>=0.14.0",
 ]
 
 [project.optional-dependencies]
@@ -27,13 +36,16 @@ dev = [
     "mypy>=1.0.0",
     "build>=1.0.0",
 ]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[project.scripts]
+schip-mcp-email = "email_mcp.server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/email_mcp"]
+
+[tool.uv-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "pep440"
 
 [tool.black]
 line-length = 100

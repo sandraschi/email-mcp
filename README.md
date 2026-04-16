@@ -489,6 +489,6 @@ By default, the web dashboard runs on port **10812**.
 *(Assigned ports: **10812** (Web dashboard frontend), **10813** (Web dashboard backend))*
 
 To start the webapp:
-1. Navigate to the `webapp` (or `web`, `frontend`) directory.
-2. Run `start.bat` (Windows) or `./start.ps1` (PowerShell).
-3. Open `http://localhost:10812` in your browser.
+1. Navigate to the `webapp` directory.
+2. Run `start.bat` (Windows) or `.\start.ps1` (PowerShell). The script starts **uvicorn** on **10813** first, **waits until that port accepts TCP** (cold `uv run` can take tens of seconds), then starts **Vite** on **10812** — so the `/api` proxy does not fail with connection refused during startup.
+3. Open `http://localhost:10812` in your browser. If the backend window shows a traceback, fix that before expecting API routes to work.
