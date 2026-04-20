@@ -1,8 +1,10 @@
 # MiniMail MCP Server
 
+[![FastMCP Version](https://img.shields.io/badge/FastMCP-3.1.0-blue?style=flat-square&logo=python&logoColor=white)](https://github.com/sandraschi/fastmcp) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![Linted with Biome](https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat-square&logo=biome&logoColor=white)](https://biomejs.dev/) [![Built with Just](https://img.shields.io/badge/Built_with-Just-000000?style=flat-square&logo=gnu-bash&logoColor=white)](https://github.com/casey/just)
+
 Multi-service email platform for MCP-compatible clients.
 
-**Version 0.3.1**  FastMCP 3.1+; mailing list tools; MCP sampling + prompts + skills (optional)
+**Version 0.3.1**  FastMCP 3.1.0+; mailing list tools; MCP sampling + prompts + skills (optional)
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
@@ -24,7 +26,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - Service health monitoring and testing
 
 ### Standards Compliance
-- FastMCP 2.14.3 protocol support
+- FastMCP 3.1.0 protocol support
 - MCPB packaging for Claude Desktop
 - Zed extension support
 - Conversational tool returns
@@ -476,6 +478,17 @@ When ready to publish to PyPI:
 3. **Add to GitHub**: Add `PYPI_API_TOKEN` secret to repository settings
 4. **Enable publishing**: Change CI/CD condition from `false` to proper tag condition
 5. **Tag release**: `git tag v0.2.1 && git push origin v0.2.1`
+
+
+## 🛡️ Industrial Quality Stack
+
+This project adheres to **SOTA 14.1** industrial standards for high-fidelity agentic orchestration:
+
+- **Python (Core)**: [Ruff](https://astral.sh/ruff) for linting and formatting. Zero-tolerance for `print` statements in core handlers (`T201`).
+- **Webapp (UI)**: [Biome](https://biomejs.dev/) for sub-millisecond linting. Strict `noConsoleLog` enforcement.
+- **Protocol Compliance**: Hardened `stdout/stderr` isolation to ensure crash-resistant JSON-RPC communication.
+- **Automation**: [Justfile](./justfile) recipes for all fleet operations (`just lint`, `just fix`, `just dev`).
+- **Security**: Automated audits via `bandit` and `safety`.
 
 ## License
 
