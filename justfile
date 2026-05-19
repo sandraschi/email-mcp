@@ -89,3 +89,20 @@ check: lint test
 # Run MCP server (stdio)
 run:
     uv run python -m email_mcp.server
+
+# Build Tauri native desktop app (Rust + WebView2)
+build-native:
+    Set-Location '{{justfile_directory()}}\native'
+    $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+    npx @tauri-apps/cli build
+
+# Build Tauri native app (debug, faster rebuild)
+build-native-debug:
+    Set-Location '{{justfile_directory()}}\native'
+    $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+    npx @tauri-apps/cli build --debug
+
+# Install Tauri CLI
+tauri-cli:
+    Set-Location '{{justfile_directory()}}\native'
+    npm install @tauri-apps/cli
