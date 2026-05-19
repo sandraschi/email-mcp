@@ -35,7 +35,7 @@
   },
   "plugins": {
     "shell": { "open": true },
-    "fs": { "scope": ["$APPDATA/**", "$HOME/**"] },
+    "fs": { "requireLiteralLeadingDot": false },
     "process": { "all": true }
   }
 }
