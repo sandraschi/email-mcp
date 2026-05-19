@@ -6,30 +6,33 @@ use tauri_plugin_shell::ShellExt;
 
 struct BackendProcess(Mutex<Option<tauri_plugin_shell::process::CommandChild>>);
 
-/// Start the MCP Python backend server. Called on app launch.
 #[tauri::command]
 async fn start_backend(app: tauri::AppHandle, state: tauri::State<'_, BackendProcess>) -> Result<String, String> {
-    let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
-    let project_root = resource_dir
-        .parent()
-        .unwrap_or(std::path::Path::new("."));
-
     let cmd = app.shell()
-        .command("uv")
-        .args(["run", "python", "-m", "email_mcp.server", "--mode", "http", "--port", "10813"])
-        .current_dir(project_root);
+        .sidecar("email-mcp-backend")
+        .map_err(|e| format!("Sidecar error: {}", e))?
+        .args(["--http", "--port", "10813"]);
 
     let (mut rx, child) = cmd.spawn().map_err(|e| format!("Failed to start backend: {}", e))?;
     *state.0.lock().unwrap() = Some(child);
 
+    // Wait for backend to be ready
     tauri::async_runtime::spawn(async move {
         use tauri_plugin_shell::process::CommandEvent;
         while let Some(event) = rx.recv().await {
-            if let CommandEvent::Stdout(line) = event {
-                let text = String::from_utf8_lossy(&line);
-                if text.contains("Uvicorn running") || text.contains("Application startup") {
-                    break;
+            match event {
+                CommandEvent::Stdout(line) => {
+                    let text = String::from_utf8_lossy(&line);
+                    if text.contains("Uvicorn running") {
+                        let _ = app.emit("backend-status", "ready");
+                        break;
+                    }
                 }
+                CommandEvent::Stderr(line) => {
+                    let text = String::from_utf8_lossy(&line);
+                    eprintln!("[backend] {}", text.trim());
+                }
+                _ => {}
             }
         }
     });
@@ -47,13 +50,14 @@ fn main() {
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                let _ = handle.emit("backend-status", "starting");
                 match start_backend(handle.clone(), handle.state::<BackendProcess>()).await {
-                    Ok(_) => { let _ = handle.emit("backend-status", "ready"); }
-                    Err(e) => { let _ = handle.emit("backend-status", format!("error: {}", e)); }
+                    Ok(_) => {}
+                    Err(e) => {
+                        eprintln!("Backend error: {}", e);
+                        let _ = handle.emit("backend-status", format!("error: {}", e));
+                    }
                 }
             });
-
             #[cfg(debug_assertions)]
             if let Some(window) = app.get_webview_window("main") {
                 window.open_devtools();
@@ -61,7 +65,7 @@ fn main() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error while building tauri application")
+        .expect("error building tauri application")
         .run(|app, event| {
             if let tauri::RunEvent::Exit = event {
                 if let Some(child) = app.state::<BackendProcess>().0.lock().unwrap().take() {
