@@ -101,6 +101,20 @@ See [docs/quickstart.md](docs/quickstart.md) for full setup.
 | Web dashboard frontend | 10812 |
 | Backend API + MCP HTTP | 10813 |
 
+## Native Desktop App (Tauri 2.0)
+
+A standalone Windows desktop app is available, bundling the webapp + Python backend into a single installer (~15 MB).
+
+```powershell
+# Build everything in one command:
+just build-native
+
+# Installer lands at:
+# native/target/release/bundle/nsis/Email MCP_0.1.0_x64-setup.exe
+```
+
+Requires [Rust](https://rustup.rs), [Node.js 20+](https://nodejs.org), and Visual Studio Build Tools (for C++ compilation). The backend is compiled via PyInstaller and bundled as a Tauri sidecar — no Python runtime needed.
+
 ## Development
 
 ```powershell
