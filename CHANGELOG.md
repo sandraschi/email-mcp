@@ -7,8 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- **`webapp/start.ps1`**: Uvicorn child uses **`-WorkingDirectory`** at the repo root; script **polls until TCP accepts on the backend port** (up to 90s) before launching Vite so the dev proxy does not hit **`ECONNREFUSED`** while the server is still importing. On failure, exit with a message to inspect the uvicorn window.
+### Added
+- **New MCP Tools**: `fetch_email_detail`, `delete_email`, `mark_email_read`, `search_emails`, `remove_service` (total: 14 tools)
+- **REST API endpoints**: email detail (`GET /api/inbox/{id}`), mark-read/unread, delete, full-text search (`/api/search`), draft CRUD (`/api/drafts`), service CRUD (`POST/PUT/DELETE /api/services/{name}`), service types reference (`/api/service-types`)
+- **Draft management**: save/load/delete drafts persisted to JSON file, auto-delete draft on send
+- **Email Detail view** (`/email`): full email reader with HTML body rendering, reply/forward links, delete/mark-read actions
+- **Search page** (`/search`): full-text IMAP search with results linking to detail view
+- **Services page** (`/services`): form-based service configuration (no JSON textarea), AI Assist with 9 provider presets (Gmail, Outlook, Yahoo, ProtonMail, MailHog, SendGrid, Mailgun, Slack, Discord), password fields with show/hide toggle, live test/delete
+- **Toast notification system**: context-based success/error/info toasts with auto-dismiss
+- **AI Improve in Compose**: style/length/mood selectors (6 each), calls `/api/improve` to rewrite email body via LLM
+- **Settings page**: email service credentials form (SMTP/IMAP user/pwd entry with save/test)
+- **Prompt injection defense**: `src/email_mcp/sanitize.py` with 37 zero-width/bidi Unicode character stripping + safety boundary wrapping (`<<< UNTRUSTED EXTERNAL DATA >>>` preamble) applied to all MCP tool returns, 5 service files, 6 test fixtures, 27 tests
+- **Live topbar health check**: polls `/api/status` every 30s, shows green/red status dot
+- **Auto-refresh inbox**: 30s polling with toggle
+- **Docs restructure**: 8 sub-readmes in `docs/` (gmail, outlook, protonmail, api-services, local-testing, webhook-integrations, configuration, safety-hardening); short user-facing README cut from 514→110 lines
+- **Tabbed Help page**: Quick Start, Email Systems, Configuration, Tools, Safety, SOTA tabs
+- **Functional Tools page**: Execute buttons now call real REST endpoints with per-tool result display
+- **Fixed dashboard**: real stats (unread count, connected services, drafts), clickable recent activity
+- **Uvicorn log spam suppression**: access/error loggers set to WARNING in server lifespan
+
+### Changed
+- Updated version to 0.4.0
+- `manifest.json` and `mcpb.json` updated with new tools and version
+- Inbox now clickable → navigates to email detail, inline delete button on hover
+- Compose now supports BCC, HTML toggle, draft save/load panel
+- Sidebar: added Search and Services nav items
+- Dashboard: removed fake "system load = tools_count * 4" stat, shows real draft count
+
+### Security
+- **Prompt injection hardening**: two-layer defense (Unicode stripping + safety boundary wrapping) applied to check_inbox, fetch_email_detail, search_emails, mailing_list_latest tool returns
+- FastMCP `instructions` declares safety posture up front
 
 ## [0.3.1] - 2026-03-20
 

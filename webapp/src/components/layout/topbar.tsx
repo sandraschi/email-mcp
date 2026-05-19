@@ -1,10 +1,32 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { APPS_CATALOG } from '@/common/apps-catalog';
-import { LayoutGrid, ExternalLink, HelpCircle } from 'lucide-react';
+import { LayoutGrid, ExternalLink, HelpCircle, Loader2 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { fetchWithAuth } from '@/lib/api';
+import { cn } from '@/common/utils';
 
 export function Topbar() {
+    const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        let mounted = true;
+        const check = async () => {
+            try {
+                await fetchWithAuth("/api/status");
+                if (mounted) setBackendOnline(true);
+            } catch {
+                if (mounted) setBackendOnline(false);
+            }
+        };
+        check();
+        const interval = setInterval(check, 30_000);
+        return () => { mounted = false; clearInterval(interval); };
+    }, []);
+
+    const statusLabel = backendOnline === null ? "Checking..." : backendOnline ? "System Online" : "Backend Offline";
+
     return (
         <header className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950/50 px-6 backdrop-blur-xl">
             <div className="flex items-center gap-4">
@@ -14,16 +36,27 @@ export function Topbar() {
             </div>
 
             <div className="flex items-center gap-2">
-                {/* System Status Indicator */}
-                <div className="mr-4 flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs text-emerald-500 border border-emerald-500/20">
+                <div className={cn(
+                    "mr-4 flex items-center gap-2 rounded-full px-3 py-1 text-xs border",
+                    backendOnline === null && "text-slate-500 border-slate-700",
+                    backendOnline === true && "text-emerald-500 border-emerald-500/20 bg-emerald-500/10",
+                    backendOnline === false && "text-red-500 border-red-500/20 bg-red-500/10",
+                )}>
                     <span className="relative flex h-2 w-2">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                        {backendOnline && (
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                        )}
+                        <span className={cn(
+                            "relative inline-flex h-2 w-2 rounded-full",
+                            backendOnline === null && "bg-slate-500",
+                            backendOnline === true && "bg-emerald-500",
+                            backendOnline === false && "bg-red-500",
+                        )} />
                     </span>
-                    System Online
+                    {backendOnline === null && <Loader2 className="h-3 w-3 animate-spin" />}
+                    {statusLabel}
                 </div>
 
-                {/* Global Apps Navigation */}
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger asChild>
                         <button className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/50 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-700">
@@ -60,7 +93,9 @@ export function Topbar() {
                     </DropdownMenu.Portal>
                 </DropdownMenu.Root>
 
-                <button className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-800 bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+                <button className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-800 bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                    onClick={() => window.open("https://opencode.ai", "_blank")}
+                >
                     <HelpCircle className="h-4 w-4" />
                 </button>
             </div>

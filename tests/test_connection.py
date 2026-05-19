@@ -1,17 +1,23 @@
-"""Quick test script for email connection."""
+"""Quick test script for email connection.
+
+WARNING: This file is a local debug script, not a proper test.
+Credentials should come from environment variables, not hardcoded values.
+Use environment vars: SMTP_USER, SMTP_PASSWORD, SMTP_SERVER, IMAP_SERVER
+"""
 
 import asyncio
+import os
 import smtplib
 import imaplib
 import sys
 
-# Hotmail/Outlook settings
-SMTP_SERVER = "smtp.office365.com"
-SMTP_PORT = 587
-IMAP_SERVER = "outlook.office365.com"
-IMAP_PORT = 993
-EMAIL = "sandraschipal@hotmail.com"
-PASSWORD = "Lara51511175mi"
+# Read from environment; no hardcoded defaults
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+IMAP_SERVER = os.environ.get("IMAP_SERVER", "")
+IMAP_PORT = int(os.environ.get("IMAP_PORT", "993"))
+EMAIL = os.environ.get("SMTP_USER", "")
+PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 
 async def test_smtp():
     """Test SMTP connection."""

@@ -1,100 +1,137 @@
 {
   "examples": [
     {
-      "title": "Send Basic Email via SMTP",
-      "description": "Send a simple text email using SMTP",
-      "code": "send_email(\n    to=\"user@example.com\",\n    subject=\"Hello World\",\n    body=\"This is a test email from Email MCP Server\"\n)",
+      "title": "Send Basic Email",
+      "description": "Send a simple text email via the default service",
+      "code": "send_email(to=\"user@example.com\", subject=\"Hello\", body=\"Test message\")",
       "category": "sending"
     },
     {
       "title": "Send HTML Email",
-      "description": "Send an email with HTML formatting",
-      "code": "send_email(\n    to=\"user@example.com\",\n    subject=\"Welcome Message\",\n    body=\"Please view this email in HTML mode\",\n    html=\"<h1>Welcome!</h1><p>Thank you for joining our service.</p><ul><li>Feature 1</li><li>Feature 2</li></ul>\"\n)",
+      "description": "Send with HTML content and a specific service",
+      "code": "send_email(to=\"user@example.com\", subject=\"Welcome\", body=\"Text fallback\", html=\"<h1>Welcome!</h1>\", service=\"sendgrid\")",
       "category": "sending"
     },
     {
       "title": "Send with CC/BCC",
-      "description": "Send email with carbon copy recipients",
-      "code": "send_email(\n    to=\"primary@example.com\",\n    cc=[\"manager@example.com\"],\n    bcc=[\"admin@example.com\"],\n    subject=\"Team Update\",\n    body=\"Important information for the team\"\n)",
+      "description": "Include carbon copy recipients",
+      "code": "send_email(to=\"primary@example.com\", cc=[\"manager@example.com\"], subject=\"Update\", body=\"Team update\")",
       "category": "sending"
     },
     {
-      "title": "Use Specific Email Service",
-      "description": "Send email via SendGrid instead of default SMTP",
-      "code": "send_email(\n    to=\"user@example.com\",\n    subject=\"Transactional Email\",\n    body=\"Your order has been processed\",\n    service=\"sendgrid\"\n)",
-      "category": "sending"
-    },
-    {
-      "title": "Check Inbox for Unread Emails",
-      "description": "Retrieve unread emails from inbox",
-      "code": "result = check_inbox(limit=10, unread_only=True)\nprint(f\"Found {result['count']} unread emails\")\nfor email in result['emails']:\n    print(f\"From: {email['from']}, Subject: {email['subject']}\")",
-      "category": "receiving"
-    },
-    {
-      "title": "Check Specific Email Folder",
-      "description": "Check emails in Sent folder",
-      "code": "result = check_inbox(folder=\"Sent\", limit=5)\nprint(f\"Found {result['count']} sent emails\")",
-      "category": "receiving"
-    },
-    {
-      "title": "Filter Emails by Date",
-      "description": "Get emails from the last week",
-      "code": "from datetime import datetime, timedelta\nweek_ago = (datetime.now() - timedelta(days=7)).strftime(\"%Y-%m-%d\")\nresult = check_inbox(after_date=week_ago)\nprint(f\"Emails from last week: {result['count']}\")",
-      "category": "receiving"
-    },
-    {
-      "title": "Send to Slack Webhook",
-      "description": "Send email content to Slack channel",
-      "code": "send_email(\n    to=\"#general\",\n    subject=\"System Alert\",\n    body=\"Server CPU usage is high\",\n    service=\"slack\"\n)",
+      "title": "Send via Slack",
+      "description": "Post email as Slack message",
+      "code": "send_email(to=\"#general\", subject=\"Alert\", body=\"CPU at 90%\", service=\"slack\")",
       "category": "webhooks"
     },
     {
-      "title": "Send to Discord Webhook",
-      "description": "Send email content to Discord channel",
-      "code": "send_email(\n    to=\"#alerts\",\n    subject=\"Deployment Complete\",\n    body=\"New version deployed successfully\",\n    service=\"discord\"\n)",
-      "category": "webhooks"
+      "title": "Check Inbox",
+      "description": "Get unread emails",
+      "code": "check_inbox(limit=10, unread_only=True)",
+      "category": "receiving"
     },
     {
-      "title": "List Available Services",
-      "description": "Get list of configured email services",
-      "code": "services = list_services()\nprint(f\"Total services: {services['count']}\")\nfor name, info in services['services'].items():\n    print(f\"{name}: {info['type']} - {'enabled' if info['enabled'] else 'disabled'}\")",
+      "title": "Check Specific Folder",
+      "description": "Get emails from Sent folder",
+      "code": "check_inbox(folder=\"Sent\", limit=5)",
+      "category": "receiving"
+    },
+    {
+      "title": "Filter by Sender",
+      "description": "Find emails from a specific sender",
+      "code": "check_inbox(from_contains=\"github.com\", limit=20)",
+      "category": "receiving"
+    },
+    {
+      "title": "Filter by Subject",
+      "description": "Find emails with keywords in subject",
+      "code": "check_inbox(subject_contains=\"invoice\", limit=20)",
+      "category": "receiving"
+    },
+    {
+      "title": "Get Email Detail",
+      "description": "Fetch full email with body",
+      "code": "fetch_email_detail(email_id=\"12345\", service=\"default\", folder=\"INBOX\")",
+      "category": "receiving"
+    },
+    {
+      "title": "Search Emails",
+      "description": "Full-text search across subject and body",
+      "code": "search_emails(query=\"deployment\", service=\"default\", folder=\"INBOX\", limit=20)",
+      "category": "receiving"
+    },
+    {
+      "title": "Delete Email",
+      "description": "Move email to Trash",
+      "code": "delete_email(email_id=\"12345\", service=\"default\", folder=\"INBOX\")",
+      "category": "management"
+    },
+    {
+      "title": "Mark Email as Read",
+      "description": "Set the SEEN flag",
+      "code": "mark_email_read(email_id=\"12345\", service=\"default\", folder=\"INBOX\")",
+      "category": "management"
+    },
+    {
+      "title": "List Services",
+      "description": "Show all configured email services",
+      "code": "list_services()",
       "category": "management"
     },
     {
       "title": "Check Service Health",
-      "description": "Test connectivity to all email services",
-      "code": "status = email_status()\nprint(f\"Total services: {status['total_services']}\")\nprint(f\"Connected: {status['connected_services']}\")\nfor name, info in status['services'].items():\n    status_text = 'connected' if info['connected'] else 'disconnected'\n    print(f\"{name}: {status_text}\")",
+      "description": "Test connectivity for all services",
+      "code": "email_status()",
       "category": "management"
     },
     {
-      "title": "Configure Gmail SMTP",
-      "description": "Add Gmail SMTP service configuration",
-      "code": "configure_service(\n    name=\"gmail-smtp\",\n    type=\"smtp\",\n    config={\n        \"server\": \"smtp.gmail.com\",\n        \"port\": 587,\n        \"username\": \"user@gmail.com\",\n        \"password\": \"app-password\"\n    }\n)",
+      "title": "Configure Gmail",
+      "description": "Add Gmail SMTP/IMAP with App Password",
+      "code": "configure_service(name=\"gmail\", type=\"smtp\", config={\"smtp_server\":\"smtp.gmail.com\",\"smtp_port\":587,\"smtp_user\":\"user@gmail.com\",\"smtp_password\":\"app-password\",\"imap_server\":\"imap.gmail.com\",\"imap_port\":993})",
       "category": "management"
     },
     {
-      "title": "Configure SendGrid API",
-      "description": "Add SendGrid transactional email service",
-      "code": "configure_service(\n    name=\"sendgrid-api\",\n    type=\"api\",\n    config={\n        \"api_key\": \"your-sendgrid-api-key\",\n        \"from_email\": \"noreply@yourdomain.com\",\n        \"service_type\": \"sendgrid\"\n    }\n)",
+      "title": "Configure SendGrid",
+      "description": "Add SendGrid transactional email",
+      "code": "configure_service(name=\"sendgrid\", type=\"api\", config={\"api_key\":\"your-key\",\"api_url\":\"https://api.sendgrid.com/v3/mail/send\",\"from_email\":\"noreply@domain.com\",\"service_type\":\"sendgrid\"})",
       "category": "management"
     },
     {
-      "title": "Configure Slack Webhook",
-      "description": "Add Slack webhook for notifications",
-      "code": "configure_service(\n    name=\"slack-webhook\",\n    type=\"webhook\",\n    config={\n        \"webhook_url\": \"https://example.com/docs/slack-incoming-webhook",\n        \"service_type\": \"slack\"\n    }\n)",
+      "title": "Remove Service",
+      "description": "Remove a runtime configured service",
+      "code": "remove_service(name=\"gmail\")",
       "category": "management"
     },
     {
-      "title": "Configure MailHog for Testing",
-      "description": "Add local MailHog service for development",
-      "code": "configure_service(\n    name=\"mailhog-local\",\n    type=\"local\",\n    config={\n        \"smtp_host\": \"localhost\",\n        \"smtp_port\": 1025,\n        \"http_url\": \"http://localhost:8025\",\n        \"service_type\": \"mailhog\"\n    }\n)",
-      "category": "management"
+      "title": "Mailing List Catalog",
+      "description": "Show configured newsletter presets",
+      "code": "mailing_lists_catalog()",
+      "category": "receiving"
+    },
+    {
+      "title": "Mailing List Latest",
+      "description": "Get newest messages from a preset",
+      "code": "mailing_list_latest(list_id=\"alphasignal\")",
+      "category": "receiving"
+    },
+    {
+      "title": "AI Subject Suggestion",
+      "description": "Get subject line ideas via MCP sampling",
+      "code": "suggest_email_subject(body=\"Your email body text here\")",
+      "category": "ai"
+    },
+    {
+      "title": "AI Email Workflow",
+      "description": "Plan a multi-step email task",
+      "code": "email_agentic_assist(goal=\"Clean up my inbox and reply to urgent messages\")",
+      "category": "ai"
     }
   ],
   "categories": {
     "sending": "Email sending operations",
-    "receiving": "Inbox checking and email retrieval",
-    "webhooks": "Webhook integrations for notifications",
-    "management": "Service configuration and monitoring"
+    "receiving": "Inbox reading, search, and detail retrieval",
+    "webhooks": "Webhook integrations (Slack, Discord)",
+    "management": "Service configuration and email lifecycle management",
+    "ai": "AI-assisted features (sampling via MCP)"
   }
 }

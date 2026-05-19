@@ -1,507 +1,114 @@
 # MiniMail MCP Server
 
-[![FastMCP Version](https://img.shields.io/badge/FastMCP-3.1.0-blue?style=flat-square&logo=python&logoColor=white)](https://github.com/sandraschi/fastmcp) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![Linted with Biome](https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat-square&logo=biome&logoColor=white)](https://biomejs.dev/) [![Built with Just](https://img.shields.io/badge/Built_with-Just-000000?style=flat-square&logo=gnu-bash&logoColor=white)](https://github.com/casey/just)
+[![FastMCP Version](https://img.shields.io/badge/FastMCP-3.1.0-blue?style=flat-square)](https://github.com/sandraschi/fastmcp)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Linted with Biome](https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat-square)](https://biomejs.dev/)
 
-Multi-service email platform for MCP-compatible clients.
+Multi-service email platform for MCP clients. Send and receive email via SMTP/IMAP, transactional APIs, local test servers, and webhooks.
 
-**Version 0.3.1**  FastMCP 3.1.0+; mailing list tools; MCP sampling + prompts + skills (optional)
+**v0.4.0** — FastMCP 3.2+, web dashboard, AI assistant, mailing list presets, prompt injection defense.
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.
+---
+
+## Quick Start
+
+```powershell
+# Start the web dashboard
+.\start.ps1
+# Open http://localhost:10812
+```
+
+```
+uvx email-mcp  # CLI mode
+```
+
+See [docs/quickstart.md](docs/quickstart.md) for full setup.
+
+## Supported Email Systems
+
+| Type | Providers | Guide |
+|------|-----------|-------|
+| **SMTP/IMAP** | Gmail, Outlook, Yahoo, iCloud, ProtonMail | [docs/gmail.md](docs/gmail.md), [docs/outlook.md](docs/outlook.md), [docs/protonmail.md](docs/protonmail.md) |
+| **Transactional APIs** | SendGrid, Mailgun, Resend, Amazon SES | [docs/api-services.md](docs/api-services.md) |
+| **Local Testing** | MailHog, Mailpit, MailCatcher, Inbucket | [docs/local-testing.md](docs/local-testing.md) |
+| **Webhooks** | Slack, Discord, Telegram | [docs/webhook-integrations.md](docs/webhook-integrations.md) |
+
+## Documentation
+
+| Document | Contents |
+|----------|----------|
+| [docs/quickstart.md](docs/quickstart.md) | Installation, Claude Desktop setup, first email |
+| [docs/configuration.md](docs/configuration.md) | All env vars, mailing lists, dynamic config |
+| [docs/safety-hardening.md](docs/safety-hardening.md) | Prompt injection defense architecture |
+| [docs/gmail.md](docs/gmail.md) | Gmail app password setup |
+| [docs/outlook.md](docs/outlook.md) | Outlook/Hotmail SMTP/IMAP |
+| [docs/protonmail.md](docs/protonmail.md) | ProtonMail Bridge & direct access |
+| [docs/api-services.md](docs/api-services.md) | SendGrid, Mailgun, Resend, SES |
+| [docs/local-testing.md](docs/local-testing.md) | MailHog, Mailpit for dev |
+| [docs/webhook-integrations.md](docs/webhook-integrations.md) | Slack, Discord, Telegram |
 
 ## Features
 
-### Email Services
-- **SMTP/IMAP**: Standard email providers (Gmail, Outlook, Yahoo, iCloud, ProtonMail)
-- **Transactional APIs**: SendGrid, Mailgun, Resend, Amazon SES, Postmark
-- **Local Testing**: MailHog, Mailpit, MailCatcher, Inbucket
-- **Webhook Integration**: Slack, Discord, Telegram, GitHub
-
-### Core Functionality
-- Send emails via multiple service types
-- Check inbox via IMAP and service APIs
-- **Mailing list presets** (`mailing_lists_catalog`, `mailing_list_latest`): named folders/filters (e.g. newsletters) via `EMAIL_MCP_MAILING_LISTS` JSON
-- Dynamic service configuration at runtime
-- Email header decoding (UTF-8, Base64, Quoted-Printable)
-- Async operations with connection pooling
-- Service health monitoring and testing
-
-### Standards Compliance
-- FastMCP 3.1.0 protocol support
-- MCPB packaging for Claude Desktop
-- Zed extension support
-- Conversational tool returns
-- Structured logging with JSON output
-
-## Standards Compliance
-
-This minimail-mcp implements current MCP server standards:
-
-### MCPB Packaging (Claude Desktop)
-- Complete `manifest.json` with tool definitions
-- Prompt templates for Claude Desktop integration
-- Self-contained source code packaging
-- Icon and documentation assets
-
-### Glama Integration
-- `glama.json` configuration for Glama MCP client discovery
-- Feature categorization and capability descriptions
-- Code review and documentation generation configuration
-- Status and development information
-
-### CI/CD Pipeline
-- GitHub Actions workflow with multi-Python version testing (3.10, 3.11, 3.12)
-- Automated linting with Ruff
-- Type checking with MyPy
-- Test coverage reporting
-- Security scanning with Bandit
-- Package building and MCPB creation
-- PyPI publishing requires account setup
-
-### Monitoring Stack
-- Health check system for email services
-- Performance metrics collection
-- System resource monitoring
-- Service availability tracking
-
-### Development Standards
-- Testing suite with pytest
-- Code quality enforcement with Ruff and MyPy
-- Project structure with src/ layout
-- Dependency management with pyproject.toml
-- Documentation and examples
-
-## Supported Services
-
-### Standard Email Providers
-- **Gmail** - SMTP/IMAP with App Passwords
-- **Outlook/Hotmail** - SMTP/IMAP
-- **Yahoo Mail** - SMTP/IMAP
-- **iCloud Mail** - SMTP/IMAP
-- **ProtonMail** - SMTP/IMAP (requires ProtonMail Bridge for free accounts, or paid account for direct access)
-
-### Transactional Email APIs
-- **SendGrid** - Enterprise email delivery
-- **Mailgun** - Developer-friendly email API
-- **Resend** - Modern email API
-- **Amazon SES** - AWS email service
-- **Postmark** - Reliable transactional email
-
-### Local Testing Services
-- **MailHog** - Web UI for email testing
-- **Mailpit** - Modern mail testing
-- **MailCatcher** - Ruby-based testing
-- **Inbucket** - Lightweight testing
-
-### Webhook/Dev Services
-- **Slack** - Send emails as Slack messages
-- **Discord** - Send emails as Discord messages
-- **Telegram** - Bot message forwarding
-- **GitHub** - Email to issue/PR comments
-
-##  Installation
-
-### Prerequisites
-- [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
-- Python 3.12+
-
-###  Quick Start
-Run immediately via `uvx`:
-```bash
-uvx email-mcp
-```
-
-###  Claude Desktop Integration
-Add to your `claude_desktop_config.json`:
-```json
-"mcpServers": {
-  "email-mcp": {
-    "command": "uv",
-    "args": ["--directory", "D:/Dev/repos/email-mcp", "run", "email-mcp"]
-  }
-}
-```
-##  Installation
-
-### Prerequisites
-- [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
-- Python 3.12+
-
-###  Quick Start
-Run immediately via `uvx`:
-```bash
-uvx email-mcp
-```
-
-###  Claude Desktop Integration
-Add to your `claude_desktop_config.json`:
-```json
-"mcpServers": {
-  "email-mcp": {
-    "command": "uv",
-    "args": ["--directory", "D:/Dev/repos/email-mcp", "run", "email-mcp"]
-  }
-}
-```
-### Claude Desktop (MCPB)
-1. Download the `minimail-mcp.mcpb` package (when built)
-2. Drag and drop into Claude Desktop settings
-3. The server will be automatically configured
-
-### Glama Client
-The server is automatically discoverable by Glama.ai's GitHub scraping system through the `glama.json` configuration.
-
-
-## Gmail Integration
-
-The minimail-mcp supports Gmail SMTP with App Password authentication:
-
-### Configuration
-```json
-{
-  "SenderEmail": "your-email@gmail.com",
-  "SenderName": "Your Name",
-  "SmtpServer": "smtp.gmail.com",
-  "SmtpPort": 587,
-  "SmtpUsername": "your-email@gmail.com",
-  "SmtpPassword": "your-gmail-app-password"
-}
-```
-
-### Setup Steps
-1. Enable 2-Factor Authentication on Gmail account
-2. Generate App Password at https://myaccount.google.com/apppasswords
-3. Use App Password for SMTP authentication
-4. Configure using `configure_service()` or environment variables
-
-### Supported Features
-- SMTP email sending with TLS encryption
-- HTML and plain text email formats
-- CC/BCC recipient support
-- Authentication with App Passwords
-- Error handling and connection testing
-
-## ProtonMail Integration
-
-The minimail-mcp supports ProtonMail with different setup requirements based on your account type:
-
-### Free Accounts (ProtonMail Bridge Required)
-
-Free ProtonMail accounts require the ProtonMail Bridge application:
-
-#### Setup Steps
-1. Download ProtonMail Bridge: https://proton.me/mail/bridge
-2. Install and configure Bridge with your ProtonMail account
-3. Bridge creates local SMTP/IMAP servers (default ports: 1025 SMTP, 1143 IMAP)
-
-#### Configuration
-```json
-{
-  "SenderEmail": "your@protonmail.com",
-  "SenderName": "Your Name",
-  "SmtpServer": "127.0.0.1",
-  "SmtpPort": 1025,
-  "SmtpUsername": "your-username",
-  "SmtpPassword": "your-protonmail-password",
-  "ImapServer": "127.0.0.1",
-  "ImapPort": 1143,
-  "ImapUsername": "your-username",
-  "ImapPassword": "your-protonmail-password"
-}
-```
-
-#### Environment Variables
-```bash
-export SMTP_SERVER="127.0.0.1"
-export SMTP_PORT="1025"
-export SMTP_USER="your-username"
-export SMTP_PASSWORD="your-protonmail-password"
-export IMAP_SERVER="127.0.0.1"
-export IMAP_PORT="1143"
-export IMAP_USER="your-username"
-export IMAP_PASSWORD="your-protonmail-password"
-```
-
-### Paid Accounts (Direct Access)
-
-Paid ProtonMail accounts support direct SMTP/IMAP access:
-
-#### Configuration
-```json
-{
-  "SenderEmail": "your@protonmail.com",
-  "SenderName": "Your Name",
-  "SmtpServer": "mail.protonmail.com",
-  "SmtpPort": 587,
-  "SmtpUsername": "your@protonmail.com",
-  "SmtpPassword": "your-protonmail-password",
-  "ImapServer": "mail.protonmail.com",
-  "ImapPort": 993,
-  "ImapUsername": "your@protonmail.com",
-  "ImapPassword": "your-protonmail-password"
-}
-```
-
-#### Environment Variables
-```bash
-export SMTP_SERVER="mail.protonmail.com"
-export SMTP_PORT="587"
-export SMTP_USER="your@protonmail.com"
-export SMTP_PASSWORD="your-protonmail-password"
-export IMAP_SERVER="mail.protonmail.com"
-export IMAP_PORT="993"
-export IMAP_USER="your@protonmail.com"
-export IMAP_PASSWORD="your-protonmail-password"
-```
-
-### Setup Steps for Paid Accounts
-1. Enable SMTP/IMAP access in ProtonMail settings
-2. Use your regular ProtonMail password (no app passwords needed)
-3. Configure using `configure_service()` or environment variables
-
-### Supported Features
-- SMTP email sending with TLS encryption
-- IMAP inbox checking and management
-- HTML and plain text email formats
-- CC/BCC recipient support
-- Automatic email header decoding
-- Error handling and connection testing
-
-### Notes
-- **Free accounts**: ProtonMail Bridge must be running for email access
-- **Paid accounts**: Direct SMTP/IMAP access available without additional software
-- **Security**: ProtonMail uses end-to-end encryption for all communications
-- **Compatibility**: Works with all Email MCP features including AI collaboration
-
-##  Configuration
-
-### Basic SMTP/IMAP (Backward Compatible)
-
-Set environment variables for standard email providers:
-
-```bash
-export SMTP_SERVER="smtp.gmail.com"
-export SMTP_PORT="587"
-export SMTP_USER="your-email@gmail.com"
-export SMTP_PASSWORD="your-app-password"
-export IMAP_SERVER="imap.gmail.com"
-export IMAP_USER="your-email@gmail.com"
-export IMAP_PASSWORD="your-app-password"
-```
-
-### API Services
-
-Configure transactional email APIs:
-
-```bash
-# SendGrid
-export SENDGRID_API_KEY="your-sendgrid-api-key"
-export SENDGRID_FROM_EMAIL="noreply@yourdomain.com"
-
-# Mailgun
-export MAILGUN_API_KEY="your-mailgun-api-key"
-export MAILGUN_DOMAIN="yourdomain.com"
-export MAILGUN_FROM_EMAIL="noreply@yourdomain.com"
-
-# Resend
-export RESEND_API_KEY="your-resend-api-key"
-export RESEND_FROM_EMAIL="noreply@yourdomain.com"
-```
-
-### Local Testing Services
-
-Enable local email testing:
-
-```bash
-# MailHog
-export MAILHOG_ENABLED="true"
-export MAILHOG_SMTP_HOST="localhost"
-export MAILHOG_SMTP_PORT="1025"
-export MAILHOG_HTTP_URL="http://localhost:8025"
-```
-
-### Webhook Services
-
-Configure chat/webhook integrations:
-
-```bash
-# Slack
-export SLACK_WEBHOOK_URL="https://example.com/docs/slack-incoming-webhook"
-```
-
-### Mailing lists (newsletters)
-
-Point each subscription at an **IMAP folder** (recommended: Gmail filter  label  folder name) or use **optional** `from_contains` / `subject_contains` to post-filter after fetch.
-
-**Env:** `EMAIL_MCP_MAILING_LISTS`  JSON array, or `EMAIL_MCP_MAILING_LISTS_FILE`  path to the same JSON.
-
-```json
-[
-  {
-    "id": "alphasignal",
-    "service": "default",
-    "folder": "INBOX",
-    "limit": 5,
-    "unread_only": true,
-    "from_contains": null,
-    "subject_contains": null
-  }
-]
-```
-
-Tools: `mailing_lists_catalog()` then `mailing_list_latest(list_id="alphasignal")`. For one-off filters, use `check_inbox(folder="...", from_contains="...", subject_contains="...")`.
-
-### Cursor IDE Configuration
-
-Add to your `mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "minimail-mcp": {
-      "command": "python",
-      "args": ["-m", "email_mcp.server"],
-      "env": {
-        "PYTHONPATH": "D:/Dev/repos/minimail-mcp/src"
-      }
-    }
-  }
-}
-```
-
-## Usage Examples
-
-### Conversational Usage
-
-**Send a basic email:**
-```
-"Send an email to user@example.com with subject 'Hello World' and body 'This is a test message'"
-```
-
-**Send HTML email via SendGrid:**
-```
-"Send a welcome email to newuser@company.com using SendGrid. Subject: 'Welcome to Our Service'. Include HTML content with a welcome header and thank you message."
-```
-
-**Send notification to Slack:**
-```
-"Send an alert message to the #dev-alerts Slack channel about high CPU usage detected on production server."
-```
-
-**Check unread emails:**
-```
-"Check my inbox and show me the last 10 unread emails."
-```
-
-**Test email service:**
-```
-"Is my Gmail service configured correctly? Test the connection."
-```
-
-**Configure new service:**
-```
-"Add SendGrid as a new email service with my API key. From email should be noreply@mydomain.com."
-```
-
-**List available services:**
-```
-"What email services do I have configured?"
-```
-
-```
-
-##  API Reference
-
-### Tools
-
-| Tool | Description | Services Supported |
-|------|-------------|-------------------|
-| `send_email` | Send emails via any service | All services |
-| `check_inbox` | Check inbox via IMAP/API | SMTP, Local services |
-| `email_status` | Test service connectivity | All services |
-| `configure_service` | Add services dynamically | Runtime configuration |
-| `list_services` | List configured services | Service management |
-| `email_help` | Get help and documentation | Documentation |
-
-### Service Types
-
-| Type | Description | Examples | Inbox Support |
-|------|-------------|----------|----------------|
-| `smtp` | Standard SMTP/IMAP | Gmail, Outlook, Yahoo |  |
-| `api` | Transactional APIs | SendGrid, Mailgun, Resend |  |
-| `local` | Testing services | MailHog, Mailpit |  |
-| `webhook` | Chat integrations | Slack, Discord |  |
-
-## Architecture
-
-- Multi-service email support (SMTP/IMAP, transactional APIs, local testing, webhooks)
-- Dynamic service configuration without restart
-- Backward compatible with existing SMTP/IMAP configurations
-- Async operations for non-blocking email handling
-- Extensible design for adding new service types
-
-## Features
-
-- Support for multiple email service types (SMTP, API, local testing, webhooks)
-- Dynamic service configuration at runtime
-- Async operations with connection pooling
-- Email header decoding and error handling
-- Service health monitoring  
+- **15 MCP tools**: send, receive, search, delete, mark-read, manage email services
+- **Web dashboard**: full React SPA at `localhost:10812`
+- **AI assistant**: natural language email commands (Ollama, OpenAI, Anthropic, Google)
+- **AI Improve**: rewrite email body with style/length/mood controls
+- **AI Assist**: describe a service in plain language, LLM fills the config form
+- **Dual transport**: stdio (Claude Desktop) + HTTP streamable (web)
+- **Draft management**: save/compose/send from the webapp
+- **Toast notifications**: live feedback for all actions
+- **Prompt injection defense**: two-layer sanitization (Unicode stripping + safety boundary wrapping)
+- **Structured logging**: JSON output via structlog
+
+## Web Dashboard
+
+| Page | Route | Purpose |
+|------|-------|---------|
+| Dashboard | `/` | KPI cards, recent activity, service health |
+| Inbox | `/inbox` | Read, filter, delete, auto-refresh |
+| Email Detail | `/email` | Full email with HTML body, reply/delete |
+| Compose | `/compose` | Send with drafts, HTML toggle, AI Improve, AI subject |
+| Search | `/search` | Full-text IMAP search |
+| AI Chat | `/chat` | Natural language email assistant |
+| Services | `/services` | Form-based add/remove/test with AI Assist presets |
+| Tools | `/tools` | Execute MCP tools from the browser |
+| Settings | `/settings` | AI provider config, email credentials |
+| Help | `/help` | Tabbed documentation (6 tabs) |
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `send_email` | Send via any service |
+| `check_inbox` | Read IMAP inbox |
+| `fetch_email_detail` | Get full email with body |
+| `search_emails` | IMAP full-text search |
+| `delete_email` | Remove email (IMAP) |
+| `mark_email_read` | Mark as read |
+| `email_status` | Test connectivity |
+| `list_services` | List configured services |
+| `configure_service` | Add service at runtime |
+| `remove_service` | Remove a service |
+| `mailing_lists_catalog` | List newsletter presets |
+| `mailing_list_latest` | Fetch from a preset |
+| `suggest_email_subject` | AI subject line (sampling) |
+| `email_agentic_assist` | Multi-step email plan |
+
+## Ports
+
+| Service | Port |
+|---------|------|
+| Web dashboard frontend | 10812 |
+| Backend API + MCP HTTP | 10813 |
 
 ## Development
 
-From a clone of the repo (fork URL if you use a fork):
-
 ```powershell
-git clone https://github.com/sandraschi/email-mcp.git
-Set-Location email-mcp
-# Install (uv)
 uv sync --extra test --extra dev
-
-# Lint / test / run MCP (see justfile)
 uv run ruff check src tests
-uv run --extra test pytest tests
-
-# Sync packaged tree: src/email_mcp  mcp-server/src/email_mcp (server, mailing_lists, skills)
-uv run python copy_server.py
+# See docs/quickstart.md for full dev guide
 ```
-
-With [just](https://github.com/casey/just): `just sync`, `just check`, `just copy-mcp`, `just run`.
-
-**MCP extras (optional):** `suggest_email_subject` and `email_agentic_assist` use **sampling** when the host supports it; **prompts** (`email_compose_request`, `email_help_request`) and **`skills/`** (`skill://email-mcp/...`) are optional  core SMTP/IMAP works without them.
-
-### PyPI Publishing Setup (Optional)
-
-When ready to publish to PyPI:
-
-1. **Create PyPI account**: Visit https://pypi.org/account/register/
-2. **Generate API token**: Go to https://pypi.org/manage/account/token/
-3. **Add to GitHub**: Add `PYPI_API_TOKEN` secret to repository settings
-4. **Enable publishing**: Change CI/CD condition from `false` to proper tag condition
-5. **Tag release**: `git tag v0.2.1 && git push origin v0.2.1`
-
-
-## 🛡️ Industrial Quality Stack
-
-This project adheres to **SOTA 14.1** industrial standards for high-fidelity agentic orchestration:
-
-- **Python (Core)**: [Ruff](https://astral.sh/ruff) for linting and formatting. Zero-tolerance for `print` statements in core handlers (`T201`).
-- **Webapp (UI)**: [Biome](https://biomejs.dev/) for sub-millisecond linting. Strict `noConsoleLog` enforcement.
-- **Protocol Compliance**: Hardened `stdout/stderr` isolation to ensure crash-resistant JSON-RPC communication.
-- **Automation**: [Justfile](./justfile) recipes for all fleet operations (`just lint`, `just fix`, `just dev`).
-- **Security**: Automated audits via `bandit` and `safety`.
 
 ## License
 
 MIT
-
-
-##  Webapp Dashboard
-
-This MCP server includes a free, premium web interface for monitoring and control.
-By default, the web dashboard runs on port **10812**.
-*(Assigned ports: **10812** (Web dashboard frontend), **10813** (Web dashboard backend))*
-
-To start the webapp:
-1. Navigate to the `webapp` directory.
-2. Run `start.bat` (Windows) or `.\start.ps1` (PowerShell). The script starts **uvicorn** on **10813** first, **waits until that port accepts TCP** (cold `uv run` can take tens of seconds), then starts **Vite** on **10812** — so the `/api` proxy does not fail with connection refused during startup.
-3. Open `http://localhost:10812` in your browser. If the backend window shows a traceback, fix that before expecting API routes to work.

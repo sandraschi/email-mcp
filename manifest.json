@@ -1,8 +1,8 @@
 {
   "manifest_version": "0.2",
   "name": "minimail-mcp",
-  "version": "0.3.1",
-  "description": "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations",
+  "version": "0.4.0",
+  "description": "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, webhook integrations, draft management, and AI-assisted writing",
   "author": {
     "name": "FlowEngineer"
   },
@@ -68,79 +68,23 @@
       "required": false,
       "default": "",
       "secret": true
-    },
-    "sendgrid_api_key": {
-      "type": "string",
-      "title": "SendGrid API Key",
-      "description": "SendGrid API key for transactional email",
-      "required": false,
-      "default": "",
-      "secret": true
-    },
-    "mailgun_api_key": {
-      "type": "string",
-      "title": "Mailgun API Key",
-      "description": "Mailgun API key for transactional email",
-      "required": false,
-      "default": "",
-      "secret": true
-    },
-    "resend_api_key": {
-      "type": "string",
-      "title": "Resend API Key",
-      "description": "Resend API key for transactional email",
-      "required": false,
-      "default": "",
-      "secret": true
-    },
-    "slack_webhook_url": {
-      "type": "string",
-      "title": "Slack Webhook URL",
-      "description": "Slack webhook URL for sending emails to Slack",
-      "required": false,
-      "default": "",
-      "secret": true
-    },
-    "discord_webhook_url": {
-      "type": "string",
-      "title": "Discord Webhook URL",
-      "description": "Discord webhook URL for sending emails to Discord",
-      "required": false,
-      "default": "",
-      "secret": true
-    },
-    "default_service": {
-      "type": "string",
-      "title": "Default Email Service",
-      "description": "Default service to use for sending emails",
-      "default": "smtp",
-      "enum": ["smtp", "sendgrid", "mailgun", "resend", "slack", "discord"]
     }
   },
   "tools": [
-    {
-      "name": "send_email",
-      "description": "Send emails via multiple service types (SMTP, API, webhook)"
-    },
-    {
-      "name": "check_inbox",
-      "description": "Check inbox via IMAP or service-specific APIs"
-    },
-    {
-      "name": "email_status",
-      "description": "Get server configuration and connectivity status"
-    },
-    {
-      "name": "configure_service",
-      "description": "Configure different email services dynamically at runtime"
-    },
-    {
-      "name": "list_services",
-      "description": "List available and configured email services"
-    },
-    {
-      "name": "email_help",
-      "description": "Get help and documentation for email operations"
-    }
+    {"name": "send_email", "description": "Send emails via multiple service types (SMTP, API, webhook)"},
+    {"name": "check_inbox", "description": "Check inbox via IMAP or service-specific APIs"},
+    {"name": "fetch_email_detail", "description": "Fetch a single email by ID with full text and HTML body"},
+    {"name": "search_emails", "description": "Full-text IMAP search across subject and body"},
+    {"name": "delete_email", "description": "Delete/move-to-trash a single email via IMAP"},
+    {"name": "mark_email_read", "description": "Mark a single email as read (SEEN flag)"},
+    {"name": "email_status", "description": "Get server configuration and connectivity status"},
+    {"name": "configure_service", "description": "Configure different email services dynamically at runtime"},
+    {"name": "remove_service", "description": "Remove a dynamically configured email service"},
+    {"name": "list_services", "description": "List available and configured email services"},
+    {"name": "email_help", "description": "Get help and documentation for email operations"},
+    {"name": "mailing_lists_catalog", "description": "List named mailing-list presets from EMAIL_MCP_MAILING_LISTS"},
+    {"name": "mailing_list_latest", "description": "Fetch newest messages for a named mailing-list preset"},
+    {"name": "suggest_email_subject", "description": "Suggest 1-3 email subject lines via MCP sampling"},
+    {"name": "email_agentic_assist", "description": "Plan a short multi-step email workflow via sampling"}
   ]
 }

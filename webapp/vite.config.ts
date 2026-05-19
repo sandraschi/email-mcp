@@ -15,6 +15,9 @@ export default defineConfig({
     proxy: {
       "/api": "http://127.0.0.1:10813",
       "/mcp": "http://127.0.0.1:10813",
+      "/docs": "http://127.0.0.1:10813",
+      "/redoc": "http://127.0.0.1:10813",
+      "/openapi.json": "http://127.0.0.1:10813",
     },
   },
 });

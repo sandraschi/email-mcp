@@ -1,185 +1,47 @@
-# Email MCP Server - User Interaction Guide
+# Email MCP Server — Quick Reference
 
-## How to Use the Email MCP Server
+## Sending
 
-### Basic Email Sending
-
-**Send a simple email:**
 ```
-send_email(
-    to="user@example.com",
-    subject="Hello World",
-    body="This is a test email"
-)
+send an email to user@example.com with subject "Hello" and body "Test"
+send an email via sendgrid to user@example.com with subject "Welcome" and html "<h1>Hi</h1>"
+send an email to #general with subject "Alert" and body "CPU high" via slack
 ```
 
-**Send HTML email:**
+## Reading
+
 ```
-send_email(
-    to="user@example.com",
-    subject="Welcome",
-    body="Please view in HTML mode",
-    html="<h1>Welcome!</h1><p>Thank you for joining.</p>"
-)
+check my inbox — show the last 10 emails
+check my inbox for unread emails from notifications@github.com
+show me emails about "meeting" in my inbox
 ```
 
-**Send with CC/BCC:**
+## Detail & Actions
+
 ```
-send_email(
-    to="primary@example.com",
-    cc=["manager@example.com"],
-    bcc=["admin@example.com"],
-    subject="Team Update",
-    body="Important team information"
-)
+get the full content of email <id>
+delete email <id>
+mark email <id> as read
+search for "invoice" in my inbox
 ```
 
-### Service Selection
+## Services
 
-**Use specific email service:**
 ```
-send_email(
-    to="user@example.com",
-    subject="Test",
-    body="Message",
-    service="sendgrid"
-)
+what email services do I have configured?
+test my gmail connection
+add sendgrid with my API key
+remove the slack service
 ```
 
-Available services: smtp, sendgrid, mailgun, resend, slack, discord
+## AI Features
 
-### Inbox Management
-
-**Check inbox:**
 ```
-result = check_inbox(limit=10, unread_only=True)
-print(f"Found {result['count']} unread emails")
+improve this email: [text] — make it more professional and concise
+suggest a subject line for this email body: [text]
+plan an email workflow to clean up my inbox
 ```
 
-**Check specific folder:**
-```
-result = check_inbox(folder="Sent", limit=5)
-```
+## Web Dashboard
 
-**Filter by date:**
-```
-from datetime import datetime, timedelta
-week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-result = check_inbox(after_date=week_ago)
-```
-
-### Service Management
-
-**List available services:**
-```
-services = list_services()
-for service in services['services']:
-    print(f"{service}: {services['services'][service]['type']}")
-```
-
-**Check service status:**
-```
-status = email_status()
-for service_name, service_info in status['services'].items():
-    print(f"{service_name}: {service_info['connected']}")
-```
-
-**Configure new service:**
-```
-configure_service(
-    name="my-gmail",
-    type="smtp",
-    config={
-        "server": "smtp.gmail.com",
-        "port": 587,
-        "username": "user@gmail.com",
-        "password": "app-password"
-    }
-)
-```
-
-### Configuration Examples
-
-**Gmail SMTP Setup:**
-```
-# Environment variables
-export SMTP_SERVER="smtp.gmail.com"
-export SMTP_PORT="587"
-export SMTP_USER="your-email@gmail.com"
-export SMTP_PASSWORD="your-app-password"
-```
-
-**SendGrid API Setup:**
-```
-export SENDGRID_API_KEY="your-sendgrid-api-key"
-export SENDGRID_FROM_EMAIL="noreply@yourdomain.com"
-```
-
-**MailHog for Testing:**
-```
-export MAILHOG_ENABLED="true"
-export MAILHOG_SMTP_HOST="localhost"
-export MAILHOG_SMTP_PORT="1025"
-```
-
-### Error Handling
-
-**Common issues and solutions:**
-
-1. **Authentication failed:**
-   - For Gmail/Outlook: Use App Password, not regular password
-   - Enable 2FA on your account
-   - Check SMTP server settings
-
-2. **Connection timeout:**
-   - Verify SMTP server and port
-   - Check firewall settings
-   - Try different service (sendgrid instead of smtp)
-
-3. **Service not configured:**
-   - Run configure_service() to add the service
-   - Check environment variables
-   - Verify API keys
-
-### Best Practices
-
-1. **Use App Passwords** for Gmail/Outlook instead of regular passwords
-2. **Test with local services** (MailHog) during development
-3. **Monitor service health** with email_status() regularly
-4. **Handle errors gracefully** with try/catch blocks
-5. **Use appropriate services** for different use cases:
-   - SMTP for standard emails
-   - SendGrid/Mailgun for transactional emails
-   - Slack/Discord for team notifications
-
-### Advanced Features
-
-**Webhook integrations:**
-```
-send_email(
-    to="#general",
-    subject="Alert",
-    body="System notification",
-    service="slack"
-)
-```
-
-**Multiple recipients:**
-```
-send_email(
-    to=["user1@example.com", "user2@example.com"],
-    subject="Group Message",
-    body="Message for multiple recipients"
-)
-```
-
-**Date filtering:**
-```
-# Emails from last week
-result = check_inbox(
-    after_date="2024-01-01",
-    before_date="2024-01-15"
-)
-```
-
-This server provides comprehensive email capabilities for all your communication needs.
+Open http://localhost:10812 for the full interface.
