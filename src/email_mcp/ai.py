@@ -49,12 +49,16 @@ class AIRouter:
                 # Use sensible default model for Ollama if none configured
                 if not self.model:
                     self.model = "llama3.1:8b"
-                return await self._openai_compat(client, query, sp, self.endpoint or "http://localhost:11434/v1/chat/completions")
+                return await self._openai_compat(
+                    client, query, sp, self.endpoint or "http://localhost:11434/v1/chat/completions"
+                )
             elif provider == "lmstudio":
                 return await self._openai_compat(client, query, sp, "http://localhost:1234/v1/chat/completions")
             elif provider == "openai":
                 return await self._openai_compat(
-                    client, query, sp,
+                    client,
+                    query,
+                    sp,
                     self.endpoint or "https://api.openai.com/v1/chat/completions",
                     api_key=os.getenv("OPENAI_API_KEY", ""),
                 )
@@ -62,12 +66,16 @@ class AIRouter:
                 return await self._anthropic(client, query, sp)
             elif provider == "google":
                 return await self._openai_compat(
-                    client, query, sp,
+                    client,
+                    query,
+                    sp,
                     self.endpoint or "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
                     api_key=os.getenv("GOOGLE_API_KEY", ""),
                 )
             else:
-                return await self._openai_compat(client, query, sp, self.endpoint or "http://localhost:11434/v1/chat/completions")
+                return await self._openai_compat(
+                    client, query, sp, self.endpoint or "http://localhost:11434/v1/chat/completions"
+                )
 
     async def _openai_compat(
         self,
@@ -134,7 +142,9 @@ class AIRouter:
         tools = await self.mcp.list_tools()
         return [{"name": t.name, "description": getattr(t, "description", "") or ""} for t in tools]
 
-    async def improve_text(self, text: str, style: str = "professional", length: str = "same", mood: str = "neutral") -> str:
+    async def improve_text(
+        self, text: str, style: str = "professional", length: str = "same", mood: str = "neutral"
+    ) -> str:
         """Improve email body text with specified style, length, and mood."""
         query = (
             f"Improve this email body. Make it {style} in tone, make it {length} in length, "

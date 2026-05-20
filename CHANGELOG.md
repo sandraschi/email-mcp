@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Prompt injection defense**: `src/email_mcp/sanitize.py` with 37 zero-width/bidi Unicode character stripping + safety boundary wrapping (`<<< UNTRUSTED EXTERNAL DATA >>>` preamble) applied to all MCP tool returns, 5 service files, 6 test fixtures, 27 tests
 - **Live topbar health check**: polls `/api/status` every 30s, shows green/red status dot
 - **Auto-refresh inbox**: 30s polling with toggle
-- **Docs restructure**: 8 sub-readmes in `docs/` (gmail, outlook, protonmail, api-services, local-testing, webhook-integrations, configuration, safety-hardening); short user-facing README cut from 514→110 lines
+- **Docs restructure**: 8 sub-readmes in `docs/` (gmail, outlook, protonmail, api-services, local-testing, webhook-integrations, configuration, safety-hardening); short user-facing README cut from 514â†’110 lines
 - **Tabbed Help page**: Quick Start, Email Systems, Configuration, Tools, Safety, SOTA tabs
 - **Functional Tools page**: Execute buttons now call real REST endpoints with per-tool result display
 - **Fixed dashboard**: real stats (unread count, connected services, drafts), clickable recent activity
@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated version to 0.4.0
 - `manifest.json` and `mcpb.json` updated with new tools and version
-- Inbox now clickable → navigates to email detail, inline delete button on hover
+- Inbox now clickable â†’ navigates to email detail, inline delete button on hover
 - Compose now supports BCC, HTML toggle, draft save/load panel
 - Sidebar: added Search and Services nav items
 - Dashboard: removed fake "system load = tools_count * 4" stat, shows real draft count
@@ -38,20 +38,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Prompt injection hardening**: two-layer defense (Unicode stripping + safety boundary wrapping) applied to check_inbox, fetch_email_detail, search_emails, mailing_list_latest tool returns
 - FastMCP `instructions` declares safety posture up front
 
+## [0.4.1] - 2026-05-19
+
+### Added
+- **Tauri 2.0 native desktop wrapper** (
+ative/): single-window app using system WebView2, no Electron/Chromium
+  - System tray icon with minimize-to-tray support
+  - Auto-launches PyInstaller sidecar backend on startup; kills it cleanly on exit
+  - Emits ackend-status events (eady / error) to the frontend via Tauri IPC
+- **PyInstaller sidecar build** (email-mcp-backend.spec, 
+ative/build-sidecar.ps1):
+  - Single-file EXE (one-file mode, no one-dir COLLECT) for Tauri externalBin compatibility
+  - Copies output to 
+ative/binaries/email-mcp-backend-x86_64-pc-windows-msvc.exe
+  - Expanded hiddenimports: full uvicorn protocol/lifespan tree + all email_mcp.* submodules
+  - pathex = ["src"] so imports resolve correctly inside the frozen bundle
+- **
+ative/package.json**: pins @tauri-apps/cli ^2 so 
+px resolves locally instead of fetching on every run
+- **justfile** — new targets in Native (Tauri) section:
+  - uild-sidecar: run PyInstaller, copy binary to 
+ative/binaries/
+  - uild-all: uild-sidecar then uild-native in one step
+  - 	auri-dev: hot-reload dev mode (backend must be running separately)
+  - uild-native / uild-native-debug: run 
+pm install before Tauri CLI
+
+### Fixed
+- **
+ative/main.rs**: uvicorn readiness detection now checks both CommandEvent::Stdout and CommandEvent::Stderr — uvicorn's startup message (Uvicorn running on ...) is emitted via Python logging to stderr, so the previous stdout-only check never fired
+
 ## [0.3.1] - 2026-03-20
 
 ### Added
 - **Mailing list presets**: `EMAIL_MCP_MAILING_LISTS` / `EMAIL_MCP_MAILING_LISTS_FILE` (JSON), tools `mailing_lists_catalog`, `mailing_list_latest`; optional `from_contains` / `subject_contains` on `check_inbox` (IMAP + local MailHog/Mailpit).
-- **`src/email_mcp/mailing_lists.py`** — Pydantic-validated list entries.
-- **`justfile`** — `sync`, `copy-mcp`, `lint`, `fmt`, `test`, `check`, `run`.
-- **`copy_server.py`** — Syncs `server.py`, `mailing_lists.py`, and `skills/` into `mcp-server/src/email_mcp/`.
+- **`src/email_mcp/mailing_lists.py`** â€” Pydantic-validated list entries.
+- **`justfile`** â€” `sync`, `copy-mcp`, `lint`, `fmt`, `test`, `check`, `run`.
+- **`copy_server.py`** â€” Syncs `server.py`, `mailing_lists.py`, and `skills/` into `mcp-server/src/email_mcp/`.
 
 ### Changed
 - **`glama.json` / `manifest.json`**: version **0.3.1**, tool count **10**; sampling + prompts + skills documented in Glama capabilities.
 - **`pytest.ini`**: `[pytest]` section, `asyncio_mode = auto` (for pytest-asyncio).
 
 ### Notes
-- **Sampling / agentic / prompts / skills**: unchanged — `suggest_email_subject`, `email_agentic_assist`, prompts, `email_mcp/skills/` remain optional UX helpers (not required for core SMTP/IMAP).
+- **Sampling / agentic / prompts / skills**: unchanged â€” `suggest_email_subject`, `email_agentic_assist`, prompts, `email_mcp/skills/` remain optional UX helpers (not required for core SMTP/IMAP).
 
 ## [0.3.0] - 2026-01-17
 
@@ -147,3 +177,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic service configuration
 - Core email sending and receiving functionality
 - Async operations support
+

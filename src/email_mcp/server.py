@@ -26,15 +26,15 @@ from email.header import decode_header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import httpx
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastmcp import Context, FastMCP
-from fastmcp.server import create_proxy
 from fastmcp.prompts import Message
+from fastmcp.server import create_proxy
 from pydantic import BaseModel, Field
 
 from .mailing_lists import load_mailing_list_entries
@@ -116,9 +116,7 @@ def decode_email_header(header_value: str) -> str:
 
         # Test the decoding with the problematic header
         if "=?UTF-8?B?" in str(header_value) or "=?utf-8?q?" in str(header_value):
-            logger.debug(
-                "Decoded header test", original=header_value, decoded=result, parts=decoded_parts
-            )
+            logger.debug("Decoded header test", original=header_value, decoded=result, parts=decoded_parts)
 
         return result
     except Exception as e:
@@ -143,7 +141,7 @@ class EmailServiceConfig(BaseModel):
     name: str
     type: str  # smtp, api, webhook, local
     enabled: bool = True
-    config: Dict[str, Any] = Field(default_factory=dict)
+    config: dict[str, Any] = Field(default_factory=dict)
 
 
 class EmailService(ABC):
@@ -170,13 +168,13 @@ class EmailService(ABC):
     @abstractmethod
     async def send_email(
         self,
-        to: Union[str, List[str]],
+        to: str | list[str],
         subject: str,
         body: str,
-        html: Optional[str] = None,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        html: str | None = None,
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Send an email via this service.
 
         Args:
@@ -198,9 +196,9 @@ class EmailService(ABC):
         folder: str = "INBOX",
         limit: int = 10,
         unread_only: bool = False,
-        from_contains: Optional[str] = None,
-        subject_contains: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        from_contains: str | None = None,
+        subject_contains: str | None = None,
+    ) -> dict[str, Any]:
         """Check inbox via this service.
 
         Args:
@@ -216,7 +214,7 @@ class EmailService(ABC):
         pass
 
     @abstractmethod
-    async def test_connection(self) -> Dict[str, Any]:
+    async def test_connection(self) -> dict[str, Any]:
         """Test connection to this service."""
         pass
 
@@ -224,7 +222,7 @@ class EmailService(ABC):
         self,
         folder: str,
         email_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Fetch a single email by ID with full body text/HTML."""
         return {"success": False, "error": f"fetch_message not supported for {self.name}"}
 
@@ -232,7 +230,7 @@ class EmailService(ABC):
         self,
         folder: str,
         email_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Delete/move-to-trash a single email by ID."""
         return {"success": False, "error": f"delete_message not supported for {self.name}"}
 
@@ -240,7 +238,7 @@ class EmailService(ABC):
         self,
         folder: str,
         email_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Mark a single email as read (SEEN)."""
         return {"success": False, "error": f"mark_read not supported for {self.name}"}
 
@@ -274,13 +272,13 @@ class SMTPEmailService(EmailService):
 
     async def send_email(
         self,
-        to: Union[str, List[str]],
+        to: str | list[str],
         subject: str,
         body: str,
-        html: Optional[str] = None,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        html: str | None = None,
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Send email via SMTP."""
         if not self.smtp_server or not self.smtp_user or not self.smtp_password:
             return {"success": False, "error": f"SMTP not configured for {self.name}"}
@@ -300,13 +298,9 @@ class SMTPEmailService(EmailService):
 
             recipients = [addr.strip() for addr in (to.split(",") if isinstance(to, str) else to)]
             if cc:
-                recipients.extend(
-                    [addr.strip() for addr in (cc if isinstance(cc, list) else cc.split(","))]
-                )
+                recipients.extend([addr.strip() for addr in (cc if isinstance(cc, list) else cc.split(","))])
             if bcc:
-                recipients.extend(
-                    [addr.strip() for addr in (bcc if isinstance(bcc, list) else bcc.split(","))]
-                )
+                recipients.extend([addr.strip() for addr in (bcc if isinstance(bcc, list) else bcc.split(","))])
 
             def send_sync():
                 with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
@@ -320,16 +314,16 @@ class SMTPEmailService(EmailService):
             return {"success": True, "status": "sent", "service": self.name}
 
         except Exception as e:
-            return {"success": False, "error": f"SMTP send failed: {str(e)}"}
+            return {"success": False, "error": f"SMTP send failed: {e!s}"}
 
     async def check_inbox(
         self,
         folder: str = "INBOX",
         limit: int = 10,
         unread_only: bool = False,
-        from_contains: Optional[str] = None,
-        subject_contains: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        from_contains: str | None = None,
+        subject_contains: str | None = None,
+    ) -> dict[str, Any]:
         """Check inbox via IMAP."""
         if not self.imap_server or not self.imap_user or not self.imap_password:
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
@@ -413,9 +407,9 @@ class SMTPEmailService(EmailService):
             }
 
         except Exception as e:
-            return {"success": False, "error": f"IMAP check failed: {str(e)}"}
+            return {"success": False, "error": f"IMAP check failed: {e!s}"}
 
-    async def test_connection(self) -> Dict[str, Any]:
+    async def test_connection(self) -> dict[str, Any]:
         """Test SMTP and IMAP connections."""
         smtp_ok = False
         imap_ok = False
@@ -462,12 +456,13 @@ class SMTPEmailService(EmailService):
         self,
         folder: str,
         email_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Fetch a single email by ID with full body text and HTML via IMAP."""
         if not self.imap_server or not self.imap_user or not self.imap_password:
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
 
         try:
+
             def fetch_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
                 mail.login(self.imap_user, self.imap_password)
@@ -545,18 +540,19 @@ class SMTPEmailService(EmailService):
             return result
 
         except Exception as e:
-            return {"success": False, "error": f"IMAP fetch failed: {str(e)}"}
+            return {"success": False, "error": f"IMAP fetch failed: {e!s}"}
 
     async def delete_message(
         self,
         folder: str,
         email_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Delete a single email by ID via IMAP (moves to Trash)."""
         if not self.imap_server or not self.imap_user or not self.imap_password:
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
 
         try:
+
             def delete_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
                 mail.login(self.imap_user, self.imap_password)
@@ -574,18 +570,19 @@ class SMTPEmailService(EmailService):
             return {"success": True, "service": self.name, "email_id": email_id, "message": f"Deleted {email_id}"}
 
         except Exception as e:
-            return {"success": False, "error": f"IMAP delete failed: {str(e)}"}
+            return {"success": False, "error": f"IMAP delete failed: {e!s}"}
 
     async def mark_read(
         self,
         folder: str,
         email_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Mark a single email as read (SEEN) via IMAP."""
         if not self.imap_server or not self.imap_user or not self.imap_password:
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
 
         try:
+
             def mark_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
                 mail.login(self.imap_user, self.imap_password)
@@ -599,10 +596,15 @@ class SMTPEmailService(EmailService):
 
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, mark_sync)
-            return {"success": True, "service": self.name, "email_id": email_id, "message": f"Marked {email_id} as read"}
+            return {
+                "success": True,
+                "service": self.name,
+                "email_id": email_id,
+                "message": f"Marked {email_id} as read",
+            }
 
         except Exception as e:
-            return {"success": False, "error": f"IMAP mark read failed: {str(e)}"}
+            return {"success": False, "error": f"IMAP mark read failed: {e!s}"}
 
 
 class APIEmailService(EmailService):
@@ -631,13 +633,13 @@ class APIEmailService(EmailService):
 
     async def send_email(
         self,
-        to: Union[str, List[str]],
+        to: str | list[str],
         subject: str,
         body: str,
-        html: Optional[str] = None,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        html: str | None = None,
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Send email via API."""
         if not self.api_key or not self.api_url or not self.from_email:
             return {"success": False, "error": f"API not configured for {self.name}"}
@@ -664,7 +666,7 @@ class APIEmailService(EmailService):
                     }
 
         except Exception as e:
-            return {"success": False, "error": f"API send failed: {str(e)}"}
+            return {"success": False, "error": f"API send failed: {e!s}"}
 
     def _prepare_api_payload(self, to, subject, body, html, cc, bcc):
         """Prepare API payload based on service type."""
@@ -720,16 +722,16 @@ class APIEmailService(EmailService):
         folder: str = "INBOX",
         limit: int = 10,
         unread_only: bool = False,
-        from_contains: Optional[str] = None,
-        subject_contains: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        from_contains: str | None = None,
+        subject_contains: str | None = None,
+    ) -> dict[str, Any]:
         """API-based services typically don't support inbox checking."""
         return {
             "success": False,
             "error": f"Inbox checking not supported for API service {self.name}",
         }
 
-    async def test_connection(self) -> Dict[str, Any]:
+    async def test_connection(self) -> dict[str, Any]:
         """Test API connection."""
         if not self.api_key or not self.api_url:
             return {"service": self.name, "connected": False, "error": "API not configured"}
@@ -771,13 +773,13 @@ class LocalEmailService(EmailService):
 
     async def send_email(
         self,
-        to: Union[str, List[str]],
+        to: str | list[str],
         subject: str,
         body: str,
-        html: Optional[str] = None,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        html: str | None = None,
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Send email to local testing service."""
         try:
             msg = MIMEMultipart("alternative")
@@ -806,11 +808,9 @@ class LocalEmailService(EmailService):
             }
 
         except Exception as e:
-            return {"success": False, "error": f"Local send failed: {str(e)}"}
+            return {"success": False, "error": f"Local send failed: {e!s}"}
 
-    async def check_inbox(
-        self, folder: str = "INBOX", limit: int = 10, unread_only: bool = False
-    ) -> Dict[str, Any]:
+    async def check_inbox(self, folder: str = "INBOX", limit: int = 10, unread_only: bool = False) -> dict[str, Any]:
         """Check inbox via local service API."""
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
@@ -826,9 +826,7 @@ class LocalEmailService(EmailService):
                                     "subject": msg.get("Content", {})
                                     .get("Headers", {})
                                     .get("Subject", ["(No Subject)"])[0],
-                                    "from": msg.get("Content", {})
-                                    .get("Headers", {})
-                                    .get("From", ["Unknown"])[0],
+                                    "from": msg.get("Content", {}).get("Headers", {}).get("From", ["Unknown"])[0],
                                     "date": msg.get("Created"),
                                     "read": True,
                                 }
@@ -867,9 +865,9 @@ class LocalEmailService(EmailService):
             }
 
         except Exception as e:
-            return {"success": False, "error": f"Local inbox check failed: {str(e)}"}
+            return {"success": False, "error": f"Local inbox check failed: {e!s}"}
 
-    async def test_connection(self) -> Dict[str, Any]:
+    async def test_connection(self) -> dict[str, Any]:
         """Test connection to local service."""
         smtp_ok = False
         http_ok = False
@@ -920,13 +918,13 @@ class WebhookEmailService(EmailService):
 
     async def send_email(
         self,
-        to: Union[str, List[str]],
+        to: str | list[str],
         subject: str,
         body: str,
-        html: Optional[str] = None,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        html: str | None = None,
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Send email via webhook."""
         if not self.webhook_url:
             return {"success": False, "error": f"Webhook not configured for {self.name}"}
@@ -946,7 +944,7 @@ class WebhookEmailService(EmailService):
                     }
 
         except Exception as e:
-            return {"success": False, "error": f"Webhook send failed: {str(e)}"}
+            return {"success": False, "error": f"Webhook send failed: {e!s}"}
 
     def _prepare_webhook_payload(self, to, subject, body, html, cc, bcc):
         """Prepare webhook payload based on service type."""
@@ -998,16 +996,16 @@ class WebhookEmailService(EmailService):
         folder: str = "INBOX",
         limit: int = 10,
         unread_only: bool = False,
-        from_contains: Optional[str] = None,
-        subject_contains: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        from_contains: str | None = None,
+        subject_contains: str | None = None,
+    ) -> dict[str, Any]:
         """Webhook services typically don't support inbox checking."""
         return {
             "success": False,
             "error": f"Inbox checking not supported for webhook service {self.name}",
         }
 
-    async def test_connection(self) -> Dict[str, Any]:
+    async def test_connection(self) -> dict[str, Any]:
         """Test webhook connection."""
         if not self.webhook_url:
             return {"service": self.name, "connected": False, "error": "Webhook not configured"}
@@ -1103,7 +1101,7 @@ class EmailMCP:
         environment variables for backward compatibility, and initializes
         the service registry for dynamic configuration.
         """
-        _mcp_kwargs: Dict[str, Any] = {
+        _mcp_kwargs: dict[str, Any] = {
             "name": "Email-MCP",
             "version": "0.4.0",
             "lifespan": server_lifespan,
@@ -1118,9 +1116,7 @@ class EmailMCP:
                 )
                 _mcp_kwargs["sampling_handler_behavior"] = "fallback"
             except ImportError:
-                logger.warning(
-                    "ANTHROPIC_API_KEY set but fastmcp[anthropic] not installed; sampling fallback disabled"
-                )
+                logger.warning("ANTHROPIC_API_KEY set but fastmcp[anthropic] not installed; sampling fallback disabled")
         self.mcp = FastMCP(**_mcp_kwargs)
 
         # ── MCP Bridge (ProxyProvider) ────────────────────────────────────────────
@@ -1138,7 +1134,7 @@ class EmailMCP:
 
         # Service registry
         # NOTE: Prefab tools gracefully skip if prefab-ui<0.18 is installed
-        self.services: Dict[str, EmailService] = {}
+        self.services: dict[str, EmailService] = {}
 
         # Load default services from environment (backward compatibility)
         self._load_default_services()
@@ -1323,14 +1319,14 @@ class EmailMCP:
 
         @self.mcp.tool()
         async def send_email(
-            to: Union[str, List[str]],
+            to: str | list[str],
             subject: str,
             body: str,
             service: str = "default",
-            html: Optional[str] = None,
-            cc: Optional[List[str]] = None,
-            bcc: Optional[List[str]] = None,
-        ) -> Dict[str, Any]:
+            html: str | None = None,
+            cc: list[str] | None = None,
+            bcc: list[str] | None = None,
+        ) -> dict[str, Any]:
             """Send an email via specified email service.
 
             Sends an email using the specified email service. Supports SMTP, API-based services,
@@ -1414,9 +1410,7 @@ class EmailMCP:
 
             if result.get("success"):
                 logger.info("Email sent successfully", service=service, to=to, subject=subject)
-                result["message"] = (
-                    f"Email '{subject}' sent successfully to {to} via {service} service"
-                )
+                result["message"] = f"Email '{subject}' sent successfully to {to} via {service} service"
             else:
                 logger.error("Failed to send email", service=service, error=result.get("error"))
                 result["message"] = f"Failed to send email: {result.get('error')}"
@@ -1429,9 +1423,9 @@ class EmailMCP:
             folder: str = "INBOX",
             limit: int = 10,
             unread_only: bool = False,
-            from_contains: Optional[str] = None,
-            subject_contains: Optional[str] = None,
-        ) -> Dict[str, Any]:
+            from_contains: str | None = None,
+            subject_contains: str | None = None,
+        ) -> dict[str, Any]:
             """Check inbox via specified email service.
 
             Retrieves emails from the specified service and folder. Supports IMAP-based services,
@@ -1499,9 +1493,7 @@ class EmailMCP:
                 }
 
             email_service = self.services[service]
-            result = await email_service.check_inbox(
-                folder, limit, unread_only, from_contains, subject_contains
-            )
+            result = await email_service.check_inbox(folder, limit, unread_only, from_contains, subject_contains)
 
             if result.get("success"):
                 count = result.get("count", 0)
@@ -1522,7 +1514,7 @@ class EmailMCP:
             return result
 
         @self.mcp.tool()
-        async def mailing_lists_catalog() -> Dict[str, Any]:
+        async def mailing_lists_catalog() -> dict[str, Any]:
             """MAILING_LISTS_CATALOG — List named mailing-list presets from EMAIL_MCP_MAILING_LISTS (JSON).
 
             Configure labels/folders once (e.g. Gmail filter → IMAP folder), then use mailing_list_latest(id).
@@ -1545,9 +1537,9 @@ class EmailMCP:
         @self.mcp.tool()
         async def mailing_list_latest(
             list_id: str,
-            limit: Optional[int] = None,
-            unread_only: Optional[bool] = None,
-        ) -> Dict[str, Any]:
+            limit: int | None = None,
+            unread_only: bool | None = None,
+        ) -> dict[str, Any]:
             """MAILING_LIST_LATEST — Fetch newest messages for a preset id (see mailing_lists_catalog).
 
             Loads folder/service/filters from EMAIL_MCP_MAILING_LISTS. Typical use: newsletter drops in a
@@ -1598,14 +1590,12 @@ class EmailMCP:
             result["list_id"] = entry.id
             result["preset"] = entry.model_dump()
             if result.get("success"):
-                result["message"] = (
-                    f"List {entry.id!r}: {result.get('count', 0)} message(s) from {entry.folder}"
-                )
+                result["message"] = f"List {entry.id!r}: {result.get('count', 0)} message(s) from {entry.folder}"
                 result["emails"] = wrap_untrusted_list(result.get("emails", []), source="mailing_list")
             return result
 
         @self.mcp.tool()
-        async def email_status(service: Optional[str] = None) -> Dict[str, Any]:
+        async def email_status(service: str | None = None) -> dict[str, Any]:
             """Get email service status and test connectivity.
 
             Tests connectivity for specified service or all configured services.
@@ -1657,12 +1647,9 @@ class EmailMCP:
                         "configured": True,
                         "connected": status.get(
                             "connected",
-                            status.get("smtp_connected", False)
-                            or status.get("imap_connected", False),
+                            status.get("smtp_connected", False) or status.get("imap_connected", False),
                         ),
-                        "error": status.get("error")
-                        or status.get("smtp_error")
-                        or status.get("imap_error"),
+                        "error": status.get("error") or status.get("smtp_error") or status.get("imap_error"),
                         "type": email_service.config.type,
                     }
                 else:
@@ -1699,9 +1686,9 @@ class EmailMCP:
         async def configure_service(
             name: str,
             type: str,
-            config: Dict[str, Any],
+            config: dict[str, Any],
             enabled: bool = True,
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Configure a new email service dynamically.
 
             Adds a new email service configuration at runtime. The service will be
@@ -1760,9 +1747,7 @@ class EmailMCP:
                 }
 
             try:
-                service_config = EmailServiceConfig(
-                    name=name, type=type, enabled=enabled, config=config
-                )
+                service_config = EmailServiceConfig(name=name, type=type, enabled=enabled, config=config)
                 self.services[name] = EmailServiceFactory.create_service(service_config)
 
                 logger.info("Service configured", service=name, type=type)
@@ -1777,11 +1762,11 @@ class EmailMCP:
                 return {
                     "success": False,
                     "service": name,
-                    "message": f"Configuration failed for service '{name}': {str(e)}",
+                    "message": f"Configuration failed for service '{name}': {e!s}",
                 }
 
         @self.mcp.tool()
-        async def list_services() -> Dict[str, Any]:
+        async def list_services() -> dict[str, Any]:
             """List all configured email services.
 
             Returns information about all available email services, their types,
@@ -1826,15 +1811,11 @@ class EmailMCP:
 
             for name, service in self.services.items():
                 configured = True
-                description = (
-                    f"{service.__class__.__name__.replace('EmailService', '').lower()} service"
-                )
+                description = f"{service.__class__.__name__.replace('EmailService', '').lower()} service"
 
                 # Check if service is properly configured
                 if isinstance(service, SMTPEmailService):
-                    configured = bool(
-                        service.smtp_server and service.smtp_user and service.smtp_password
-                    )
+                    configured = bool(service.smtp_server and service.smtp_user and service.smtp_password)
                     description = "SMTP/IMAP email service"
                 elif isinstance(service, APIEmailService):
                     configured = bool(service.api_key and service.api_url and service.from_email)
@@ -1864,7 +1845,7 @@ class EmailMCP:
             }
 
         @self.mcp.tool()
-        async def email_help() -> Dict[str, Any]:
+        async def email_help() -> dict[str, Any]:
             """Get help and usage information for email MCP tools and services.
 
             Returns comprehensive help information including available tools, supported services,
@@ -2015,7 +1996,7 @@ class EmailMCP:
             email_id: str,
             service: str = "default",
             folder: str = "INBOX",
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Fetch a single email by ID with full body (text + HTML).
 
             Returns the complete email including decoded text body, HTML body,
@@ -2039,7 +2020,7 @@ class EmailMCP:
             email_id: str,
             service: str = "default",
             folder: str = "INBOX",
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Delete a single email by ID (moves to Trash via IMAP).
 
             ## Return Format
@@ -2054,7 +2035,7 @@ class EmailMCP:
             email_id: str,
             service: str = "default",
             folder: str = "INBOX",
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Mark a single email as read (SEEN flag) via IMAP.
 
             ## Return Format
@@ -2070,7 +2051,7 @@ class EmailMCP:
             service: str = "default",
             folder: str = "INBOX",
             limit: int = 20,
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             """Search emails via IMAP SEARCH command (subject/from/body keywords).
 
             Uses IMAP SEARCH to find messages matching the query string,
@@ -2094,6 +2075,7 @@ class EmailMCP:
                 )
 
             try:
+
                 def search_sync():
                     mail = imaplib.IMAP4_SSL(svc.imap_server, svc.imap_port)
                     mail.login(svc.imap_user, svc.imap_password)
@@ -2115,12 +2097,14 @@ class EmailMCP:
                         if st != "OK":
                             continue
                         em = email.message_from_bytes(md[0][1])
-                        emails_.append({
-                            "id": eid.decode(),
-                            "subject": sanitize_text(decode_email_header(em.get("Subject", ""))) or "(No Subject)",
-                            "from": sanitize_text(decode_email_header(em.get("From", ""))) or "Unknown",
-                            "date": sanitize_text(decode_email_header(em.get("Date", ""))) or "Unknown",
-                        })
+                        emails_.append(
+                            {
+                                "id": eid.decode(),
+                                "subject": sanitize_text(decode_email_header(em.get("Subject", ""))) or "(No Subject)",
+                                "from": sanitize_text(decode_email_header(em.get("From", ""))) or "Unknown",
+                                "date": sanitize_text(decode_email_header(em.get("Date", ""))) or "Unknown",
+                            }
+                        )
                     mail.close()
                     mail.logout()
                     return emails_
@@ -2138,10 +2122,10 @@ class EmailMCP:
                     "message": f"Found {len(wrapped)} results for '{query}' in {folder}",
                 }
             except Exception as e:
-                return {"success": False, "error": f"Search failed: {str(e)}"}
+                return {"success": False, "error": f"Search failed: {e!s}"}
 
         @self.mcp.tool()
-        async def remove_service(name: str) -> Dict[str, Any]:
+        async def remove_service(name: str) -> dict[str, Any]:
             """Remove a dynamically configured email service.
 
             ## Return Format
@@ -2187,15 +2171,14 @@ class EmailMCP:
                     "Reply with only the subjects, one per line.\n\nBody:\n" + body[:2000]
                 ),
                 system_prompt=(
-                    "You are a concise assistant. Output only subject lines, one per line, "
-                    "no numbering or extra text."
+                    "You are a concise assistant. Output only subject lines, one per line, no numbering or extra text."
                 ),
                 max_tokens=150,
             )
             return getattr(result, "text", None) or str(result)
 
         @mcp.tool()
-        async def email_agentic_assist(goal: str, ctx: Context) -> Dict[str, Any]:
+        async def email_agentic_assist(goal: str, ctx: Context) -> dict[str, Any]:
             """Plan a short multi-step email workflow using sampling (agentic assist).
 
             Uses the host LLM via sampling when available; optional Anthropic fallback if configured.
@@ -2229,7 +2212,6 @@ class EmailMCP:
         except OSError | UnicodeError | ValueError as e:
             logger.warning("skills_provider_skipped", error=str(e))
 
-
     def _register_prefab_tools(self) -> None:
         """Register FastMCP 3.2 Prefab UI tools (app=True) for in-chat rich cards."""
         try:
@@ -2262,7 +2244,9 @@ class EmailMCP:
             for svc_name in services_to_check:
                 svc = self.services[svc_name]
                 status = await svc.test_connection()
-                connected = status.get("connected", status.get("smtp_connected", False) or status.get("imap_connected", False))
+                connected = status.get(
+                    "connected", status.get("smtp_connected", False) or status.get("imap_connected", False)
+                )
                 service_statuses[svc_name] = {
                     "connected": connected,
                     "type": svc.config.type,
@@ -2304,9 +2288,7 @@ class EmailMCP:
                     Text(f"Service '{service}' not found. Available: {list(self.services.keys())}")
                 return PrefabApp(view=view, title="Email Inbox")
 
-            result = await self.services[service].check_inbox(
-                folder="INBOX", limit=limit, unread_only=unread_only
-            )
+            result = await self.services[service].check_inbox(folder="INBOX", limit=limit, unread_only=unread_only)
             emails = result.get("emails", [])
 
             with Column(gap=3, css_class="p-4") as view:
@@ -2363,9 +2345,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
 
 setup_webapp(app, email_mcp.mcp)
 app.mount("/mcp", _mcp_http)

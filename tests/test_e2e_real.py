@@ -19,7 +19,6 @@ from aiosmtpd.controller import Controller
 from aiosmtpd.handlers import Sink
 from aiosmtpd.smtp import SMTP as SMTPServer
 
-from email_mcp.server import app
 from tests.conftest import AUTH_HEADER
 
 SMTP_PORT = 11225
@@ -33,14 +32,16 @@ class CaptureHandler(Sink):
     async def handle_DATA(self, server: SMTPServer, session, envelope) -> str:
         raw = envelope.content
         msg = BytesParser().parsebytes(raw)
-        _captured_emails.append({
-            "id": str(uuid.uuid4()),
-            "from": envelope.mail_from,
-            "to": envelope.rcpt_tos,
-            "subject": msg.get("Subject", ""),
-            "body": _decode_body(msg),
-            "raw": raw,
-        })
+        _captured_emails.append(
+            {
+                "id": str(uuid.uuid4()),
+                "from": envelope.mail_from,
+                "to": envelope.rcpt_tos,
+                "subject": msg.get("Subject", ""),
+                "body": _decode_body(msg),
+                "raw": raw,
+            }
+        )
         return "250 OK"
 
 
@@ -68,16 +69,18 @@ async def _http_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
     if path == "/api/v2/messages":
         items = []
         for m in _captured_emails:
-            items.append({
-                "Content": {
-                    "Headers": {
-                        "Subject": [m["subject"]],
-                        "To": m["to"],
-                        "From": [m["from"]],
+            items.append(
+                {
+                    "Content": {
+                        "Headers": {
+                            "Subject": [m["subject"]],
+                            "To": m["to"],
+                            "From": [m["from"]],
+                        },
+                        "Body": m["body"],
                     },
-                    "Body": m["body"],
-                },
-            })
+                }
+            )
         body = json.dumps({"items": items, "count": len(items), "total": len(items)}).encode()
         resp = (
             b"HTTP/1.1 200 OK\r\n"

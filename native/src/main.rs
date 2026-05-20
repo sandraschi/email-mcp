@@ -1,4 +1,4 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+﻿#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::sync::Mutex;
 use tauri::{Emitter, Manager};
@@ -16,14 +16,17 @@ async fn start_backend(app: tauri::AppHandle, state: tauri::State<'_, BackendPro
     let (mut rx, child) = cmd.spawn().map_err(|e| format!("Failed to start backend: {}", e))?;
     *state.0.lock().unwrap() = Some(child);
 
-    // Wait for backend to be ready
+    // Wait for backend to be ready.
+    // Uvicorn logs "Uvicorn running on ..." via its logger which goes to stderr,
+    // so we check both stdout and stderr for the readiness signal.
     tauri::async_runtime::spawn(async move {
         use tauri_plugin_shell::process::CommandEvent;
         while let Some(event) = rx.recv().await {
             match event {
                 CommandEvent::Stdout(line) => {
                     let text = String::from_utf8_lossy(&line);
-                    if text.contains("Uvicorn running") {
+                    eprintln!("[backend stdout] {}", text.trim());
+                    if text.contains("Uvicorn running") || text.contains("Application startup complete") {
                         let _ = app.emit("backend-status", "ready");
                         break;
                     }
@@ -31,6 +34,11 @@ async fn start_backend(app: tauri::AppHandle, state: tauri::State<'_, BackendPro
                 CommandEvent::Stderr(line) => {
                     let text = String::from_utf8_lossy(&line);
                     eprintln!("[backend] {}", text.trim());
+                    // Uvicorn startup message arrives on stderr via Python logging
+                    if text.contains("Uvicorn running") || text.contains("Application startup complete") {
+                        let _ = app.emit("backend-status", "ready");
+                        break;
+                    }
                 }
                 _ => {}
             }

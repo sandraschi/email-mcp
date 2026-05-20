@@ -17,6 +17,7 @@ try:
     from aiosmtpd.controller import Controller
     from aiosmtpd.handlers import Sink
     from aiosmtpd.smtp import SMTP as SMTPServer
+
     HAS_AIOSMTPD = True
 except ImportError:
     HAS_AIOSMTPD = False
@@ -26,12 +27,18 @@ except ImportError:
         pass
 
     class Controller:  # type: ignore[no-redef]
-        def __init__(self, *a, **kw): pass
-        def start(self): pass
-        def stop(self): pass
+        def __init__(self, *a, **kw):
+            pass
+
+        def start(self):
+            pass
+
+        def stop(self):
+            pass
 
     class SMTPServer:  # type: ignore[no-redef]
         pass
+
 
 from .sanitize import sanitize_text
 
@@ -48,16 +55,18 @@ class _CaptureHandler(Sink):
         msg = BytesParser().parsebytes(raw)
         email_id = str(uuid.uuid4())[:12]
         text_body, html_body = _parse_body(msg)
-        _captured.append({
-            "id": email_id,
-            "from": sanitize_text(envelope.mail_from or ""),
-            "to": [sanitize_text(a) for a in envelope.rcpt_tos],
-            "subject": sanitize_text(msg.get("Subject", "") or "(No Subject)"),
-            "text_body": sanitize_text(text_body),
-            "html_body": html_body,
-            "date": time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()),
-            "raw_size": len(raw),
-        })
+        _captured.append(
+            {
+                "id": email_id,
+                "from": sanitize_text(envelope.mail_from or ""),
+                "to": [sanitize_text(a) for a in envelope.rcpt_tos],
+                "subject": sanitize_text(msg.get("Subject", "") or "(No Subject)"),
+                "text_body": sanitize_text(text_body),
+                "html_body": html_body,
+                "date": time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime()),
+                "raw_size": len(raw),
+            }
+        )
         return "250 OK"
 
 
@@ -97,7 +106,12 @@ def start_server(port: int = 0) -> dict[str, Any]:
     global _server, _server_port, _server_thread
 
     if not HAS_AIOSMTPD:
-        return {"running": False, "port": 0, "email_count": 0, "error": "aiosmtpd not installed. Run: uv pip install aiosmtpd"}
+        return {
+            "running": False,
+            "port": 0,
+            "email_count": 0,
+            "error": "aiosmtpd not installed. Run: uv pip install aiosmtpd",
+        }
 
     if _server is not None:
         return {"running": True, "port": _server_port, "email_count": len(_captured), "message": "Already running"}
@@ -106,7 +120,12 @@ def start_server(port: int = 0) -> dict[str, Any]:
     _server = Controller(_CaptureHandler(), hostname="127.0.0.1", port=port)
     _server.start()
     _server_port = _server.server.server_address[1]  # actual port assigned
-    return {"running": True, "port": _server_port, "email_count": 0, "message": f"Server started on 127.0.0.1:{_server_port}"}
+    return {
+        "running": True,
+        "port": _server_port,
+        "email_count": 0,
+        "message": f"Server started on 127.0.0.1:{_server_port}",
+    }
 
 
 def stop_server() -> dict[str, Any]:
@@ -163,7 +182,10 @@ def clear_emails() -> dict[str, Any]:
 
 # ── Inject a pre-built email (for AI generation) ────────────────────────────
 
-def inject_email(from_addr: str, to: list[str], subject: str, text_body: str, html_body: str | None = None) -> dict[str, Any]:
+
+def inject_email(
+    from_addr: str, to: list[str], subject: str, text_body: str, html_body: str | None = None
+) -> dict[str, Any]:
     """Inject a synthetic email into the captured store as if received via SMTP.
 
     Used by the AI generator to populate the throwaway inbox without needing

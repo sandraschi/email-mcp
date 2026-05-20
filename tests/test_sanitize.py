@@ -40,8 +40,8 @@ class TestSanitizeText:
         assert result == "Hello"
 
     def test_strips_bidi_override(self):
-        result = sanitize_text("before\u202Eafter")
-        assert "\u202E" not in result
+        result = sanitize_text("before\u202eafter")
+        assert "\u202e" not in result
         assert result == "beforeafter"
 
     def test_strips_all_zero_width_chars(self):
@@ -79,15 +79,15 @@ class TestSanitizeText:
     def test_injection_fixture_bidi_override(self):
         raw = (FIXTURES_DIR / "bidi_override.txt").read_text()
         result = sanitize_text(raw)
-        assert "\u202E" not in result
-        assert "\u202C" not in result
+        assert "\u202e" not in result
+        assert "\u202c" not in result
 
     def test_injection_fixture_mixed(self):
         raw = (FIXTURES_DIR / "mixed.txt").read_text()
         result = sanitize_text(raw)
         assert "\u200b" not in result
-        assert "\u202E" not in result
-        assert "\u202C" not in result
+        assert "\u202e" not in result
+        assert "\u202c" not in result
 
 
 # ── Layer 2: Safety boundary wrapping ─────────────────────────────────────────
@@ -129,7 +129,7 @@ class TestWrapUntrustedDict:
         d = {"subject": "Hello", "from": "attacker@evil.com", "body": "Click here", "success": True}
         result = wrap_untrusted_dict(d, source="email_detail")
         for key in ("subject", "from", "body"):
-            assert "---BEGIN EMAIL_DETAIL_{}---".format(key.upper()) in result[key]
+            assert f"---BEGIN EMAIL_DETAIL_{key.upper()}---" in result[key]
         # Non-text fields should be untouched
         assert result["success"] is True
 
@@ -193,8 +193,8 @@ class TestIntegration:
     def test_bidi_override_is_stripped_then_wrapped(self):
         raw = (FIXTURES_DIR / "bidi_override.txt").read_text()
         result = self._apply_both(raw)
-        assert "\u202E" not in result
-        assert "\u202C" not in result
+        assert "\u202e" not in result
+        assert "\u202c" not in result
         assert "---BEGIN EMAIL---" in result
 
     def test_misspelled_bypass_gets_wrapped(self):

@@ -67,6 +67,7 @@ def _extract_tool_result(result: Any) -> dict[str, Any]:
                 pass
     return {"result": str(result) if result is not None else None}
 
+
 # In-memory draft store (survives one process lifetime)
 _drafts: dict[str, dict[str, Any]] = {}
 _DRAFTS_FILE = Path(os.getenv("EMAIL_MCP_DRAFTS_FILE", Path(__file__).resolve().parent.parent / "drafts.json"))
@@ -105,16 +106,10 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
     async def get_capabilities(_user: str = Depends(authenticate)):
         tools = await mcp_app.list_tools()
         tool_names = {t.name for t in tools}
-        has_imap = any(
-            n in tool_names for n in ("check_inbox", "mailing_list_latest", "fetch_email_detail")
-        )
+        has_imap = any(n in tool_names for n in ("check_inbox", "mailing_list_latest", "fetch_email_detail"))
         has_send = "send_email" in tool_names
-        has_sampling = any(
-            n in tool_names for n in ("suggest_email_subject", "email_agentic_assist")
-        )
-        has_prefab = any(
-            n in tool_names for n in ("show_email_status_card", "show_inbox_card")
-        )
+        has_sampling = any(n in tool_names for n in ("suggest_email_subject", "email_agentic_assist"))
+        has_prefab = any(n in tool_names for n in ("show_email_status_card", "show_inbox_card"))
         return {
             "inbox": has_imap,
             "send": has_send,
@@ -170,15 +165,17 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         if missing:
             raise HTTPException(status_code=422, detail=f"Missing fields: {missing}")
         try:
-            result = _extract_tool_result(await mcp_app.call_tool(
-                "configure_service",
-                {
-                    "name": payload["name"],
-                    "type": payload["type"],
-                    "config": payload["config"],
-                    "enabled": payload.get("enabled", True),
-                },
-            ))
+            result = _extract_tool_result(
+                await mcp_app.call_tool(
+                    "configure_service",
+                    {
+                        "name": payload["name"],
+                        "type": payload["type"],
+                        "config": payload["config"],
+                        "enabled": payload.get("enabled", True),
+                    },
+                )
+            )
             return result
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -192,15 +189,17 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         try:
             await mcp_app.call_tool("remove_service", {"name": name})
             cfg = payload.get("config", {})
-            result = _extract_tool_result(await mcp_app.call_tool(
-                "configure_service",
-                {
-                    "name": name,
-                    "type": payload.get("type", cfg.get("type", "smtp")),
-                    "config": cfg,
-                    "enabled": payload.get("enabled", True),
-                },
-            ))
+            result = _extract_tool_result(
+                await mcp_app.call_tool(
+                    "configure_service",
+                    {
+                        "name": name,
+                        "type": payload.get("type", cfg.get("type", "smtp")),
+                        "config": cfg,
+                        "enabled": payload.get("enabled", True),
+                    },
+                )
+            )
             return result
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -234,10 +233,12 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
             for svc_name, svc_info in services.items():
                 if svc_info.get("connected") and svc_info.get("type") in ("smtp", "local"):
                     try:
-                        inbox_result = _extract_tool_result(await mcp_app.call_tool(
-                            "check_inbox",
-                            {"service": svc_name, "unread_only": True, "limit": 5},
-                        ))
+                        inbox_result = _extract_tool_result(
+                            await mcp_app.call_tool(
+                                "check_inbox",
+                                {"service": svc_name, "unread_only": True, "limit": 5},
+                            )
+                        )
                         if inbox_result.get("success"):
                             unread_count += inbox_result.get("count", 0)
                             for email in inbox_result.get("emails", []):
@@ -283,17 +284,19 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         _user: str = Depends(authenticate),
     ):
         try:
-            return _extract_tool_result(await mcp_app.call_tool(
-                "check_inbox",
-                {
-                    "service": service,
-                    "folder": folder,
-                    "limit": limit,
-                    "unread_only": unread_only,
-                    "from_contains": from_contains or None,
-                    "subject_contains": subject_contains or None,
-                },
-            ))
+            return _extract_tool_result(
+                await mcp_app.call_tool(
+                    "check_inbox",
+                    {
+                        "service": service,
+                        "folder": folder,
+                        "limit": limit,
+                        "unread_only": unread_only,
+                        "from_contains": from_contains or None,
+                        "subject_contains": subject_contains or None,
+                    },
+                )
+            )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -305,10 +308,12 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         _user: str = Depends(authenticate),
     ):
         try:
-            result = _extract_tool_result(await mcp_app.call_tool(
-                "fetch_email_detail",
-                {"email_id": message_id, "service": service, "folder": folder},
-            ))
+            result = _extract_tool_result(
+                await mcp_app.call_tool(
+                    "fetch_email_detail",
+                    {"email_id": message_id, "service": service, "folder": folder},
+                )
+            )
             if not result.get("success"):
                 raise HTTPException(status_code=404, detail=result.get("error", "Not found"))
             return result
@@ -324,14 +329,16 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         _user: str = Depends(authenticate),
     ):
         try:
-            return _extract_tool_result(await mcp_app.call_tool(
-                "mark_email_read",
-                {
-                    "email_id": message_id,
-                    "service": payload.get("service", "default"),
-                    "folder": payload.get("folder", "INBOX"),
-                },
-            ))
+            return _extract_tool_result(
+                await mcp_app.call_tool(
+                    "mark_email_read",
+                    {
+                        "email_id": message_id,
+                        "service": payload.get("service", "default"),
+                        "folder": payload.get("folder", "INBOX"),
+                    },
+                )
+            )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -355,10 +362,12 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         _user: str = Depends(authenticate),
     ):
         try:
-            return _extract_tool_result(await mcp_app.call_tool(
-                "delete_email",
-                {"email_id": message_id, "service": service, "folder": folder},
-            ))
+            return _extract_tool_result(
+                await mcp_app.call_tool(
+                    "delete_email",
+                    {"email_id": message_id, "service": service, "folder": folder},
+                )
+            )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -375,10 +384,12 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         if not q.strip():
             raise HTTPException(status_code=422, detail="q (query) is required")
         try:
-            return _extract_tool_result(await mcp_app.call_tool(
-                "search_emails",
-                {"query": q.strip(), "service": service, "folder": folder, "limit": limit},
-            ))
+            return _extract_tool_result(
+                await mcp_app.call_tool(
+                    "search_emails",
+                    {"query": q.strip(), "service": service, "folder": folder, "limit": limit},
+                )
+            )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -394,18 +405,20 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         if missing:
             raise HTTPException(status_code=422, detail=f"Missing fields: {missing}")
         try:
-            result = _extract_tool_result(await mcp_app.call_tool(
-                "send_email",
-                {
-                    "to": payload["to"],
-                    "subject": payload["subject"],
-                    "body": payload["body"],
-                    "service": payload.get("service", "default"),
-                    "html": payload.get("html"),
-                    "cc": payload.get("cc"),
-                    "bcc": payload.get("bcc"),
-                },
-            ))
+            result = _extract_tool_result(
+                await mcp_app.call_tool(
+                    "send_email",
+                    {
+                        "to": payload["to"],
+                        "subject": payload["subject"],
+                        "body": payload["body"],
+                        "service": payload.get("service", "default"),
+                        "html": payload.get("html"),
+                        "cc": payload.get("cc"),
+                        "bcc": payload.get("bcc"),
+                    },
+                )
+            )
             return result
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -416,8 +429,13 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
     async def list_drafts(_user: str = Depends(authenticate)):
         return {
             "drafts": [
-                {"id": d["id"], "to": d.get("to", ""), "subject": d.get("subject", ""),
-                 "updated_at": d.get("updated_at", ""), "service": d.get("service", "default")}
+                {
+                    "id": d["id"],
+                    "to": d.get("to", ""),
+                    "subject": d.get("subject", ""),
+                    "updated_at": d.get("updated_at", ""),
+                    "service": d.get("service", "default"),
+                }
                 for d in _drafts.values()
             ],
             "count": len(_drafts),
@@ -511,52 +529,68 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
                     if r.status_code == 200:
                         data = r.json()
                         models = [m["name"] for m in data.get("models", [])]
-                        providers.append({
-                            "id": "ollama",
-                            "name": "Ollama",
-                            "endpoint": f"{host}/v1/chat/completions",
-                            "available": True,
-                            "models": models,
-                        })
+                        providers.append(
+                            {
+                                "id": "ollama",
+                                "name": "Ollama",
+                                "endpoint": f"{host}/v1/chat/completions",
+                                "available": True,
+                                "models": models,
+                            }
+                        )
                         ollama_ok = True
                         break
                 except Exception:
                     continue
 
             if not ollama_ok:
-                providers.append({
-                    "id": "ollama",
-                    "name": "Ollama",
-                    "endpoint": "http://localhost:11434/v1/chat/completions",
-                    "available": False,
-                    "models": [],
-                })
+                providers.append(
+                    {
+                        "id": "ollama",
+                        "name": "Ollama",
+                        "endpoint": "http://localhost:11434/v1/chat/completions",
+                        "available": False,
+                        "models": [],
+                    }
+                )
 
             try:
                 r = await client.get("http://localhost:1234/v1/models")
                 if r.status_code == 200:
                     data = r.json()
                     models = [m["id"] for m in data.get("data", [])]
-                    providers.append({
+                    providers.append(
+                        {
+                            "id": "lmstudio",
+                            "name": "LM Studio",
+                            "endpoint": "http://localhost:1234/v1/chat/completions",
+                            "available": True,
+                            "models": models,
+                        }
+                    )
+            except Exception:
+                providers.append(
+                    {
                         "id": "lmstudio",
                         "name": "LM Studio",
                         "endpoint": "http://localhost:1234/v1/chat/completions",
-                        "available": True,
-                        "models": models,
-                    })
-            except Exception:
-                providers.append({
-                    "id": "lmstudio",
-                    "name": "LM Studio",
-                    "endpoint": "http://localhost:1234/v1/chat/completions",
-                    "available": False,
-                    "models": [],
-                })
+                        "available": False,
+                        "models": [],
+                    }
+                )
 
         for cloud in [
-            {"id": "anthropic", "name": "Anthropic (Claude)", "models": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-5-20251001"]},
+            {
+                "id": "anthropic",
+                "name": "Anthropic (Claude)",
+                "models": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-5-20251001"],
+            },
             {"id": "openai", "name": "OpenAI", "models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]},
-            {"id": "google", "name": "Google Gemini", "models": ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite"]},
+            {
+                "id": "google",
+                "name": "Google Gemini",
+                "models": ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite"],
+            },
         ]:
             providers.append({**cloud, "endpoint": None, "available": None})
 
@@ -652,7 +686,17 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
             "types": {
                 "smtp": {
                     "label": "SMTP / IMAP",
-                    "fields": ["smtp_server", "smtp_port", "smtp_user", "smtp_password", "smtp_from", "imap_server", "imap_port", "imap_user", "imap_password"],
+                    "fields": [
+                        "smtp_server",
+                        "smtp_port",
+                        "smtp_user",
+                        "smtp_password",
+                        "smtp_from",
+                        "imap_server",
+                        "imap_port",
+                        "imap_user",
+                        "imap_password",
+                    ],
                     "required": ["smtp_server", "smtp_user", "smtp_password"],
                 },
                 "api": {
@@ -679,30 +723,35 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
     async def lab_start(_user: str = Depends(authenticate)):
         """Start a throwaway SMTP server for testing."""
         from .lab import start_server
+
         return start_server()
 
     @app.post("/api/lab/stop")
     async def lab_stop(_user: str = Depends(authenticate)):
         """Stop the throwaway SMTP server."""
         from .lab import stop_server
+
         return stop_server()
 
     @app.get("/api/lab/status")
     async def lab_status(_user: str = Depends(authenticate)):
         """Get throwaway server status and email count."""
         from .lab import server_status
+
         return server_status()
 
     @app.get("/api/lab/emails")
     async def lab_list_emails(_user: str = Depends(authenticate)):
         """List captured emails from the throwaway server."""
         from .lab import list_emails
+
         return {"emails": list_emails(), "count": len(__import__("email_mcp.lab", fromlist=["_captured"])._captured)}
 
     @app.get("/api/lab/emails/{email_id}")
     async def lab_get_email(email_id: str, _user: str = Depends(authenticate)):
         """Get full detail of a captured email."""
         from .lab import get_email
+
         email = get_email(email_id)
         if not email:
             raise HTTPException(status_code=404, detail="Email not found")
@@ -712,6 +761,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
     async def lab_clear_emails(_user: str = Depends(authenticate)):
         """Clear all captured emails."""
         from .lab import clear_emails
+
         return clear_emails()
 
     @app.post("/api/lab/inject")
@@ -721,6 +771,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
     ):
         """Inject a synthetic email into the captured store."""
         from .lab import inject_email
+
         result = inject_email(
             payload.get("from", "sender@test.com"),
             payload.get("to", ["recipient@test.com"]),
@@ -750,6 +801,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         )
         response = await ai_router.route_json_query(prompt)
         import json as _json
+
         try:
             cleaned = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
             messages = _json.loads(cleaned)
@@ -777,6 +829,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
     ):
         """Forward a captured lab email to a real email address."""
         from .lab import get_email
+
         email = get_email(email_id)
         if not email:
             raise HTTPException(status_code=404, detail="Email not found")

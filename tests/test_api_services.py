@@ -54,11 +54,15 @@ class TestServiceCRUD:
 
     async def test_create_empty_config(self, client: httpx.AsyncClient, auth: dict) -> None:
         """POST /api/services with empty config should still succeed (service registered)."""
-        resp = await client.post("/api/services", json={
-            "name": "empty-cfg",
-            "type": "smtp",
-            "config": {},
-        }, headers=auth)
+        resp = await client.post(
+            "/api/services",
+            json={
+                "name": "empty-cfg",
+                "type": "smtp",
+                "config": {},
+            },
+            headers=auth,
+        )
         data = resp.json()
         assert data["success"] is True
 

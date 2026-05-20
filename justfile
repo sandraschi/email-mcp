@@ -1,34 +1,8 @@
-set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+﻿set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 
-# ── Dashboard ─────────────────────────────────────────────────────────────────
-
-# Display the SOTA Industrial Dashboard
+# Open the interactive recipe dashboard in the browser
 default:
-    @$lines = Get-Content '{{justfile()}}'; \
-    Write-Host ' [SOTA] Industrial Operations Dashboard v1.3.2' -ForegroundColor White -BackgroundColor Cyan; \
-    Write-Host '' ; \
-    $currentCategory = ''; \
-    foreach ($line in $lines) { \
-        if ($line -match '^# ── ([^─]+) ─') { \
-            $currentCategory = $matches[1].Trim(); \
-            Write-Host "`n  $currentCategory" -ForegroundColor Cyan; \
-            Write-Host ('  ' + ('─' * 45)) -ForegroundColor Gray; \
-        } elseif ($line -match '^# ([^─].+)') { \
-            $desc = $matches[1].Trim(); \
-            $idx = [array]::IndexOf($lines, $line); \
-            if ($idx -lt $lines.Count - 1) { \
-                $nextLine = $lines[$idx + 1]; \
-                if ($nextLine -match '^([a-z0-9-]+):') { \
-                    $recipe = $matches[1]; \
-                    $pad = ' ' * [math]::Max(2, (18 - $recipe.Length)); \
-                    Write-Host "    $recipe" -ForegroundColor White -NoNewline; \
-                    Write-Host "$pad$desc" -ForegroundColor Gray; \
-                } \
-            } \
-        } \
-    } \
-    Write-Host "`n  [System State: PROD/HARDENED]" -ForegroundColor DarkGray; \
-    Write-Host ''
+    @pwsh.exe -NoProfile -ExecutionPolicy Bypass -File ../mcp-central-docs/scripts/just-dashboard.ps1 -Path .
 
 # ── Quality ───────────────────────────────────────────────────────────────────
 
@@ -59,7 +33,7 @@ audit-deps:
     Set-Location '{{justfile_directory()}}'
     uv run safety check
 
-# email-mcp / minimail-mcp — Windows-friendly tasks (run with `just` from https://github.com/casey/just)
+# ── Dev ───────────────────────────────────────────────────────────────────────
 
 # Repo statistics (Markdown, tools, FastMCP, MCP tools)
 stats:
@@ -74,7 +48,6 @@ sync:
 copy-mcp:
     uv run python copy_server.py
 
-# Lint
 # Format
 fmt:
     uv run ruff format src tests
@@ -90,19 +63,38 @@ check: lint test
 run:
     uv run python -m email_mcp.server
 
-# Build Tauri native desktop app (Rust + WebView2)
+# ── Native (Tauri) ────────────────────────────────────────────────────────────
+
+# Build PyInstaller sidecar binary → native/binaries/
+build-sidecar:
+    Set-Location '{{justfile_directory()}}'
+    pwsh -NoLogo -File '{{justfile_directory()}}\native\build-sidecar.ps1'
+
+# Build Tauri desktop app — sidecar must exist first (run build-sidecar)
 build-native:
     Set-Location '{{justfile_directory()}}\native'
     $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+    npm install
     npx @tauri-apps/cli build
 
-# Build Tauri native app (debug, faster rebuild)
+# Build sidecar then full Tauri release in one step
+build-all: build-sidecar build-native
+
+# Build Tauri app in debug mode (faster rebuild, devtools on)
 build-native-debug:
     Set-Location '{{justfile_directory()}}\native'
     $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+    npm install
     npx @tauri-apps/cli build --debug
 
-# Install Tauri CLI
+# Run Tauri in hot-reload dev mode (backend must already be running)
+tauri-dev:
+    Set-Location '{{justfile_directory()}}\native'
+    $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+    npm install
+    npx @tauri-apps/cli dev
+
+# Install Tauri CLI locally (pinned via native/package.json)
 tauri-cli:
     Set-Location '{{justfile_directory()}}\native'
-    npm install @tauri-apps/cli
+    npm install
