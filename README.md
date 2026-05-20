@@ -8,6 +8,9 @@
   <a href="https://github.com/PrefectHQ/fastmcp"><img src="https://img.shields.io/badge/FastMCP-3.2-7c5cfc?style=flat-square" alt="FastMCP"></a>
 </p>
 
+
+> 📖 **[Installation Guide](INSTALL.md)** — quick start, manual setup, and troubleshooting
+
 Multi-service email platform for MCP clients. Send and receive email via SMTP/IMAP, transactional APIs, local test servers, and webhooks.
 
 **v0.4.0** — FastMCP 3.2+, web dashboard, AI assistant, mailing list presets, prompt injection defense.
