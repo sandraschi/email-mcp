@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Send, Loader2, CheckCircle2, AlertCircle, Bot, Sparkles, RefreshCw, X } from "lucide-react";
+import { Plus, Trash2, Send, Loader2, CheckCircle2, AlertCircle, Bot, Sparkles, RefreshCw, X, Skull } from "lucide-react";
 import { fetchWithAuth } from "@/lib/api";
 import { useToast } from "@/components/toast";
 
@@ -18,7 +18,7 @@ export function AutoRespond() {
     const [tab, setTab] = useState<"rules" | "pending">("rules");
     const [showAdd, setShowAdd] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [newRule, setNewRule] = useState({ name: "", match_field: "subject", match_pattern: "", reply_body: "", reply_subject: "", use_ai: false, auto_send: false, ai_prompt: "", service: "default" });
+    const [newRule, setNewRule] = useState({ name: "", match_field: "subject", match_pattern: "", reply_body: "", reply_subject: "", use_ai: false, auto_send: false, ai_prompt: "", service: "default", response_mode: "normal", spoof_tone: "mock-stupid", spam_action: "ignore" });
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -127,10 +127,28 @@ export function AutoRespond() {
                                     <div><Label className="text-slate-300">Match Pattern (regex)</Label><Input className="bg-slate-900 border-slate-700 text-white mt-1" placeholder="invoice|receipt|order" value={newRule.match_pattern} onChange={(e) => setNewRule({ ...newRule, match_pattern: e.target.value })} /></div>
                                     <div className="flex gap-4 items-end pb-2">
                                         <label className="flex items-center gap-1 text-xs text-slate-300 cursor-pointer"><input type="checkbox" checked={newRule.use_ai} onChange={(e) => setNewRule({ ...newRule, use_ai: e.target.checked, auto_send: e.target.checked ? newRule.auto_send : false })} className="accent-blue-500" /> Use AI to draft reply</label>
-                                        <label className="flex items-center gap-1 text-xs text-slate-300 cursor-pointer"><input type="checkbox" checked={newRule.auto_send} onChange={(e) => setNewRule({ ...newRule, auto_send: e.target.checked })} className="accent-emerald-500" disabled={!newRule.use_ai} /> Auto-send (no approval)</label>
+                                        <label className="flex items-center gap-1 text-xs text-slate-300 cursor-pointer"><input type="checkbox" checked={newRule.response_mode === "spoof"} onChange={(e) => setNewRule({ ...newRule, response_mode: e.target.checked ? "spoof" : "normal" })} className="accent-red-500" /> Spoof mode (hilarious replies to scammers)</label>
+                                        <label className="flex items-center gap-1 text-xs text-slate-300 cursor-pointer"><input type="checkbox" checked={newRule.auto_send} onChange={(e) => setNewRule({ ...newRule, auto_send: e.target.checked })} className="accent-emerald-500" disabled={!newRule.use_ai && newRule.response_mode !== "spoof"} /> Auto-send (no approval)</label>
                                     </div>
+                                    </div>
+                                    {newRule.response_mode === "spoof" && (
+                                        <div className="grid gap-2 mt-1">
+                                            <Label className="text-slate-300 text-xs">Spoof Tone</Label>
+                                            <select className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5 w-full" value={newRule.spoof_tone} onChange={(e) => setNewRule({ ...newRule, spoof_tone: e.target.value })}>
+                                                <option value="mock-stupid">Mock Stupid (gullible)</option>
+                                                <option value="irate">Irate (screaming)</option>
+                                                <option value="absurd">Absurd (sentient toaster)</option>
+                                                <option value="polite-but-confused">Polite but Confused (British)</option>
+                                            </select>
+                                            <Label className="text-slate-300 text-xs">Spam Action</Label>
+                                            <select className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5 w-full" value={newRule.spam_action} onChange={(e) => setNewRule({ ...newRule, spam_action: e.target.value })}>
+                                                <option value="ignore">Ignore spam (don't reply)</option>
+                                                <option value="spoof">Spoof spam (reply hilariously)</option>
+                                            </select>
+                                        </div>
+                                    )}
                                 </div>
-                                {newRule.use_ai ? (
+                                {newRule.response_mode === "spoof" ? (
                                     <div><Label className="text-slate-300">AI Prompt (optional — leave blank for default)</Label>
                                         <textarea className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white resize-y min-h-[60px] mt-1" placeholder="Reply politely saying I'm out of office until Monday" value={newRule.ai_prompt} onChange={(e) => setNewRule({ ...newRule, ai_prompt: e.target.value })} /></div>
                                 ) : (
@@ -154,8 +172,10 @@ export function AutoRespond() {
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm text-white truncate">{r.name}</p>
                                         <p className="text-xs text-slate-500 truncate">
-                                            {r.match_field} ~/{r.match_pattern}/ &nbsp;→&nbsp; {r.use_ai ? <><Bot className="h-3 w-3 inline" /> AI reply</> : `"${(r.reply_body || "").slice(0, 40)}..."`}
+                                            {r.match_field} ~/{r.match_pattern}/ &nbsp;→&nbsp;
+                                            {r.response_mode === "spoof" ? <><Skull className="h-3 w-3 inline text-red-400" /> spoof ({r.spoof_tone})</> : r.use_ai ? <><Bot className="h-3 w-3 inline" /> AI reply</> : `"${(r.reply_body || "").slice(0, 40)}..."`}
                                             {r.auto_send ? <span className="text-emerald-400 ml-1">· auto-send</span> : <span className="text-amber-400 ml-1">· pending</span>}
+                                            {r.response_mode === "spoof" && r.spam_action === "spoof" && <span className="text-red-400 ml-1">· spam spoof</span>}
                                         </p>
                                     </div>
                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-red-400" onClick={() => handleDelete(r.id)}><Trash2 className="h-3.5 w-3.5" /></Button>

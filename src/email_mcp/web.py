@@ -1191,6 +1191,16 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
 
         return watcher_status()
 
+    @app.post("/api/check-spam")
+    async def check_spam(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        """Check if an email looks like spam based on content analysis."""
+        from .autorespond import is_spam
+
+        return is_spam(payload)
+
     # ── Auto-Respond ─────────────────────────────────────────────────────────
 
     @app.get("/api/auto-rules")

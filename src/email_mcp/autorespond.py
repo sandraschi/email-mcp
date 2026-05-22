@@ -1,4 +1,4 @@
-"""Auto-respond engine — rule-based matching + AI drafting + pending queue."""
+"""Auto-respond engine — rule-based matching + AI drafting + spam spoofing."""
 
 from __future__ import annotations
 
@@ -69,6 +69,9 @@ def add_rule(
     auto_send: bool = False,
     ai_prompt: str = "",
     service: str = "default",
+    response_mode: str = "normal",
+    spoof_tone: str = "mock-stupid",
+    spam_action: str = "ignore",
 ) -> dict[str, Any]:
     _load_rules()
     rule = {
@@ -82,6 +85,9 @@ def add_rule(
         "auto_send": auto_send,
         "ai_prompt": ai_prompt.strip(),
         "service": service,
+        "response_mode": response_mode,
+        "spoof_tone": spoof_tone,
+        "spam_action": spam_action,
         "enabled": True,
         "created_at": int(time.time()),
     }
@@ -110,6 +116,66 @@ def delete_rule(rule_id: str) -> dict[str, Any]:
             _save_rules()
             return {"success": True, "message": f"Deleted rule {r['name']!r}"}
     return {"success": False, "error": f"Rule {rule_id!r} not found"}
+
+
+# ── Spam detection ─────────────────────────────────────────────────────────
+
+
+_SPAM_PATTERNS = [
+    r"prince|princess.*inheritance|nigerian|transfer.*fund",
+    r"click here.*confirm|verify.*account|login.*secure",
+    r"limited time offer|act now|exclusive deal",
+    r"you.ve won|congratulations.*winner|lucky.*winner",
+    r"bitcoin|crypto.*invest|double.*money|guaranteed.*return",
+    r"urgent.*attention|immediate.*action required",
+    r"unusual.*login|suspicious.*activity.*verify",
+    r"viagra|cialis|enlargement|pharmacy.*online",
+    r"work from home|earn.*\$|passive income|financial freedom",
+    r"inheritance|next of kin|deceased.*estate",
+]
+
+
+def is_spam(email: dict[str, Any]) -> dict[str, Any]:
+    """Check if an email looks like spam based on subject/body keywords.
+
+    Returns {spam: bool, score: int, reasons: [str]}.
+    """
+    subject = (email.get("subject") or "").lower()
+    body = (email.get("text_body") or email.get("body") or "").lower()
+    text = f"{subject} {body}"
+    score = 0
+    reasons: list[str] = []
+    for i, pattern in enumerate(_SPAM_PATTERNS):
+        if re.search(pattern, text, re.IGNORECASE):
+            score += 1
+            reasons.append(f"pattern_{i}")
+    return {
+        "spam": score >= 2,
+        "score": score,
+        "reasons": reasons,
+        "confidence": min(1.0, score / 4),
+    }
+
+
+SPOOF_TONES = {
+    "irate": "Write an over-the-top angry reply. Scream at the scammer. Threaten to call the FBI, Interpol, and the Ghostbusters. Sign as 'General Disappointment'.",
+    "mock-stupid": "Reply as the most gullible person alive. Enthusiastically agree to everything. Ask very specific stupid questions. Ask if they accept payment in exposed film rolls.",
+    "absurd": "Reply as a sentient toaster who got access to email. Discuss bread prices in ancient Rome. Offer cloud storage advice for crumbs. Never acknowledge the original topic.",
+    "polite-but-confused": "Reply with extreme British politeness. Apologize for not understanding. Ask them to explain the scam 'so I can be scammed correctly'. Offer tea.",
+}
+
+
+def generate_spoof_reply(email: dict[str, Any], tone: str = "mock-stupid") -> str:
+    """Generate a spoof reply prompt for the AI based on tone."""
+    tone_instruction = SPOOF_TONES.get(tone, SPOOF_TONES["mock-stupid"])
+    return (
+        f"{tone_instruction}\n\n"
+        f"The email you are replying to:\n"
+        f"From: {email.get('from', '')}\n"
+        f"Subject: {email.get('subject', '')}\n"
+        f"Body: {(email.get('text_body') or email.get('body', ''))[:1000]}\n\n"
+        f"Return ONLY the reply text, no explanations."
+    )
 
 
 # ── Rule matching ──────────────────────────────────────────────────────────
@@ -204,15 +270,32 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
     if not rule:
         return {"matched": False, "message": "No rule matched"}
 
+    # Spam detection
+    spam_check = is_spam(email)
+    spam_action = rule.get("spam_action", "ignore")
+    if spam_check["spam"] and spam_action == "ignore":
+        logger.info("Spam detected, ignoring per rule: %s", email.get("subject", ""))
+        return {"matched": True, "spam": True, "action": "ignored", "rule": rule["name"]}
+
     reply_subject = rule.get("reply_subject", "") or f"Re: {email.get('subject', '')}"
     reply_body = rule.get("reply_body", "")
 
-    if rule.get("use_ai") and ai_router:
+    # Spoof mode — generate hilarious reply to scammers
+    response_mode = rule.get("response_mode", "normal")
+    if response_mode == "spoof" and ai_router:
+        tone = rule.get("spoof_tone", "mock-stupid")
+        prompt = generate_spoof_reply(email, tone)
+        reply_body = await ai_router.route_query(prompt)
+        auto_send = True  # spoof replies auto-send by default
+        logger.info("Spoof reply generated to %s (tone=%s)", email.get("from", ""), tone)
+    elif rule.get("use_ai") and ai_router:
         body_text = (email.get("text_body") or email.get("body", ""))[:2000]
         prompt = rule.get("ai_prompt", "") or (f"Write a friendly reply. Be concise.\nFrom: {email.get('from', '')}\nSubject: {email.get('subject', '')}\nBody: {body_text}")
         reply_body = await ai_router.route_query(prompt)
 
-    if rule.get("auto_send") and mcp_app and reply_body:
+    auto_send = rule.get("auto_send", False) if response_mode != "spoof" else True
+
+    if auto_send and mcp_app and reply_body:
         try:
             result = await mcp_app.call_tool(
                 "send_email",
