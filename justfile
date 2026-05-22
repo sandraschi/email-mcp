@@ -1,8 +1,35 @@
 ﻿set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 
-# Open the interactive recipe dashboard in the browser
+# ── Dashboard ──────────────────────────────────────────────────────────────────
+
+# Display SOTA Industrial Dashboard
 default:
-    @pwsh.exe -NoProfile -ExecutionPolicy Bypass -File ../mcp-central-docs/scripts/just-dashboard.ps1 -Path .
+    @powershell -NoLogo -Command "
+        $lines = Get-Content '{{justfile()}}';
+        Write-Host ' [EMAIL-MCP] Multi-Service Email Platform v0.4.1' -ForegroundColor White -BackgroundColor Cyan;
+        Write-Host '';
+        $currentCategory = '';
+        foreach ($line in $lines) {
+            if ($line -match '^# ── ([^─]+) ─') {
+                $currentCategory = $matches[1].Trim();
+                Write-Host \"`n  $currentCategory\" -ForegroundColor Cyan;
+                Write-Host '  ' + ('─' * 45) -ForegroundColor Gray;
+            } elseif ($line -match '^# ([^─].+)') {
+                $desc = $matches[1].Trim();
+                $idx = [array]::IndexOf($lines, $line);
+                if ($idx -lt $lines.Count - 1) {
+                    $nextLine = $lines[$idx + 1];
+                    if ($nextLine -match '^([a-z0-9-]+):') {
+                        $recipe = $matches[1];
+                        $pad = ' ' * [math]::Max(2, (18 - $recipe.Length));
+                        Write-Host \"    $recipe\" -ForegroundColor White -NoNewline;
+                        Write-Host \"$pad$desc\" -ForegroundColor Gray;
+                    }
+                }
+            }
+        }
+        Write-Host '';
+    "
 
 # ── Quality ───────────────────────────────────────────────────────────────────
 
@@ -13,6 +40,10 @@ lint:
     Set-Location '{{justfile_directory()}}\webapp'
     npx @biomejs/biome ci .
 
+# Format code with Ruff
+fmt:
+    uv run ruff format src tests
+
 # Execute Ruff SOTA v13.1 fix and formatting
 fix:
     Set-Location '{{justfile_directory()}}'
@@ -21,118 +52,86 @@ fix:
     Set-Location '{{justfile_directory()}}\webapp'
     npx @biomejs/biome check --write .
 
-# ── Hardening ─────────────────────────────────────────────────────────────────
+# Linting & formatting (SOTA mandatory)
+check: fmt lint
 
-# Execute Bandit security audit
-check-sec:
+# ── Test ────────────────────────────────────────────────────────────────────────
+
+# Automated verification (SOTA mandatory)
+test:
     Set-Location '{{justfile_directory()}}'
-    uv run bandit -r src/
+    uv run --extra test pytest tests -q
+    Write-Host 'Backend tests passed' -ForegroundColor Green
+    Set-Location '{{justfile_directory()}}\webapp'
+    npx playwright test
+    Write-Host 'E2E tests passed' -ForegroundColor Green
 
-# Execute safety audit of dependencies
-audit-deps:
-    Set-Location '{{justfile_directory()}}'
-    uv run safety check
+# ── Build ───────────────────────────────────────────────────────────────────────
 
-# ── Dev ───────────────────────────────────────────────────────────────────────
-
-# Repo statistics (Markdown, tools, FastMCP, MCP tools)
-stats:
-    Set-Location '{{justfile_directory()}}'
-    uv run python tools/repo_stats.py
-
-# Install dev deps (pytest, ruff) via uv
-sync:
+# Install all dependencies (SOTA mandatory)
+build:
     uv sync --extra test --extra dev
 
-# Copy src/email_mcp → mcp-server/src/email_mcp (server, mailing_lists, skills)
-copy-mcp:
-    uv run python copy_server.py
-
-# Format
-fmt:
-    uv run ruff format src tests
-
-# Unit tests (no network)
-test:
-    uv run --extra test pytest tests -q
-
-# Lint + test (CI-ish)
-check: lint test
-
-# Run MCP server (stdio)
-run:
-    uv run python -m email_mcp.server
-
-# ── Native (Tauri) ────────────────────────────────────────────────────────────
+# Build MCPB package
+package:
+    Set-Location '{{justfile_directory()}}'
+    uv run python build_mcpb.py
 
 # Build PyInstaller sidecar binary → native/binaries/
 build-sidecar:
     Set-Location '{{justfile_directory()}}'
     pwsh -NoLogo -File '{{justfile_directory()}}\native\build-sidecar.ps1'
 
-# Build Tauri desktop app — sidecar must exist first (run build-sidecar)
+# Build Tauri desktop app — sidecar must exist first
 build-native:
     Set-Location '{{justfile_directory()}}\native'
     $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
     npm install
     npx @tauri-apps/cli build
 
-# Build sidecar then full Tauri release in one step
+# Sidecar then Tauri release
 build-all: build-sidecar build-native
 
-# Build Tauri app in debug mode (faster rebuild, devtools on)
+# Build Tauri app in debug mode
 build-native-debug:
     Set-Location '{{justfile_directory()}}\native'
     $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
     npm install
     npx @tauri-apps/cli build --debug
 
-# Run Tauri in hot-reload dev mode (backend must already be running)
-tauri-dev:
-    Set-Location '{{justfile_directory()}}\native'
-    $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
-    npm install
-    npx @tauri-apps/cli dev
+# ── Security ───────────────────────────────────────────────────────────────────
 
-# Install Tauri CLI locally (pinned via native/package.json)
-tauri-cli:
-    Set-Location '{{justfile_directory()}}\native'
-    npm install
-
-# ── Convenience ────────────────────────────────────────────────────────────────
-
-# Bootstrap: install all dependencies (test + dev extras)
-bootstrap:
+# Bandit security audit
+check-sec:
     Set-Location '{{justfile_directory()}}'
-    uv sync --extra test --extra dev
+    uv run bandit -r src/
+
+# Safety dependency audit
+audit-deps:
+    Set-Location '{{justfile_directory()}}'
+    uv run safety check
+
+# ── Dev ─────────────────────────────────────────────────────────────────────────
+
+# Repo statistics
+stats:
+    Set-Location '{{justfile_directory()}}'
+    uv run python tools/repo_stats.py
+
+# Copy src/email_mcp → mcp-server/
+copy-mcp:
+    uv run python copy_server.py
+
+# Run MCP server (stdio)
+run:
+    uv run python -m email_mcp.server
 
 # Start web dashboard (backend + frontend)
 serve dev:
     Set-Location '{{justfile_directory()}}'
     .\start.ps1
 
-# Build MCPB package
-build:
-    Set-Location '{{justfile_directory()}}'
-    uv run python build_mcpb.py
-
-# Launch throwaway MailLab SMTP server on a free port
-lab:
-    uv run python -c "
-from email_mcp.lab import start_server, stop_server, server_status, list_emails
-import time
-s = start_server()
-print(f'Lab SMTP server running on 127.0.0.1:{s[\"port\"]}')
-print('Press Ctrl+C to stop')
-try:
-    while True:
-        st = server_status()
-        print(f'  [{time.strftime(\"%H:%M:%S\")}] {st[\"email_count\"]} emails captured')
-        time.sleep(5)
-except KeyboardInterrupt:
-    stop_server()
-    print('Server stopped')
-"
+# ── Housekeeping ───────────────────────────────────────────────────────────────
 
 # Clean build artifacts and backups
 clean:
@@ -140,4 +139,7 @@ clean:
     -Remove-Item -Recurse -Force build/, dist/, target/, .coverage, *.bak, *.spec 2>$null
     -Remove-Item -Recurse -Force src/**/*.bak, src/**/*.spec, webapp/**/*.bak 2>$null
     Get-ChildItem -Recurse -Filter __pycache__ | Remove-Item -Recurse -Force 2>$null
-    Write-Host 'Cleaned'
+    Write-Host 'Cleaned' -ForegroundColor Green
+
+# CI pipeline: build → check → test
+ci: build check test
