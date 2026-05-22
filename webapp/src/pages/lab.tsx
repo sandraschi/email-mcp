@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Play, Square, Loader2, Mail, Trash2, Forward, Sparkles, RefreshCw, Copy, CheckCircle2, AlertCircle, Server, Inbox, Send, Eye, EyeOff } from "lucide-react";
+import { Play, Square, Loader2, Mail, Trash2, Forward, Sparkles, RefreshCw, Copy, CheckCircle2, AlertCircle, Server, Inbox, Send, Eye, EyeOff, Bell } from "lucide-react";
 import { fetchWithAuth } from "@/lib/api";
 import { useToast } from "@/components/toast";
 
@@ -42,6 +42,11 @@ export function Lab() {
     // Forward
     const [forwardTo, setForwardTo] = useState("");
     const [forwarding, setForwarding] = useState<string | null>(null);
+
+    // Watcher
+    const [watcherRunning, setWatcherRunning] = useState(false);
+    const [watcherInterval, setWatcherInterval] = useState(60);
+    const [webhookUrl, setWebhookUrl] = useState("");
 
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -129,6 +134,30 @@ export function Lab() {
         } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Generate failed"); }
         finally { setGenerating(false); }
     };
+
+    // Watcher handlers
+    const handleWatcherStart = async () => {
+        try {
+            const data = await fetchWithAuth("/api/watcher/start", { method: "POST", body: JSON.stringify({ interval: watcherInterval, webhook_url: webhookUrl.trim() }) });
+            setWatcherRunning(data.running);
+            if (data.running) toast("success", data.message);
+            else toast("error", "Failed to start watcher");
+        } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Start failed"); }
+    };
+    const handleWatcherStop = async () => {
+        try {
+            const data = await fetchWithAuth("/api/watcher/stop", { method: "POST" });
+            setWatcherRunning(false);
+            toast("success", data.message);
+        } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Stop failed"); }
+    };
+    useEffect(() => {
+        const poll = setInterval(async () => {
+            try { const data = await fetchWithAuth("/api/watcher/status"); setWatcherRunning(data.running); }
+            catch { /* ignore */ }
+        }, 5000);
+        return () => clearInterval(poll);
+    }, []);
 
     const handleOpenEmail = async (emailId: string) => {
         setEmailLoading(true);
@@ -251,6 +280,39 @@ export function Lab() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Mail Watcher */}
+            <Card className="border-cyan-900/30 bg-cyan-950/10">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-white text-sm flex items-center gap-2">
+                        <Bell className="h-4 w-4 text-cyan-400" />
+                        Mail Watcher
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex gap-2 items-center flex-wrap">
+                        <span className="text-xs text-slate-400">
+                            {watcherRunning ? (
+                                <span className="flex items-center gap-1 text-emerald-400"><span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Watching (every {watcherInterval}s)</span>
+                            ) : (
+                                "Monitor IMAP for new mail and POST to a webhook"
+                            )}
+                        </span>
+                        <Input className="bg-slate-900 border-slate-700 text-white text-xs w-48 h-7" placeholder="Webhook URL (robofang/fleet-agent)" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} />
+                        <Input className="bg-slate-900 border-slate-700 text-white text-xs w-16 h-7" placeholder="60s" value={watcherInterval} onChange={(e) => setWatcherInterval(Number(e.target.value) || 60)} />
+                        {!watcherRunning ? (
+                            <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 h-7 text-xs" onClick={handleWatcherStart} disabled={!webhookUrl.trim()}>
+                                <Bell className="h-3 w-3 mr-1" /> Start Watch
+                            </Button>
+                        ) : (
+                            <Button size="sm" variant="outline" className="border-red-800 text-red-400 hover:bg-red-950/20 h-7 text-xs" onClick={handleWatcherStop}>
+                                <Square className="h-3 w-3 mr-1" /> Stop
+                            </Button>
+                        )}
+                    </div>
+                    {!webhookUrl.trim() && <p className="text-xs text-amber-500 mt-1">Enter a webhook URL to receive notifications (robofang, fleet-agent, etc.)</p>}
+                </CardContent>
+            </Card>
 
             {/* Captured Emails */}
             <Card className="border-slate-800 bg-slate-950/50">

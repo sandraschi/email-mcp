@@ -1162,3 +1162,29 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         query = template.format(recipient=recipient, tone=tone, mood=mood, fmt_text=fmt_text)
         response = await ai_router.route_query(query)
         return {"success": True, "workflow": workflow, "response": response, "format": fmt}
+
+    # ── Mail Watcher (background IMAP polling) ─────────────────────────────
+
+    @app.post("/api/watcher/start")
+    async def watcher_start(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .watcher import start_watcher
+
+        interval_s = max(30, min(payload.get("interval", 60), 3600))
+        webhook_url = payload.get("webhook_url", "").strip()
+        services = payload.get("services", [{"name": "default", "folder": "INBOX"}])
+        return start_watcher(interval_s, webhook_url, services, mcp_app)
+
+    @app.post("/api/watcher/stop")
+    async def watcher_stop(_user: str = Depends(authenticate)):
+        from .watcher import stop_watcher
+
+        return stop_watcher()
+
+    @app.get("/api/watcher/status")
+    async def watcher_status(_user: str = Depends(authenticate)):
+        from .watcher import watcher_status
+
+        return watcher_status()
