@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "schip-mcp-email"
-version = "0.4.0"
+version = "0.4.1"
 description = "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations (FastMCP 3.2, Prefab UI)"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -18,7 +18,6 @@ dependencies = [
     "pydantic>=2.0.0",
     "structlog>=24.0.0",
     "httpx>=0.25.0",
-    "ruff>=0.15.2",
     "prefab-ui>=0.18.0",
 ]
 
@@ -43,22 +42,13 @@ email-mcp = "email_mcp.server:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/email_mcp"]
 
-[tool.uv-dynamic-versioning]
-enable = true
-vcs = "git"
-style = "pep440"
-
-[tool.black]
-line-length = 100
-target-version = ["py310"]
-
 [tool.ruff]
-line-length = 120
+line-length = 175
 target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "S", "UP", "RUF"]
-ignore = ["S101", "B008"]
+ignore = ["S101", "B008", "S112", "S110"]
 
 [tool.ruff.format]
 quote-style = "double"

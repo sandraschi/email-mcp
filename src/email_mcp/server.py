@@ -114,10 +114,6 @@ def decode_email_header(header_value: str) -> str:
                 # If we already have a string, use it as-is
                 result += str(decoded_bytes)
 
-        # Test the decoding with the problematic header
-        if "=?UTF-8?B?" in str(header_value) or "=?utf-8?q?" in str(header_value):
-            logger.debug("Decoded header test", original=header_value, decoded=result, parts=decoded_parts)
-
         return result
     except Exception as e:
         logger.warning("Failed to decode email header", header=header_value, error=str(e))
@@ -241,6 +237,22 @@ class EmailService(ABC):
     ) -> dict[str, Any]:
         """Mark a single email as read (SEEN)."""
         return {"success": False, "error": f"mark_read not supported for {self.name}"}
+
+    async def list_folders(self, service: str = "default") -> list[dict[str, Any]]:
+        """List IMAP folders/mailboxes."""
+        return []
+
+    async def create_folder(self, folder: str) -> dict[str, Any]:
+        """Create a new IMAP folder."""
+        return {"success": False, "error": f"create_folder not supported for {self.name}"}
+
+    async def delete_folder(self, folder: str) -> dict[str, Any]:
+        """Delete an IMAP folder."""
+        return {"success": False, "error": f"delete_folder not supported for {self.name}"}
+
+    async def rename_folder(self, old_name: str, new_name: str) -> dict[str, Any]:
+        """Rename an IMAP folder."""
+        return {"success": False, "error": f"rename_folder not supported for {self.name}"}
 
 
 class SMTPEmailService(EmailService):
@@ -606,6 +618,135 @@ class SMTPEmailService(EmailService):
         except Exception as e:
             return {"success": False, "error": f"IMAP mark read failed: {e!s}"}
 
+    async def mark_unread(
+        self,
+        folder: str,
+        email_id: str,
+    ) -> dict[str, Any]:
+        """Mark a single email as unread (remove SEEN flag) via IMAP."""
+        if not self.imap_server or not self.imap_user or not self.imap_password:
+            return {"success": False, "error": f"IMAP not configured for {self.name}"}
+
+        try:
+
+            def unmark_sync():
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail.login(self.imap_user, self.imap_password)
+                mail.select(folder)
+                eid = email_id.encode() if isinstance(email_id, str) else email_id
+                mail.store(eid, "-FLAGS", "\\Seen")
+                mail.close()
+                mail.logout()
+                return True
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, unmark_sync)
+            return {
+                "success": True,
+                "service": self.name,
+                "email_id": email_id,
+                "message": f"Marked {email_id} as unread",
+            }
+        except Exception as e:
+            return {"success": False, "error": f"IMAP mark unread failed: {e!s}"}
+
+    async def list_folders(self, service: str = "default") -> list[dict[str, Any]]:
+        """List all IMAP folders/mailboxes for this service."""
+        if not self.imap_server or not self.imap_user or not self.imap_password:
+            return []
+        try:
+
+            def list_sync():
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail.login(self.imap_user, self.imap_password)
+                status, folders = mail.list()
+                mail.logout()
+                if status != "OK":
+                    return []
+                result = []
+                for line in folders:
+                    decoded = line.decode("utf-8", errors="replace")
+                    parts = decoded.split(' "/" ')
+                    name = parts[-1].strip('" ') if len(parts) > 1 else decoded.strip()
+                    if name and not name.startswith("[Gmail]"):
+                        result.append({"name": name, "delimiter": "/"})
+                return result
+
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, list_sync)
+        except Exception:
+            return []
+
+    async def create_folder(self, folder: str) -> dict[str, Any]:
+        """Create a new IMAP folder."""
+        if not self.imap_server or not self.imap_user or not self.imap_password:
+            return {"success": False, "error": f"IMAP not configured for {self.name}"}
+        try:
+
+            def create_sync():
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail.login(self.imap_user, self.imap_password)
+                status, _ = mail.create(folder)
+                mail.logout()
+                return status == "OK"
+
+            loop = asyncio.get_event_loop()
+            ok = await loop.run_in_executor(None, create_sync)
+            return {
+                "success": ok,
+                "folder": folder,
+                "message": f"Folder '{folder}' created" if ok else f"Failed to create '{folder}'",
+            }
+        except Exception as e:
+            return {"success": False, "error": f"IMAP create folder failed: {e!s}"}
+
+    async def delete_folder(self, folder: str) -> dict[str, Any]:
+        """Delete an IMAP folder."""
+        if not self.imap_server or not self.imap_user or not self.imap_password:
+            return {"success": False, "error": f"IMAP not configured for {self.name}"}
+        try:
+
+            def delete_sync():
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail.login(self.imap_user, self.imap_password)
+                status, _ = mail.delete(folder)
+                mail.logout()
+                return status == "OK"
+
+            loop = asyncio.get_event_loop()
+            ok = await loop.run_in_executor(None, delete_sync)
+            return {
+                "success": ok,
+                "folder": folder,
+                "message": f"Folder '{folder}' deleted" if ok else f"Failed to delete '{folder}'",
+            }
+        except Exception as e:
+            return {"success": False, "error": f"IMAP delete folder failed: {e!s}"}
+
+    async def rename_folder(self, old_name: str, new_name: str) -> dict[str, Any]:
+        """Rename an IMAP folder."""
+        if not self.imap_server or not self.imap_user or not self.imap_password:
+            return {"success": False, "error": f"IMAP not configured for {self.name}"}
+        try:
+
+            def rename_sync():
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail.login(self.imap_user, self.imap_password)
+                status, _ = mail.rename(old_name, new_name)
+                mail.logout()
+                return status == "OK"
+
+            loop = asyncio.get_event_loop()
+            ok = await loop.run_in_executor(None, rename_sync)
+            return {
+                "success": ok,
+                "old_name": old_name,
+                "new_name": new_name,
+                "message": f"Renamed '{old_name}' to '{new_name}'" if ok else f"Failed to rename '{old_name}'",
+            }
+        except Exception as e:
+            return {"success": False, "error": f"IMAP rename folder failed: {e!s}"}
+
 
 class APIEmailService(EmailService):
     """Transactional email API service implementation.
@@ -823,9 +964,7 @@ class LocalEmailService(EmailService):
                             emails.append(
                                 {
                                     "id": msg.get("ID"),
-                                    "subject": msg.get("Content", {})
-                                    .get("Headers", {})
-                                    .get("Subject", ["(No Subject)"])[0],
+                                    "subject": msg.get("Content", {}).get("Headers", {}).get("Subject", ["(No Subject)"])[0],
                                     "from": msg.get("Content", {}).get("Headers", {}).get("From", ["Unknown"])[0],
                                     "date": msg.get("Created"),
                                     "read": True,
@@ -1670,16 +1809,25 @@ class EmailMCP:
                 "total_services": len(service_statuses),
                 "configured_services": configured_count,
                 "connected_services": connected_count,
-                "tools_exposed": 6,
+                "tools_exposed": 15,
                 "tools": [
                     "send_email",
                     "check_inbox",
+                    "fetch_email_detail",
+                    "search_emails",
+                    "delete_email",
+                    "mark_email_read",
                     "email_status",
                     "configure_service",
+                    "remove_service",
                     "list_services",
                     "email_help",
+                    "mailing_lists_catalog",
+                    "mailing_list_latest",
+                    "suggest_email_subject",
+                    "email_agentic_assist",
                 ],
-                "message": f"Email MCP server v0.4.0 - {connected_count}/{len(service_statuses)} services connected",
+                "message": f"Email MCP server v0.4.1 - {connected_count}/{len(service_statuses)} services connected",
             }
 
         @self.mcp.tool()
@@ -1880,8 +2028,8 @@ class EmailMCP:
             """
             return {
                 "server": "Email-MCP",
-                "version": "0.4.0",
-                "description": "Multi-service email platform supporting SMTP, APIs, local testing, and webhooks",
+                "version": "0.4.1",
+                "description": "Multi-service email platform supporting SMTP, APIs, local testing, webhooks, search, and AI features",
                 "supported_services": {
                     "smtp": "Standard email providers (Gmail, Outlook, Yahoo, iCloud, ProtonMail)",
                     "api": "Transactional email APIs (SendGrid, Mailgun, Postmark, Amazon SES, Resend)",
@@ -1898,6 +2046,26 @@ class EmailMCP:
                         "name": "check_inbox",
                         "description": "Check inbox via IMAP or service APIs",
                         "usage": 'check_inbox(service="default", folder="INBOX", limit=10)',
+                    },
+                    {
+                        "name": "fetch_email_detail",
+                        "description": "Get full email with text and HTML body",
+                        "usage": 'fetch_email_detail(email_id="12345", service="default")',
+                    },
+                    {
+                        "name": "search_emails",
+                        "description": "Full-text IMAP search on subject and body",
+                        "usage": 'search_emails(query="invoice", folder="INBOX")',
+                    },
+                    {
+                        "name": "delete_email",
+                        "description": "Delete/move-to-trash a single email",
+                        "usage": 'delete_email(email_id="12345")',
+                    },
+                    {
+                        "name": "mark_email_read",
+                        "description": "Mark a single email as read (SEEN flag)",
+                        "usage": 'mark_email_read(email_id="12345")',
                     },
                     {
                         "name": "mailing_lists_catalog",
@@ -1920,6 +2088,11 @@ class EmailMCP:
                         "usage": "configure_service(name='my-api', type='api', config={...})",
                     },
                     {
+                        "name": "remove_service",
+                        "description": "Remove a runtime configured service",
+                        "usage": 'remove_service(name="gmail")',
+                    },
+                    {
                         "name": "list_services",
                         "description": "List all configured email services",
                         "usage": "list_services()",
@@ -1931,12 +2104,12 @@ class EmailMCP:
                     },
                     {
                         "name": "suggest_email_subject",
-                        "description": "Suggest subject lines via MCP sampling (FastMCP 3.1)",
+                        "description": "Suggest subject lines via MCP sampling",
                         "usage": 'suggest_email_subject(body="...")',
                     },
                     {
                         "name": "email_agentic_assist",
-                        "description": "Multi-step email plan via sampling (agentic assist)",
+                        "description": "Multi-step email plan via sampling",
                         "usage": 'email_agentic_assist(goal="...")',
                     },
                 ],
@@ -2046,6 +2219,79 @@ class EmailMCP:
             return await self.services[service].mark_read(folder, email_id)
 
         @self.mcp.tool()
+        async def mark_email_unread(
+            email_id: str,
+            service: str = "default",
+            folder: str = "INBOX",
+        ) -> dict[str, Any]:
+            """Mark a single email as unread (remove SEEN flag) via IMAP.
+
+            ## Return Format
+            {success, service, email_id, message}
+            """
+            if service not in self.services:
+                return {"success": False, "error": f"Service {service!r} not available"}
+            return await self.services[service].mark_unread(folder, email_id)
+
+        @self.mcp.tool()
+        async def list_folders(
+            service: str = "default",
+        ) -> dict[str, Any]:
+            """List all IMAP folders/mailboxes for a service.
+
+            ## Return Format
+            {success, folders: [{name, delimiter}], service}
+            """
+            if service not in self.services:
+                return {"success": False, "error": f"Service {service!r} not available"}
+            svc = self.services[service]
+            folders = await svc.list_folders(service)
+            return {"success": True, "folders": folders, "service": service, "count": len(folders)}
+
+        @self.mcp.tool()
+        async def create_folder(
+            folder: str,
+            service: str = "default",
+        ) -> dict[str, Any]:
+            """Create a new IMAP folder.
+
+            ## Return Format
+            {success, folder, message}
+            """
+            if service not in self.services:
+                return {"success": False, "error": f"Service {service!r} not available"}
+            return await self.services[service].create_folder(folder)
+
+        @self.mcp.tool()
+        async def delete_folder(
+            folder: str,
+            service: str = "default",
+        ) -> dict[str, Any]:
+            """Delete an IMAP folder.
+
+            ## Return Format
+            {success, folder, message}
+            """
+            if service not in self.services:
+                return {"success": False, "error": f"Service {service!r} not available"}
+            return await self.services[service].delete_folder(folder)
+
+        @self.mcp.tool()
+        async def rename_folder(
+            old_name: str,
+            new_name: str,
+            service: str = "default",
+        ) -> dict[str, Any]:
+            """Rename an IMAP folder.
+
+            ## Return Format
+            {success, old_name, new_name, message}
+            """
+            if service not in self.services:
+                return {"success": False, "error": f"Service {service!r} not available"}
+            return await self.services[service].rename_folder(old_name, new_name)
+
+        @self.mcp.tool()
         async def search_emails(
             query: str,
             service: str = "default",
@@ -2083,7 +2329,7 @@ class EmailMCP:
 
                     # IMAP SEARCH: look in subject and body
                     search_key = f'(OR SUBJECT "{query}" BODY "{query}")'
-                    status, messages = mail.search(None, search_key)
+                    _status, messages = mail.search(None, search_key)
                     email_ids_ = messages[0].split() if messages and messages[0] else []
                     if not email_ids_:
                         mail.close()
@@ -2164,15 +2410,10 @@ class EmailMCP:
 
         @mcp.tool()
         async def suggest_email_subject(body: str, ctx: Context) -> str:
-            """Suggest 1–3 concise email subject lines for the given body (uses MCP sampling when available)."""
+            """Suggest 1-3 concise email subject lines for the given body (uses MCP sampling when available)."""
             result = await ctx.sample(
-                messages=(
-                    "Suggest 1 to 3 short, clear email subject lines for this body. "
-                    "Reply with only the subjects, one per line.\n\nBody:\n" + body[:2000]
-                ),
-                system_prompt=(
-                    "You are a concise assistant. Output only subject lines, one per line, no numbering or extra text."
-                ),
+                messages=("Suggest 1 to 3 short, clear email subject lines for this body. Reply with only the subjects, one per line.\n\nBody:\n" + body[:2000]),
+                system_prompt=("You are a concise assistant. Output only subject lines, one per line, no numbering or extra text."),
                 max_tokens=150,
             )
             return getattr(result, "text", None) or str(result)
@@ -2209,7 +2450,7 @@ class EmailMCP:
             return
         try:
             self.mcp.add_provider(SkillsDirectoryProvider(roots=roots))
-        except OSError | UnicodeError | ValueError as e:
+        except (OSError, UnicodeError, ValueError) as e:
             logger.warning("skills_provider_skipped", error=str(e))
 
     def _register_prefab_tools(self) -> None:
@@ -2244,9 +2485,7 @@ class EmailMCP:
             for svc_name in services_to_check:
                 svc = self.services[svc_name]
                 status = await svc.test_connection()
-                connected = status.get(
-                    "connected", status.get("smtp_connected", False) or status.get("imap_connected", False)
-                )
+                connected = status.get("connected", status.get("smtp_connected", False) or status.get("imap_connected", False))
                 service_statuses[svc_name] = {
                     "connected": connected,
                     "type": svc.config.type,

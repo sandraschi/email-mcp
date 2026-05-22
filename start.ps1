@@ -17,7 +17,7 @@ $UV = "C:\Users\sandr\.local\bin\uv.exe"
 $BackendPort = 10813
 $FrontendPort = 10812
 
-Write-Host "=== email-mcp 0.3.2 (FastMCP 3.2 + Prefab UI) ===" -ForegroundColor Cyan
+Write-Host "=== email-mcp 0.4.1 (FastMCP 3.2 + Prefab UI) ===" -ForegroundColor Cyan
 
 # ── Kill stale processes on both ports ───────────────────────────────────────
 foreach ($port in @($BackendPort, $FrontendPort)) {

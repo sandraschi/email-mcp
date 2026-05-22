@@ -1,4 +1,4 @@
-# MiniMail MCP Server
+# Email MCP Server
 
 <p align="center">
   <a href="https://github.com/casey/just"><img src="https://img.shields.io/badge/just-ready_to_go-7c5cfc?style=flat-square&logo=just&logoColor=white" alt="Just"></a>
@@ -13,7 +13,7 @@
 
 Multi-service email platform for MCP clients. Send and receive email via SMTP/IMAP, transactional APIs, local test servers, and webhooks.
 
-**v0.4.0** — FastMCP 3.2+, web dashboard, AI assistant, mailing list presets, prompt injection defense.
+**v0.4.1** — FastMCP 3.2+, web dashboard, AI assistant, mailing list presets, prompt injection defense, MailLab throwaway server.
 
 ---
 
@@ -70,6 +70,7 @@ See [docs/quickstart.md](docs/quickstart.md) for full setup.
 - **Draft management**: save/compose/send from the webapp
 - **Toast notifications**: live feedback for all actions
 - **Prompt injection defense**: two-layer sanitization (Unicode stripping + safety boundary wrapping)
+- **Mail Lab**: throwaway SMTP server for testing with AI-generated messages
 - **Structured logging**: JSON output via structlog
 
 ## Web Dashboard
@@ -82,6 +83,7 @@ See [docs/quickstart.md](docs/quickstart.md) for full setup.
 | Compose | `/compose` | Send with drafts, HTML toggle, AI Improve, AI subject |
 | Search | `/search` | Full-text IMAP search |
 | AI Chat | `/chat` | Natural language email assistant |
+| Mail Lab | `/lab` | Throwaway SMTP server with AI message generator |
 | Services | `/services` | Form-based add/remove/test with AI Assist presets |
 | Tools | `/tools` | Execute MCP tools from the browser |
 | Settings | `/settings` | AI provider config, email credentials |
@@ -101,6 +103,7 @@ See [docs/quickstart.md](docs/quickstart.md) for full setup.
 | `list_services` | List configured services |
 | `configure_service` | Add service at runtime |
 | `remove_service` | Remove a service |
+| `email_help` | Usage help and documentation |
 | `mailing_lists_catalog` | List newsletter presets |
 | `mailing_list_latest` | Fetch from a preset |
 | `suggest_email_subject` | AI subject line (sampling) |
@@ -130,10 +133,23 @@ Requires [Rust](https://rustup.rs), [Node.js 20+](https://nodejs.org), and Visua
 ## Development
 
 ```powershell
+# Install all dependencies
 uv sync --extra test --extra dev
-uv run ruff check src tests
-# See docs/quickstart.md for full dev guide
+
+# Start the web dashboard
+.\start.ps1
+
+# Run tests
+uv run pytest tests -q
+
+# Build MCPB package
+uv run python build_mcpb.py
+
+# Lint
+uv run ruff check src
 ```
+
+See [docs/quickstart.md](docs/quickstart.md) for full setup guide.
 
 ## License
 

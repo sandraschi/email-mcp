@@ -100,7 +100,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
 
     @app.get("/api/status")
     async def get_status(user: str = Depends(authenticate)):
-        return {"status": "connected", "user": user, "mcp": mcp_app.name, "version": "0.3.2"}
+        return {"status": "connected", "user": user, "mcp": mcp_app.name, "version": "0.4.1"}
 
     @app.get("/api/capabilities")
     async def get_capabilities(_user: str = Depends(authenticate)):
@@ -123,6 +123,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
             "detail": "fetch_email_detail" in tool_names,
             "delete": "delete_email" in tool_names,
             "drafts": True,
+            "workflows": True,
         }
 
     # ── Tools ────────────────────────────────────────────────────────────────
@@ -187,7 +188,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         _user: str = Depends(authenticate),
     ):
         try:
-            await mcp_app.call_tool("remove_service", {"name": name})
+            rm_ = _extract_tool_result(await mcp_app.call_tool("remove_service", {"name": name}))
+            if not rm_.get("success"):
+                return rm_
             cfg = payload.get("config", {})
             result = _extract_tool_result(
                 await mcp_app.call_tool(
@@ -219,6 +222,108 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
             return result
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post("/api/services/quick")
+    async def quick_setup(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        """Quick-setup a provider with email + password only."""
+        provider = payload.get("provider", "").strip().lower()
+        email = payload.get("email", "").strip()
+        password = payload.get("password", "").strip()
+        if not provider or not email or not password:
+            raise HTTPException(status_code=422, detail="provider, email, and password are required")
+
+        PROFILES: dict[str, dict[str, Any]] = {
+            "gmail": {
+                "name": "gmail",
+                "smtp_server": "smtp.gmail.com",
+                "smtp_port": 587,
+                "imap_server": "imap.gmail.com",
+                "imap_port": 993,
+            },
+            "outlook": {
+                "name": "outlook",
+                "smtp_server": "smtp-mail.outlook.com",
+                "smtp_port": 587,
+                "imap_server": "outlook.office365.com",
+                "imap_port": 993,
+            },
+            "hotmail": {
+                "name": "outlook",
+                "smtp_server": "smtp-mail.outlook.com",
+                "smtp_port": 587,
+                "imap_server": "outlook.office365.com",
+                "imap_port": 993,
+            },
+            "yahoo": {
+                "name": "yahoo",
+                "smtp_server": "smtp.mail.yahoo.com",
+                "smtp_port": 587,
+                "imap_server": "imap.mail.yahoo.com",
+                "imap_port": 993,
+            },
+            "icloud": {
+                "name": "icloud",
+                "smtp_server": "smtp.mail.me.com",
+                "smtp_port": 587,
+                "imap_server": "imap.mail.me.com",
+                "imap_port": 993,
+            },
+            "protonmail": {
+                "name": "protonmail",
+                "smtp_server": "mail.protonmail.com",
+                "smtp_port": 587,
+                "imap_server": "mail.protonmail.com",
+                "imap_port": 993,
+            },
+            "zoho": {
+                "name": "zoho",
+                "smtp_server": "smtp.zoho.com",
+                "smtp_port": 587,
+                "imap_server": "imap.zoho.com",
+                "imap_port": 993,
+            },
+            "gmx": {
+                "name": "gmx",
+                "smtp_server": "smtp.gmx.com",
+                "smtp_port": 587,
+                "imap_server": "imap.gmx.com",
+                "imap_port": 993,
+            },
+            "fastmail": {
+                "name": "fastmail",
+                "smtp_server": "smtp.fastmail.com",
+                "smtp_port": 587,
+                "imap_server": "imap.fastmail.com",
+                "imap_port": 993,
+            },
+        }
+
+        if provider not in PROFILES:
+            raise HTTPException(status_code=422, detail=f"Unknown provider '{provider}'. Supported: {', '.join(PROFILES.keys())}")
+
+        profile = PROFILES[provider]
+        svc_name = profile["name"]
+        config = {
+            "smtp_server": profile["smtp_server"],
+            "smtp_port": profile["smtp_port"],
+            "smtp_user": email,
+            "smtp_password": password,
+            "smtp_from": email,
+            "imap_server": profile["imap_server"],
+            "imap_port": profile["imap_port"],
+            "imap_user": email,
+            "imap_password": password,
+        }
+        result = _extract_tool_result(
+            await mcp_app.call_tool(
+                "configure_service",
+                {"name": svc_name, "type": "smtp", "config": config},
+            )
+        )
+        return result
 
     # ── Stats (dashboard KPIs) ───────────────────────────────────────────────
 
@@ -348,11 +453,19 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         payload: dict[str, Any] = Body(default={}),
         _user: str = Depends(authenticate),
     ):
-        return {
-            "success": False,
-            "message_id": message_id,
-            "error": "Mark-as-unread requires IMAP \\Seen flag removal (not yet implemented)",
-        }
+        try:
+            return _extract_tool_result(
+                await mcp_app.call_tool(
+                    "mark_email_unread",
+                    {
+                        "email_id": message_id,
+                        "service": payload.get("service", "default"),
+                        "folder": payload.get("folder", "INBOX"),
+                    },
+                )
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.delete("/api/inbox/{message_id}")
     async def delete_email(
@@ -390,6 +503,55 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
                     {"query": q.strip(), "service": service, "folder": folder, "limit": limit},
                 )
             )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    # ── Folders (IMAP) ───────────────────────────────────────────────────────
+
+    @app.get("/api/services/{name}/folders")
+    async def list_folders(name: str, _user: str = Depends(authenticate)):
+        try:
+            return _extract_tool_result(await mcp_app.call_tool("list_folders", {"service": name}))
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post("/api/services/{name}/folders")
+    async def create_folder(
+        name: str,
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        folder = payload.get("folder", "").strip()
+        if not folder:
+            raise HTTPException(status_code=422, detail="folder is required")
+        try:
+            return _extract_tool_result(await mcp_app.call_tool("create_folder", {"folder": folder, "service": name}))
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.delete("/api/services/{name}/folders/{folder_name:path}")
+    async def delete_folder(
+        name: str,
+        folder_name: str,
+        _user: str = Depends(authenticate),
+    ):
+        try:
+            return _extract_tool_result(await mcp_app.call_tool("delete_folder", {"folder": folder_name, "service": name}))
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.put("/api/services/{name}/folders/{folder_name:path}")
+    async def rename_folder(
+        name: str,
+        folder_name: str,
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        new_name = payload.get("new_name", "").strip()
+        if not new_name:
+            raise HTTPException(status_code=422, detail="new_name is required")
+        try:
+            return _extract_tool_result(await mcp_app.call_tool("rename_folder", {"old_name": folder_name, "new_name": new_name, "service": name}))
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -745,7 +907,8 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         """List captured emails from the throwaway server."""
         from .lab import list_emails
 
-        return {"emails": list_emails(), "count": len(__import__("email_mcp.lab", fromlist=["_captured"])._captured)}
+        emails = list_emails()
+        return {"emails": emails, "count": len(emails)}
 
     @app.get("/api/lab/emails/{email_id}")
     async def lab_get_email(email_id: str, _user: str = Depends(authenticate)):
@@ -846,3 +1009,41 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
             },
         )
         return _extract_tool_result(result)
+
+    # ── Creative Workflows ────────────────────────────────────────────────────
+
+    WORKFLOWS: dict[str, str] = {
+        "love-letter": ("Write a love letter. Make it {tone} and {mood}. The recipient is my {recipient}. Sign it with love. Output format: {fmt_text}"),
+        "breakup": ("Write a breakup email to my {recipient}. Make it {tone} and {mood}. Output format: {fmt_text}"),
+        "thank-you": ("Write a warm thank-you note to my {recipient}. Make it {tone}. Output format: {fmt_text}"),
+        "complaint": ("Write a {mood} complaint letter to my {recipient}. Make it {tone}. Output format: {fmt_text}"),
+        "apology": ("Write an apology email to my {recipient}. Make it {tone}. Output format: {fmt_text}"),
+        "fan-mail": ("Write an enthusiastic fan letter to my {recipient}. Make it {tone}. Mention something you admire. Output format: {fmt_text}"),
+        "hate-mail": (
+            "Write a hilariously passive-aggressive email to my {recipient}. Make it comedic and over-the-top, not actually mean. Tone: {tone}. Output format: {fmt_text}"
+        ),
+    }
+
+    FORMAT_INSTRUCTIONS: dict[str, str] = {
+        "text": "Return ONLY the email body as plain text.",
+        "ascii": "Include a large ASCII art illustration at the top. Use chars like @ # % * / \\ | ( ) - + = . Make it impressive.",
+        "svg": "Return an inline SVG document wrapped in ```svg ... ``` that renders the email as a decorative card, max 800x600, then the text below.",
+    }
+
+    @app.post("/api/workflow")
+    async def run_workflow(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        workflow = payload.get("workflow", "").strip()
+        if workflow not in WORKFLOWS:
+            raise HTTPException(status_code=422, detail=f"Unknown workflow '{workflow}'. Available: {list(WORKFLOWS.keys())}")
+        template = WORKFLOWS[workflow]
+        tone = payload.get("tone", "sincere")
+        mood = payload.get("mood", "warm")
+        recipient = payload.get("recipient", "beloved")
+        fmt = payload.get("format", "text")
+        fmt_text = FORMAT_INSTRUCTIONS.get(fmt, FORMAT_INSTRUCTIONS["text"])
+        query = template.format(recipient=recipient, tone=tone, mood=mood, fmt_text=fmt_text)
+        response = await ai_router.route_query(query)
+        return {"success": True, "workflow": workflow, "response": response, "format": fmt}

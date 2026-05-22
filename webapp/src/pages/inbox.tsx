@@ -26,6 +26,7 @@ export function Inbox() {
 
     const [emails, setEmails] = useState<Email[]>([]);
     const [services, setServices] = useState<Service[]>([]);
+    const [folders, setFolders] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedService, setSelectedService] = useState("default");
@@ -77,6 +78,21 @@ export function Inbox() {
             })
             .catch(() => {});
     }, []);
+
+    // Load folders when service changes
+    const fetchFolders = useCallback(async () => {
+        try {
+            const data = await fetchWithAuth(`/api/services/${encodeURIComponent(selectedService)}/folders`);
+            const folderNames = (data.folders || []).map((f: any) => f.name);
+            if (folderNames.length > 0) {
+                setFolders(folderNames);
+            }
+        } catch { /* ignore */ }
+    }, [selectedService]);
+
+    useEffect(() => {
+        fetchFolders();
+    }, [fetchFolders]);
 
     useEffect(() => {
         fetchEmails();
@@ -182,9 +198,10 @@ export function Inbox() {
                                 value={folder}
                                 onChange={(e) => setFolder(e.target.value)}
                             >
-                                {["INBOX", "Sent", "Drafts", "Trash", "Spam"].map((f) => (
-                                    <option key={f}>{f}</option>
-                                ))}
+                                {folders.length > 0
+                                    ? folders.map((f) => <option key={f}>{f}</option>)
+                                    : ["INBOX", "Sent", "Drafts", "Trash", "Spam"].map((f) => <option key={f}>{f}</option>)
+                                }
                             </select>
                         </div>
                         <div className="flex items-center gap-2">

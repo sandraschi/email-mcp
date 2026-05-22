@@ -8,55 +8,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **New MCP Tools**: `fetch_email_detail`, `delete_email`, `mark_email_read`, `search_emails`, `remove_service` (total: 14 tools)
-- **REST API endpoints**: email detail (`GET /api/inbox/{id}`), mark-read/unread, delete, full-text search (`/api/search`), draft CRUD (`/api/drafts`), service CRUD (`POST/PUT/DELETE /api/services/{name}`), service types reference (`/api/service-types`)
+- **Mail Lab page** (`/lab`): throwaway SMTP server (aiosmtpd) start/stop from web UI
+- **AI Message Generator**: 10 scenario presets, LLM-generated test emails injected into lab inbox
+- **Forward to real email**: captured lab emails can be forwarded to a real SMTP account
+- **Model list filtering**: embedding/rerank models hidden from LM Studio/Ollama model dropdown
+- **Test button now saves first**: test connection auto-saves provider config before testing
+- **justfile**: added `bootstrap`, `build`, `clean`, `lab`, `serve`, `dev` recipes
+
+### Changed
+- Updated version to 0.4.1 across all files
+- `ruff` moved from production deps to dev deps (pyproject.toml)
+- Removed stale `[tool.black]` config (project uses ruff format)
+- `tools_exposed` now reports 15 tools (was hardcoded to 6)
+- `email_help` tool listing now includes all 15 tools
+- `update_service` endpoint properly extracts call_tool result for error handling
+- MailLab email count endpoint uses clean `len(emails)` instead of `__import__` hack
+- Cleaned 16 stale `.bak` files from codebase
+- Leftover debug logging in `decode_email_header` removed
+
+### Fixed
+- README no longer references non-existent `just bootstrap` / `just serve` recipes
+- Settings page correctly filters embedding models from LM Studio model list
+- Test Connection button now actually tests the selected provider (not the stale backend default)
+
+## [0.4.0] - 2026-05-14
+
+### Added
+- **New MCP Tools**: `fetch_email_detail`, `delete_email`, `mark_email_read`, `search_emails`, `remove_service` (total: 15 tools)
+- **REST API endpoints**: email detail, mark-read/unread, delete, full-text search, draft CRUD, service CRUD, service types reference
 - **Draft management**: save/load/delete drafts persisted to JSON file, auto-delete draft on send
-- **Email Detail view** (`/email`): full email reader with HTML body rendering, reply/forward links, delete/mark-read actions
-- **Search page** (`/search`): full-text IMAP search with results linking to detail view
-- **Services page** (`/services`): form-based service configuration (no JSON textarea), AI Assist with 9 provider presets (Gmail, Outlook, Yahoo, ProtonMail, MailHog, SendGrid, Mailgun, Slack, Discord), password fields with show/hide toggle, live test/delete
-- **Toast notification system**: context-based success/error/info toasts with auto-dismiss
-- **AI Improve in Compose**: style/length/mood selectors (6 each), calls `/api/improve` to rewrite email body via LLM
-- **Settings page**: email service credentials form (SMTP/IMAP user/pwd entry with save/test)
-- **Prompt injection defense**: `src/email_mcp/sanitize.py` with 37 zero-width/bidi Unicode character stripping + safety boundary wrapping (`<<< UNTRUSTED EXTERNAL DATA >>>` preamble) applied to all MCP tool returns, 5 service files, 6 test fixtures, 27 tests
-- **Live topbar health check**: polls `/api/status` every 30s, shows green/red status dot
+- **Email Detail view** (`/email`): full email reader with HTML body rendering
+- **Search page** (`/search`): full-text IMAP search
+- **Services page** (`/services`): form-based config with AI Assist presets
+- **Toast notification system**: context-based success/error/info toasts
+- **AI Improve in Compose**: style/length/mood selectors for LLM rewriting
+- **Settings page**: email service credentials form
+- **Prompt injection defense**: 37 Unicode chars stripped + safety boundary wrapping, 6 test fixtures, 27 tests
+- **Live topbar health check**: polls `/api/status` every 30s
 - **Auto-refresh inbox**: 30s polling with toggle
-- **Docs restructure**: 8 sub-readmes in `docs/` (gmail, outlook, protonmail, api-services, local-testing, webhook-integrations, configuration, safety-hardening); short user-facing README cut from 514â†’110 lines
-- **Tabbed Help page**: Quick Start, Email Systems, Configuration, Tools, Safety, SOTA tabs
-- **Functional Tools page**: Execute buttons now call real REST endpoints with per-tool result display
-- **Fixed dashboard**: real stats (unread count, connected services, drafts), clickable recent activity
-- **Uvicorn log spam suppression**: access/error loggers set to WARNING in server lifespan
+- **Docs restructure**: 8 sub-readmes in `docs/`
+- **Tabbed Help page**: 6 tabs including Safety
+- **Functional Tools page**: execute buttons call real REST endpoints
+- **Mail Lab** (`/lab`): throwaway SMTP server (aiosmtpd) + AI message generator
+- **Uvicorn log spam suppression**
 
 ### Changed
 - Updated version to 0.4.0
-- `manifest.json` and `mcpb.json` updated with new tools and version
-- Inbox now clickable â†’ navigates to email detail, inline delete button on hover
-- Compose now supports BCC, HTML toggle, draft save/load panel
-- Sidebar: added Search and Services nav items
-- Dashboard: removed fake "system load = tools_count * 4" stat, shows real draft count
+- Inbox clickable, inline delete, auto-refresh
+- Compose: BCC, HTML toggle, drafts
+- Sidebar: Search and Services nav items
+- Dashboard: real stats, draft count
+- Chat page: loads SKILL.md, shows provider info
+- All `call_tool` results now properly extracted via `_extract_tool_result()`
 
 ### Security
-- **Prompt injection hardening**: two-layer defense (Unicode stripping + safety boundary wrapping) applied to check_inbox, fetch_email_detail, search_emails, mailing_list_latest tool returns
-- FastMCP `instructions` declares safety posture up front
+- Two-layer prompt injection defense: Unicode stripping + safety boundary wrapping
 
 ## [0.4.1] - 2026-05-19
 
 ### Added
-- **Tauri 2.0 native desktop wrapper** (
-ative/): single-window app using system WebView2, no Electron/Chromium
+- **Tauri 2.0 native desktop wrapper** (`native/`): single-window app using system WebView2
   - System tray icon with minimize-to-tray support
   - Auto-launches PyInstaller sidecar backend on startup; kills it cleanly on exit
-  - Emits ackend-status events (eady / error) to the frontend via Tauri IPC
-- **PyInstaller sidecar build** (email-mcp-backend.spec, 
-ative/build-sidecar.ps1):
-  - Single-file EXE (one-file mode, no one-dir COLLECT) for Tauri externalBin compatibility
-  - Copies output to 
-ative/binaries/email-mcp-backend-x86_64-pc-windows-msvc.exe
-  - Expanded hiddenimports: full uvicorn protocol/lifespan tree + all email_mcp.* submodules
-  - pathex = ["src"] so imports resolve correctly inside the frozen bundle
-- **
-ative/package.json**: pins @tauri-apps/cli ^2 so 
-px resolves locally instead of fetching on every run
-- **justfile** — new targets in Native (Tauri) section:
+  - Emits `backend-status` events (ready / error) to the frontend via Tauri IPC
+- **PyInstaller sidecar build** (`native/build-sidecar.ps1`):
+  - Single-file EXE for Tauri externalBin compatibility
+  - Copies output to `native/binaries/email-mcp-backend-x86_64-pc-windows-msvc.exe`
+  - Expanded hidden imports: full uvicorn protocol/lifespan tree + all `email_mcp.*` submodules
+- **`native/package.json`**: pins `@tauri-apps/cli` ^2 so `npx` resolves locally
+- **justfile**: new targets for Tauri build, debug, dev mode
+- **`mailing_list_latest` tool**: now correctly handles invalid IDs and missing service configs
   - uild-sidecar: run PyInstaller, copy binary to 
 ative/binaries/
   - uild-all: uild-sidecar then uild-native in one step

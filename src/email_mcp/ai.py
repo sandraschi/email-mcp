@@ -33,7 +33,7 @@ class AIRouter:
 
     _JSON_SYSTEM = "You are a JSON-only data extraction engine. Return ONLY valid JSON. No explanations, no markdown, no code fences, no prefixes. Just the raw JSON object."
 
-    _WRITING_SYSTEM = "You are an expert email writing assistant. Rewrite and improve email text as requested. Return ONLY the rewritten text, no explanations, no prefixes, no notes."
+    _WRITING_SYSTEM = "You are an expert email writing assistant. Improve text as requested. Return ONLY the rewritten text, no explanations."
 
     async def route_json_query(self, query: str) -> str:
         """Route query with a JSON-only system prompt."""
@@ -49,9 +49,7 @@ class AIRouter:
                 # Use sensible default model for Ollama if none configured
                 if not self.model:
                     self.model = "llama3.1:8b"
-                return await self._openai_compat(
-                    client, query, sp, self.endpoint or "http://localhost:11434/v1/chat/completions"
-                )
+                return await self._openai_compat(client, query, sp, self.endpoint or "http://localhost:11434/v1/chat/completions")
             elif provider == "lmstudio":
                 return await self._openai_compat(client, query, sp, "http://localhost:1234/v1/chat/completions")
             elif provider == "openai":
@@ -73,9 +71,7 @@ class AIRouter:
                     api_key=os.getenv("GOOGLE_API_KEY", ""),
                 )
             else:
-                return await self._openai_compat(
-                    client, query, sp, self.endpoint or "http://localhost:11434/v1/chat/completions"
-                )
+                return await self._openai_compat(client, query, sp, self.endpoint or "http://localhost:11434/v1/chat/completions")
 
     async def _openai_compat(
         self,
@@ -142,9 +138,7 @@ class AIRouter:
         tools = await self.mcp.list_tools()
         return [{"name": t.name, "description": getattr(t, "description", "") or ""} for t in tools]
 
-    async def improve_text(
-        self, text: str, style: str = "professional", length: str = "same", mood: str = "neutral"
-    ) -> str:
+    async def improve_text(self, text: str, style: str = "professional", length: str = "same", mood: str = "neutral") -> str:
         """Improve email body text with specified style, length, and mood."""
         query = (
             f"Improve this email body. Make it {style} in tone, make it {length} in length, "

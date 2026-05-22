@@ -1477,7 +1477,7 @@ wheels = [
 
 [[package]]
 name = "schip-mcp-email"
-version = "0.4.0"
+version = "0.4.1"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
@@ -1485,7 +1485,6 @@ dependencies = [
     { name = "httpx" },
     { name = "prefab-ui" },
     { name = "pydantic" },
-    { name = "ruff" },
     { name = "structlog" },
 ]
 
@@ -1519,7 +1518,6 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=0.21.0" },
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=4.0.0" },
-    { name = "ruff", specifier = ">=0.15.2" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "structlog", specifier = ">=24.0.0" },
 ]

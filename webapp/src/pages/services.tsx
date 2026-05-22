@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Play, Loader2, Trash2, Plus, Sparkles, RefreshCw, Eye, EyeOff, Key } from "lucide-react";
+import { Play, Loader2, Trash2, Plus, Sparkles, Eye, EyeOff, Key, Mail } from "lucide-react";
 import { fetchWithAuth } from "@/lib/api";
 import { cn } from "@/common/utils";
 import { useToast } from "@/components/toast";
@@ -71,6 +71,10 @@ export function Services() {
     const [adding, setAdding] = useState(false);
     const [testingAdd, setTestingAdd] = useState(false);
     const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set());
+    const [quickProvider, setQuickProvider] = useState<"gmail" | "outlook" | null>(null);
+    const [quickEmail, setQuickEmail] = useState("");
+    const [quickPassword, setQuickPassword] = useState("");
+    const [quickSettingUp, setQuickSettingUp] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
     const [assisting, setAssisting] = useState(false);
     const [aiPrompt, setAiPrompt] = useState("");
@@ -246,6 +250,34 @@ export function Services() {
         } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Test failed"); }
     };
 
+    const handleQuickSetup = async (provider: "gmail" | "outlook") => {
+        if (!quickEmail.trim() || !quickPassword.trim()) {
+            toast("error", "Enter email and password first");
+            return;
+        }
+        setQuickProvider(provider);
+        setQuickSettingUp(true);
+        try {
+            const data = await fetchWithAuth("/api/services/quick", {
+                method: "POST",
+                body: JSON.stringify({ provider, email: quickEmail.trim(), password: quickPassword }),
+            });
+            if (data.success) {
+                toast("success", `${provider === "gmail" ? "Gmail" : "Outlook"} configured!`);
+                setQuickEmail("");
+                setQuickPassword("");
+                setQuickProvider(null);
+                loadServices();
+            } else {
+                toast("error", data.message || data.error || "Setup failed");
+            }
+        } catch (err: unknown) {
+            toast("error", err instanceof Error ? err.message : "Setup failed");
+        } finally {
+            setQuickSettingUp(false);
+        }
+    };
+
     const toggleSecret = (key: string) => {
         setShowSecrets((prev) => {
             const next = new Set(prev);
@@ -267,6 +299,56 @@ export function Services() {
                     <Plus className="h-4 w-4 mr-1" /> {showAdd ? "Cancel" : "Add Service"}
                 </Button>
             </div>
+
+            {/* Quick Setup */}
+            <Card className="border-slate-800 bg-slate-950/50">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-white text-sm">Quick Setup</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    <p className="text-xs text-slate-500">Select a provider, enter your email and password. Server details are auto-configured.</p>
+                    <div className="flex gap-2 flex-wrap">
+                        {[
+                            { id: "gmail", label: "Gmail", color: "border-emerald-700 hover:border-emerald-500 text-emerald-300" },
+                            { id: "outlook", label: "Outlook", color: "border-blue-700 hover:border-blue-500 text-blue-300" },
+                            { id: "yahoo", label: "Yahoo", color: "border-purple-700 hover:border-purple-500 text-purple-300" },
+                            { id: "icloud", label: "iCloud", color: "border-slate-600 hover:border-slate-400 text-slate-300" },
+                            { id: "protonmail", label: "ProtonMail", color: "border-indigo-700 hover:border-indigo-500 text-indigo-300" },
+                            { id: "zoho", label: "Zoho", color: "border-amber-700 hover:border-amber-500 text-amber-300" },
+                            { id: "gmx", label: "GMX", color: "border-cyan-700 hover:border-cyan-500 text-cyan-300" },
+                            { id: "fastmail", label: "Fastmail", color: "border-rose-700 hover:border-rose-500 text-rose-300" },
+                        ].map((p) => (
+                            <button key={p.id}
+                                className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${quickProvider === p.id ? `${p.color} bg-slate-800/50` : "border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500"}`}
+                                onClick={() => setQuickProvider(p.id as any)}>
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
+                    {quickProvider && (
+                        <div className="flex gap-2 items-end flex-wrap">
+                            <div className="min-w-[220px] flex-1">
+                                <Label className="text-slate-400 text-xs">{quickProvider === "gmail" ? "Email (requires App Password)" : "Email"}</Label>
+                                <Input className="bg-slate-900 border-slate-700 text-white mt-1 text-sm" placeholder="your@email.com" value={quickEmail}
+                                    onChange={(e) => setQuickEmail(e.target.value)} />
+                            </div>
+                            <div className="min-w-[180px] flex-1">
+                                <Label className="text-slate-400 text-xs">{quickProvider === "gmail" ? "App Password" : "Password"}</Label>
+                                <div className="relative mt-1">
+                                    <Input type="password" className="bg-slate-900 border-slate-700 text-white text-sm pr-8" placeholder="..." value={quickPassword}
+                                        onChange={(e) => setQuickPassword(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleQuickSetup(quickProvider)} />
+                                </div>
+                            </div>
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs" onClick={() => handleQuickSetup(quickProvider)} disabled={quickSettingUp || !quickEmail.trim() || !quickPassword.trim()}>
+                                {quickSettingUp ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Mail className="h-3 w-3 mr-1" />}
+                                Set up {quickProvider === "outlook" ? "Outlook" : quickProvider.charAt(0).toUpperCase() + quickProvider.slice(1)}
+                            </Button>
+                        </div>
+                    )}
+                    {quickProvider === "gmail" && <p className="text-xs text-slate-500">Gmail requires an <a className="text-blue-400 hover:underline" href="https://myaccount.google.com/apppasswords" target="_blank">App Password</a>. Generate one at myaccount.google.com/apppasswords.</p>}
+                </CardContent>
+            </Card>
 
             {showAdd && (
                 <Card className="border-blue-800 bg-blue-950/20">
