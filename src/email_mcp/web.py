@@ -840,6 +840,31 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         response = await ai_router.improve_text(text, style, length, mood)
         return {"success": True, "response": response}
 
+    @app.post("/api/expand")
+    async def expand_text(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        """Expand a short note into a full email with creative fictional details."""
+        text = payload.get("text", "").strip()
+        if not text:
+            raise HTTPException(status_code=422, detail="text is required")
+        style = payload.get("style", "humorous")
+        length = payload.get("length", "long")
+        context = payload.get("context", "none")
+        context_hints = {
+            "venice": "Set the scene in Venice during the Biennale. Mention sinking palazzos, overpriced spritzes, a gondolier who quotes Deleuze, and an installation made of 4000 humming Roomba vacuums.",
+            "mars": "Set the scene on Elon Musk's Mars colony. Mention the unreliable oxygen recycler, the 'everything is fine' facade, the HOA fees for the geodesic dome, and the local café that only serves protein slurry.",
+            "castle": "Set the scene in a medieval castle. Mention drafty corridors, a jester who gives bad financial advice, a dragon in the moat, and the annual 'tRounament of Self-Actualization'.",
+            "underwater": "Set the scene in an underwater research base. Mention the leaky porthole, the chef who only serves kelp, a strangely intelligent octopus roommate, and the daily 'shark drill'.",
+            "space": "Set the scene on a space station. Mention the zero-gravity coffee spills, the annoying AI voice, the cargo bay full of IKEA flatpacks, and the guy from accounting who keeps trying to open the airlock.",
+            "wildwest": "Set the scene in a Wild West frontier town. Mention the tumbleweeds in the saloon, the sheriff who's also the baker, a horse that gives legal advice, and the annual 'High Noon Haggling Championship'.",
+        }
+        hint = context_hints.get(context, "")
+        query = f"Expand this short note into a full email. Make it {style} and {length}. Weave in creative, humorous fictional details. {hint}\n\nNote: {text}\n\nReturn ONLY the expanded email, no explanations."
+        response = await ai_router.route_query(query)
+        return {"success": True, "response": response, "context": context}
+
     # ── Service types reference ──────────────────────────────────────────────
 
     @app.get("/api/service-types")
@@ -1019,9 +1044,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         "complaint": ("Write a {mood} complaint letter to my {recipient}. Make it {tone}. Output format: {fmt_text}"),
         "apology": ("Write an apology email to my {recipient}. Make it {tone}. Output format: {fmt_text}"),
         "fan-mail": ("Write an enthusiastic fan letter to my {recipient}. Make it {tone}. Mention something you admire. Output format: {fmt_text}"),
-        "hate-mail": (
-            "Write a hilariously passive-aggressive email to my {recipient}. Make it comedic and over-the-top, not actually mean. Tone: {tone}. Output format: {fmt_text}"
-        ),
+        "hate-mail": ("Write a hilariously passive-aggressive email to my {recipient}. Make it comedic and over-the-top, not actually mean. Tone: {tone}. Output format: {fmt_text}"),
     }
 
     FORMAT_INSTRUCTIONS: dict[str, str] = {

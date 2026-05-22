@@ -68,6 +68,13 @@ export function Compose() {
     const [improveMood, setImproveMood] = useState("neutral");
     const [improving, setImproving] = useState(false);
 
+    // ── Expander state ──
+    const [expandNote, setExpandNote] = useState("");
+    const [expandStyle, setExpandStyle] = useState("humorous");
+    const [expandLength, setExpandLength] = useState("long");
+    const [expandContext, setExpandContext] = useState("none");
+    const [expanding, setExpanding] = useState(false);
+
     useEffect(() => {
         fetchWithAuth("/api/services")
             .then((data) => {
@@ -173,6 +180,25 @@ export function Compose() {
             }
         } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Improve failed"); }
         finally { setImproving(false); }
+    };
+
+    const handleExpand = async () => {
+        if (!expandNote.trim()) { toast("error", "Write a short note first"); return; }
+        setExpanding(true);
+        try {
+            const data = await fetchWithAuth("/api/expand", {
+                method: "POST",
+                body: JSON.stringify({ text: expandNote, style: expandStyle, length: expandLength, context: expandContext }),
+            });
+            if (data.success && data.response) {
+                setBody(data.response);
+                setExpandNote("");
+                toast("success", `Expanded: ${expandStyle}, ${expandLength}, ${expandContext}`);
+            } else {
+                toast("error", data.response || "Expand failed");
+            }
+        } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Expand failed"); }
+        finally { setExpanding(false); }
     };
 
     const defaultServices = services.length > 0 ? services.find((s) => s.name === "default") : null;
@@ -308,6 +334,58 @@ export function Compose() {
                                     <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-xs h-7" onClick={handleImprove} disabled={improving || !body.trim()}>
                                         {improving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
                                         Improve
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Expander Panel — short note to full email */}
+                    {!useHtml && (
+                        <Card className="border-amber-900/30 bg-amber-950/10">
+                            <CardHeader className="pb-2 pt-3">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4 text-amber-400" />
+                                    <CardTitle className="text-white text-sm">Expander — short note to full email</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <textarea
+                                    className="w-full bg-slate-900 border border-amber-800/50 rounded-md px-3 py-2 text-sm text-white resize-y min-h-[60px] focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                    placeholder='e.g. "In Venice for the Biennale. Weather nice, prices high."'
+                                    value={expandNote}
+                                    onChange={(e) => setExpandNote(e.target.value)}
+                                />
+                                <div className="grid grid-cols-4 gap-3">
+                                    <div>
+                                        <Label className="text-slate-400 text-xs">Style</Label>
+                                        <select className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5 w-full mt-1" value={expandStyle} onChange={(e) => setExpandStyle(e.target.value)}>
+                                            {["humorous", "dramatic", "absurd", "poetic", "dry", "enthusiastic"].map((s) => <option key={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <Label className="text-slate-400 text-xs">Length</Label>
+                                        <select className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5 w-full mt-1" value={expandLength} onChange={(e) => setExpandLength(e.target.value)}>
+                                            {["short", "medium", "long", "epic"].map((s) => <option key={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Label className="text-slate-400 text-xs">Context (adds fictional details)</Label>
+                                        <select className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5 w-full mt-1" value={expandContext} onChange={(e) => setExpandContext(e.target.value)}>
+                                            <option value="none">None — just expand</option>
+                                            <option value="venice">Venice Biennale</option>
+                                            <option value="mars">Elon's Mars Colony</option>
+                                            <option value="castle">Medieval Castle</option>
+                                            <option value="underwater">Underwater Base</option>
+                                            <option value="space">Space Station</option>
+                                            <option value="wildwest">Wild West Frontier</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end">
+                                    <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-xs h-7" onClick={handleExpand} disabled={expanding || !expandNote.trim()}>
+                                        {expanding ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                                        Expand
                                     </Button>
                                 </div>
                             </CardContent>

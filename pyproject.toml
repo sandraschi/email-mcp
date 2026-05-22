@@ -43,7 +43,7 @@ email-mcp = "email_mcp.server:main"
 packages = ["src/email_mcp"]
 
 [tool.ruff]
-line-length = 175
+line-length = 230
 target-version = "py312"
 
 [tool.ruff.lint]
