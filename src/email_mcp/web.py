@@ -125,6 +125,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
             "drafts": True,
             "workflows": True,
             "contacts": True,
+            "watcher": True,
         }
 
     # ── Tools ────────────────────────────────────────────────────────────────

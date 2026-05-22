@@ -2385,6 +2385,125 @@ class EmailMCP:
             logger.info("Service removed", service=name)
             return {"success": True, "service": name, "message": f"Service {name!r} removed"}
 
+        @self.mcp.tool()
+        async def start_watcher(
+            interval: int = 60,
+            webhook_url: str = "",
+            services: str = '[{"name":"default","folder":"INBOX"}]',
+        ) -> dict[str, Any]:
+            """Start background IMAP polling for new emails.
+
+            Polls configured services at intervals. When new unread emails arrive,
+            POSTs a JSON payload to the webhook URL. Designed for integration with
+            robofang (TTS alerts) or fleet-agent (workflow triggers).
+
+            ## Return Format
+            {running, message, services: [name]}
+
+            ## Examples
+            start_watcher(interval=60, webhook_url="http://localhost:10956/api/alerts")
+            """
+            import json as _j
+
+            svc_list = _j.loads(services) if isinstance(services, str) else services
+            from .watcher import start_watcher as _sw
+
+            return _sw(interval, webhook_url, svc_list, self.mcp)
+
+        @self.mcp.tool()
+        async def stop_watcher() -> dict[str, Any]:
+            """Stop the background mail watcher.
+
+            ## Return Format
+            {running, message}
+            """
+            from .watcher import stop_watcher as _sw
+
+            return _sw()
+
+        @self.mcp.tool()
+        async def watcher_status() -> dict[str, Any]:
+            """Check if the mail watcher is running.
+
+            ## Return Format
+            {running, config: {interval, webhook_url, services}}
+            """
+            from .watcher import watcher_status as _ws
+
+            return _ws()
+
+        @self.mcp.tool()
+        async def add_contact(
+            name: str = "",
+            email: str = "",
+            phone: str = "",
+            notes: str = "",
+            group: str = "",
+        ) -> dict[str, Any]:
+            """Add a contact to the address book.
+
+            ## Return Format
+            {success, contact: {id, name, email, phone, notes, group}}
+            """
+            from .contacts import add_contact as _ac
+
+            return _ac(name, email, phone, notes, group)
+
+        @self.mcp.tool()
+        async def search_contacts(query: str) -> dict[str, Any]:
+            """Search contacts by name or email.
+
+            ## Return Format
+            {contacts: [{id, name, email, phone, group}]}
+            """
+            from .contacts import search_contacts as _sc
+
+            return {"contacts": _sc(query)}
+
+        @self.mcp.tool()
+        async def run_workflow(
+            workflow: str = "love-letter",
+            recipient: str = "beloved",
+            tone: str = "sincere",
+            mood: str = "warm",
+            format: str = "text",
+        ) -> dict[str, Any]:
+            """Generate a creative email using a preset workflow.
+
+            Supported workflows: love-letter, breakup, thank-you, complaint,
+            apology, fan-mail, hate-mail. Recipients can be anything: person,
+            pet, object, or concept. Formats: text, ascii, svg.
+
+            ## Return Format
+            {success, workflow, response (the generated text), format}
+
+            ## Examples
+            run_workflow(workflow="love-letter", recipient="Landlady", format="ascii")
+            run_workflow(workflow="complaint", recipient="The WiFi Router", tone="comedic")
+            """
+            if workflow not in ("love-letter", "breakup", "thank-you", "complaint", "apology", "fan-mail", "hate-mail"):
+                return {"success": False, "error": f"Unknown workflow '{workflow}'"}
+            _TMPL = {
+                "love-letter": "Write a love letter. Make it {tone} and {mood}. The recipient is my {recipient}. Sign it with love. Output format: {fmt_text}",
+                "breakup": "Write a breakup email to my {recipient}. Make it {tone} and {mood}. Output format: {fmt_text}",
+                "thank-you": "Write a warm thank-you note to my {recipient}. Make it {tone}. Output format: {fmt_text}",
+                "complaint": "Write a {mood} complaint letter to my {recipient}. Make it {tone}. Output format: {fmt_text}",
+                "apology": "Write an apology email to my {recipient}. Make it {tone}. Output format: {fmt_text}",
+                "fan-mail": "Write an enthusiastic fan letter to my {recipient}. Make it {tone}. Output format: {fmt_text}",
+                "hate-mail": "Write a hilariously passive-aggressive email to my {recipient}. Make it comedic and over-the-top. Tone: {tone}. Output format: {fmt_text}",
+            }
+            _FMT = {
+                "text": "Return ONLY the email body as plain text.",
+                "ascii": "Include a large ASCII art illustration at the top using characters like @ # % * / \\ | ( ) - + = .",
+                "svg": "Return an inline SVG wrapped in ```svg ... ``` as a decorative card.",
+            }
+            query = _TMPL[workflow].format(recipient=recipient, tone=tone, mood=mood, fmt_text=_FMT.get(format, _FMT["text"]))
+            from .ai import AIRouter
+
+            _router = AIRouter(self.mcp)
+            response = await _router.route_query(query)
+            return {"success": True, "workflow": workflow, "response": response, "format": format}
+
     def _register_prompts(self) -> None:
         """Register FastMCP 3.1 prompts (reusable message templates)."""
         mcp = self.mcp
