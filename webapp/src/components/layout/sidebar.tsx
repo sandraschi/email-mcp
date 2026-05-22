@@ -16,6 +16,7 @@ import {
     Server,
     Search,
     FlaskConical,
+    Users,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,6 +35,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         { href: '/chat',      label: 'AI Chat',     icon: Bot },
         { href: '/lab',       label: 'Mail Lab',    icon: FlaskConical },
         { href: '/services',  label: 'Services',    icon: Server },
+        { href: '/contacts',  label: 'Contacts',    icon: Users },
         { href: '/tools',     label: 'Tools',       icon: Wrench },
         { href: '/skill',     label: 'Skill',       icon: BookOpen },
         { href: '/api-docs',  label: 'API Docs',    icon: Code2 },

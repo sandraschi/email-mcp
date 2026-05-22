@@ -1,0 +1,194 @@
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, Trash2, Search, Upload, Download, Mail, User, Phone, BookOpen, Loader2 } from "lucide-react";
+import { fetchWithAuth } from "@/lib/api";
+import { useToast } from "@/components/toast";
+
+type Contact = { id: string; name: string; email: string; phone: string; notes: string; group: string };
+
+export function Contacts() {
+    const { toast } = useToast();
+    const [contacts, setContacts] = useState<Contact[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
+    const [showAdd, setShowAdd] = useState(false);
+    const [showImport, setShowImport] = useState(false);
+    const [newName, setNewName] = useState("");
+    const [newEmail, setNewEmail] = useState("");
+    const [newPhone, setNewPhone] = useState("");
+    const [newNotes, setNewNotes] = useState("");
+    const [newGroup, setNewGroup] = useState("");
+    const [importText, setImportText] = useState("");
+    const [importFormat, setImportFormat] = useState("csv");
+    const [saving, setSaving] = useState(false);
+    const [importing, setImporting] = useState(false);
+    const [deleting, setDeleting] = useState<string | null>(null);
+
+    const loadContacts = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = search.trim() ? `?q=${encodeURIComponent(search)}` : "";
+            const data = await fetchWithAuth(`/api/contacts${params}`);
+            setContacts(data.contacts || []);
+        } catch { /* ignore */ }
+        finally { setLoading(false); }
+    }, [search]);
+
+    useEffect(() => { loadContacts(); }, [loadContacts]);
+
+    const handleAdd = async () => {
+        if (!newEmail.trim()) { toast("error", "Email is required"); return; }
+        setSaving(true);
+        try {
+            const data = await fetchWithAuth("/api/contacts", {
+                method: "POST",
+                body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone, notes: newNotes, group: newGroup }),
+            });
+            if (data.success) {
+                toast("success", `Added ${data.contact.name || data.contact.email}`);
+                setNewName(""); setNewEmail(""); setNewPhone(""); setNewNotes(""); setNewGroup("");
+                setShowAdd(false);
+                loadContacts();
+            } else { toast("error", data.error || "Add failed"); }
+        } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Add failed"); }
+        finally { setSaving(false); }
+    };
+
+    const handleDelete = async (id: string) => {
+        setDeleting(id);
+        try {
+            await fetchWithAuth(`/api/contacts/${id}`, { method: "DELETE" });
+            toast("success", "Contact deleted");
+            loadContacts();
+        } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Delete failed"); }
+        finally { setDeleting(null); }
+    };
+
+    const handleImport = async () => {
+        if (!importText.trim()) { toast("error", "Paste contacts data first"); return; }
+        setImporting(true);
+        try {
+            const data = await fetchWithAuth("/api/contacts/import", {
+                method: "POST",
+                body: JSON.stringify({ format: importFormat, text: importText }),
+            });
+            if (data.success) {
+                toast("success", `Imported ${data.imported} contact(s)`);
+                if (data.errors?.length) toast("error", `${data.errors.length} error(s): ${data.errors[0]}`);
+                setShowImport(false);
+                setImportText("");
+                loadContacts();
+            } else { toast("error", data.error || "Import failed"); }
+        } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Import failed"); }
+        finally { setImporting(false); }
+    };
+
+    const groups = [...new Set(contacts.map(c => c.group).filter(Boolean))];
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight text-white">Contacts</h2>
+                    <p className="text-slate-400">{contacts.length} contact{contacts.length !== 1 ? "s" : ""}</p>
+                </div>
+                <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => setShowImport(!showImport)}>
+                        <Upload className="h-4 w-4 mr-1" /> Import
+                    </Button>
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAdd(!showAdd)}>
+                        <Plus className="h-4 w-4 mr-1" /> Add
+                    </Button>
+                </div>
+            </div>
+
+            {showAdd && (
+                <Card className="border-blue-800 bg-blue-950/20">
+                    <CardHeader><CardTitle className="text-white text-sm">Add Contact</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <div><Label className="text-slate-300">Name</Label><Input className="bg-slate-900 border-slate-700 text-white mt-1" value={newName} onChange={(e) => setNewName(e.target.value)} /></div>
+                            <div><Label className="text-slate-300">Email *</Label><Input className="bg-slate-900 border-slate-700 text-white mt-1" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} /></div>
+                            <div><Label className="text-slate-300">Phone</Label><Input className="bg-slate-900 border-slate-700 text-white mt-1" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} /></div>
+                            <div><Label className="text-slate-300">Group</Label><Input className="bg-slate-900 border-slate-700 text-white mt-1" value={newGroup} onChange={(e) => setNewGroup(e.target.value)} placeholder="e.g. Friends, Work" /></div>
+                        </div>
+                        <div><Label className="text-slate-300">Notes</Label><Input className="bg-slate-900 border-slate-700 text-white mt-1" value={newNotes} onChange={(e) => setNewNotes(e.target.value)} /></div>
+                        <div className="flex gap-2">
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleAdd} disabled={saving || !newEmail.trim()}>
+                                {saving && <Loader2 className="h-3 w-3 mr-1 animate-spin" />} Add
+                            </Button>
+                            <Button size="sm" variant="outline" className="border-slate-700 text-slate-300" onClick={() => setShowAdd(false)}>Cancel</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {showImport && (
+                <Card className="border-purple-800 bg-purple-950/20">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-white text-sm flex items-center gap-2">
+                            <Upload className="h-4 w-4 text-purple-400" /> Import Contacts
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        <div className="flex gap-2">
+                            <Button size="sm" variant={importFormat === "csv" ? "default" : "outline"} className={importFormat === "csv" ? "bg-blue-600" : "border-slate-700 text-slate-300"} onClick={() => setImportFormat("csv")}>CSV</Button>
+                            <Button size="sm" variant={importFormat === "vcard" ? "default" : "outline"} className={importFormat === "vcard" ? "bg-blue-600" : "border-slate-700 text-slate-300"} onClick={() => setImportFormat("vcard")}>vCard (.vcf)</Button>
+                        </div>
+                        <textarea className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white resize-y min-h-[100px] font-mono"
+                            placeholder={importFormat === "csv" ? "name,email,phone,notes,group\nJohn,john@test.com,555-0100,,Friends" : "BEGIN:VCARD\nFN:John\nEMAIL:john@test.com\nEND:VCARD"}
+                            value={importText} onChange={(e) => setImportText(e.target.value)} />
+                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={handleImport} disabled={importing || !importText.trim()}>
+                            {importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />} Import
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Search */}
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input className="w-full bg-slate-900 border border-slate-700 rounded-md pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Search contacts..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+
+            {/* Groups */}
+            {groups.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                    <button className="text-xs px-2.5 py-1 rounded-md border border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => setSearch("")}>
+                        All
+                    </button>
+                    {groups.map(g => (
+                        <button key={g} className="text-xs px-2.5 py-1 rounded-md border border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => setSearch(g)}>
+                            {g}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {loading ? (
+                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-blue-500" /></div>
+            ) : contacts.length === 0 ? (
+                <p className="text-slate-500 text-center py-12 text-sm italic">No contacts yet. Add one or import from CSV/vCard.</p>
+            ) : (
+                <div className="space-y-2">
+                    {contacts.map(c => (
+                        <div key={c.id} className="flex items-center gap-3 py-2.5 px-3 rounded bg-slate-950/50 border border-slate-800 hover:bg-slate-900/30 transition-colors">
+                            <div className="p-2 bg-slate-900 rounded-full"><User className="h-4 w-4 text-blue-400" /></div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm text-white truncate">{c.name || "(no name)"}</p>
+                                <p className="text-xs text-slate-500 truncate">{c.email}{c.phone ? ` · ${c.phone}` : ""}{c.group ? ` · [${c.group}]` : ""}</p>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-red-400" onClick={() => handleDelete(c.id)} disabled={deleting === c.id}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}

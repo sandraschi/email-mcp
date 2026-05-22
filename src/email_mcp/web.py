@@ -647,6 +647,73 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         _save_drafts()
         return {"success": True, "message": f"Draft {draft_id!r} deleted"}
 
+    # ── Contacts ──────────────────────────────────────────────────────────────
+
+    @app.get("/api/contacts")
+    async def list_contacts(
+        q: str = "",
+        _user: str = Depends(authenticate),
+    ):
+        from .contacts import list_contacts as lc
+        from .contacts import search_contacts
+
+        if q.strip():
+            return {"contacts": search_contacts(q.strip())}
+        return {"contacts": lc()}
+
+    @app.post("/api/contacts")
+    async def add_contact(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .contacts import add_contact as ac
+
+        name = payload.get("name", "").strip()
+        email = payload.get("email", "").strip()
+        if not email:
+            raise HTTPException(status_code=422, detail="email is required")
+        result = ac(name, email, payload.get("phone", ""), payload.get("notes", ""), payload.get("group", ""))
+        return result
+
+    @app.put("/api/contacts/{contact_id}")
+    async def update_contact(
+        contact_id: str,
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .contacts import update_contact as uc
+
+        return uc(contact_id, payload)
+
+    @app.delete("/api/contacts/{contact_id}")
+    async def delete_contact(contact_id: str, _user: str = Depends(authenticate)):
+        from .contacts import delete_contact as dc
+
+        return dc(contact_id)
+
+    @app.post("/api/contacts/import")
+    async def import_contacts(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .contacts import import_csv, import_vcard
+
+        fmt = payload.get("format", "csv")
+        text = payload.get("text", "")
+        if not text:
+            raise HTTPException(status_code=422, detail="text is required")
+        if fmt == "csv":
+            return import_csv(text)
+        elif fmt == "vcard":
+            return import_vcard(text)
+        raise HTTPException(status_code=422, detail="format must be 'csv' or 'vcard'")
+
+    @app.get("/api/contacts/groups")
+    async def list_groups(_user: str = Depends(authenticate)):
+        from .contacts import get_groups
+
+        return {"groups": get_groups()}
+
     # ── Skills ───────────────────────────────────────────────────────────────
 
     @app.get("/api/skills")
