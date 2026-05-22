@@ -158,7 +158,7 @@ export function Chat() {
                                     </span>
                                     <span className="text-xs text-slate-500">{msg.timestamp}</span>
                                 </div>
-                                    <div className="text-sm text-slate-300 p-3 rounded-md border inline-block max-w-[90%] break-words prose prose-invert prose-slate max-w-none [&_svg]:max-w-full [&_pre]:bg-slate-950 [&_code]:text-emerald-300 ${msg.role === "user" ? "bg-slate-900/50 border-slate-800" : "bg-blue-950/10 border-blue-900/30"}`}>
+                                    <div className={`text-sm text-slate-300 p-3 rounded-md border inline-block max-w-[90%] break-words ${msg.role === "user" ? "bg-slate-900/50 border-slate-800" : "bg-blue-950/10 border-blue-900/30"}`}>
                                         <ReactMarkdown>{msg.content}</ReactMarkdown>
                                     </div>
                             </div>
