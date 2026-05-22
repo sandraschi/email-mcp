@@ -68,3 +68,43 @@ just lab  # Throwaway SMTP server (CLI)
 ```powershell
 .venv\Scripts\pytest.exe tests/test_sanitize.py tests/test_api_services.py tests/test_e2e_real.py -v
 ```
+
+## 2026-05-23: Auto-Respond, Bulk Send, Spam/Spoof, Curated Lists (COMPLETED)
+
+### What was done
+- **Auto-Respond system** (`src/email_mcp/autorespond.py`): rule engine with regex matching, AI drafting via LLM, pending queue, approve/reject, auto-send. 6 MCP tools + REST endpoints + /auto-respond frontend page (Rules tab + Pending tab)
+- **Spam detection**: 10 pattern groups (Nigerian prince, crypto, viagra, phishing, etc.), `is_spam()` function, `POST /api/check-spam` endpoint
+- **Spoof mode**: 4 AI reply tones (irate, mock-stupid, absurd, polite-but-confused) for hilarious auto-replies to scammers. Spoof rules auto-send by default
+- **Bulk send**: `POST /api/send-bulk`, max 50 recipients, CAN-SPAM/GDPR warning text, explicit consent checkbox for >10 recipients. Frontend section on Compose page
+- **Curated public lists** (`src/email_mcp/curated_lists.py`): US Congress (10), Austrian Parliament (7), EU Commission (3), test civic (3). Collapsible section on Contacts page, one-click import to contacts
+- **Contacts**: Google People API + Microsoft Graph API import (OAuth token-based)
+- **Folder CRUD**: list/create/delete/rename IMAP folders (MCP tools + REST + frontend)
+- **Quick Setup**: 8 provider presets (Gmail/Outlook/Yahoo/iCloud/ProtonMail/Zoho/GMX/Fastmail)
+- **Creative Workflows**: 7 AI letter presets, text/ascii/svg format
+- **Expander**: short-note-to-full-email with 6 fictional context scenarios
+- **Mail Watcher**: background IMAP polling with webhook POST, frontend controls on Mail Lab page
+- **Playwright e2e tests**: 17 tests covering all pages + 7 REST endpoints
+- **justfile**: aligned with SOTA standards (inline dashboard, build=uv sync, check=fmt+lint, ci pipeline)
+- **README**: hero rewrite, quick start cleanup, test badge, full feature list
+- **protonmail.md**: complete rewrite with Gmail comparison, pros/cons, CERN/Swiss background
+- **api-services.md**: clarified transactional email (not spam cannons), comparison table
+- **playwright_e2e_sota.md**: new fleet standard in mcp-central-docs
+- **Changelog**: comprehensive unreleased entries
+
+### Key files created
+- `src/email_mcp/autorespond.py` — rule engine + spam detection + spoof mode
+- `src/email_mcp/curated_lists.py` — curated public official lists
+- `src/email_mcp/contacts.py` — contact CRUD + CSV/vCard/Google/Microsoft import
+- `src/email_mcp/watcher.py` — background IMAP polling
+- `webapp/src/pages/auto-respond.tsx` — auto-respond management page
+- `webapp/src/pages/contacts.tsx` — contact management page
+- `webapp/e2e/email-mcp.spec.ts` — 17 Playwright tests
+- `webapp/playwright.config.ts` — Playwright config
+
+### Stats
+- 86 total tests: 27 sanitize + 17 API services + 16 contacts + 5 mailing lists + 2 connection + 1 e2e real SMTP + 17 Playwright
+- Ruff: 0 warnings
+- Python: 3.12+, FastMCP 3.2+, aiosmtpd 1.4+
+
+### Ports
+- 10812 frontend, 10813 backend

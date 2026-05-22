@@ -59,15 +59,18 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 - **AI assistant**: natural language email commands (Ollama, OpenAI, Anthropic, Google)
 - **AI Improve**: rewrite email body with style/length/mood controls
 - **AI Assist**: describe a service in plain language, LLM fills the config form
+- **Auto-Respond**: rule-based + AI-powered auto-reply with spam detection and spoof mode
+- **Bulk Send**: paste email lists with rate limiting and anti-spam safeguards
 - **Dual transport**: stdio (Claude Desktop) + HTTP streamable (web)
 - **Draft management**: save/compose/send from the webapp
 - **Toast notifications**: live feedback for all actions
 - **Prompt injection defense**: two-layer sanitization (Unicode stripping + safety boundary wrapping)
 - **Mail Lab**: throwaway SMTP server for testing with AI-generated messages
 - **Mail Watcher**: background IMAP polling with webhook notifications for robofang/fleet-agent integration
-- **Contact import**: CSV, vCard, Google People API, Microsoft Graph API
+- **Contact import**: CSV, vCard, Google People API, Microsoft Graph API + curated lists (US Congress, EU, Austria)
 - **Creative Workflows**: 7 AI letter presets with ASCII art and SVG card output
-- **Structured logging**: JSON output via structlog
+- **Folder management**: create, rename, delete IMAP folders from the webapp
+- **Quick Setup**: one-click Gmail/Outlook/Yahoo/iCloud/ProtonMail/Zoho/GMX/Fastmail with email+password
 
 ## Web Dashboard
 
@@ -76,11 +79,12 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 | Dashboard | `/` | KPI cards, recent activity, service health |
 | Inbox | `/inbox` | Read, filter, delete, auto-refresh |
 | Email Detail | `/email` | Full email with HTML body, reply/delete |
-| Compose | `/compose` | Send with drafts, HTML toggle, AI Improve, AI subject |
+| Compose | `/compose` | Send with drafts, HTML toggle, AI Improve, AI subject, Expander, Bulk Send |
 | Search | `/search` | Full-text IMAP search |
-| AI Chat | `/chat` | Natural language email assistant |
-| Mail Lab | `/lab` | Throwaway SMTP server with AI message generator, mail watcher |
-| Contacts | `/contacts` | Import CSV/vCard/Google/Office 365, search, groups |
+| AI Chat | `/chat` | Natural language email assistant with creative workflows |
+| Mail Lab | `/lab` | Throwaway SMTP server, AI message generator, mail watcher |
+| Contacts | `/contacts` | Import CSV/vCard/Google/Office 365, search, groups, curated lists |
+| Auto-Reply | `/auto-respond` | Rule-based + AI auto-reply, spam detection, spoof mode, pending approval |
 | Services | `/services` | Form-based add/remove/test with AI Assist presets |
 | Tools | `/tools` | Execute MCP tools from the browser |
 | Settings | `/settings` | AI provider config, email credentials |

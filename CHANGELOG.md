@@ -8,14 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Mail Lab page** (`/lab`): throwaway SMTP server (aiosmtpd) start/stop from web UI
-- **AI Message Generator**: 10 scenario presets, LLM-generated test emails injected into lab inbox
-- **Forward to real email**: captured lab emails can be forwarded to a real SMTP account
-- **Model list filtering**: embedding/rerank models hidden from LM Studio/Ollama model dropdown
-- **Test button now saves first**: test connection auto-saves provider config before testing
-- **justfile**: added `bootstrap`, `build`, `clean`, `lab`, `serve`, `dev` recipes
+- **Auto-Respond system**: rule engine with regex matching (subject/from/body), AI drafting, pending queue for human approval, auto-send
+- **Spam detection**: 10 pattern groups, `POST /api/check-spam` endpoint
+- **Spoof mode**: hilarious AI-generated replies to scammers — 4 tones (irate, mock-stupid, absurd, polite-but-confused)
+- **Bulk send**: paste email lists, max 50/batch, CAN-SPAM/GDPR warnings, consent checkbox
+- **Curated public lists**: US Congress (10), Austrian Parliament (7), EU Commission (3) — importable to contacts with one click
+- **Mail Watcher**: background IMAP polling with webhook notifications (`start_watcher`, `stop_watcher`, `watcher_status` MCP tools)
+- **Contact import**: Google People API, Microsoft Graph API (OAuth token-based), plus full CRUD + CSV/vCard import
+- **Folder CRUD**: list, create, delete, rename IMAP folders (MCP tools + REST + frontend)
+- **Quick Setup**: 8 provider presets (Gmail/Outlook/Yahoo/iCloud/ProtonMail/Zoho/GMX/Fastmail) — one-click with email+password
+- **Creative Workflows**: 7 presets (love-letter, breakup, thank-you, complaint, apology, fan-mail, hate-mail) with text/ascii/svg format
+- **Expander**: short-note-to-full-email with 6 context scenarios (Venice Biennale, Mars Colony, Medieval Castle, etc.)
+- **Playwright e2e tests**: 17 tests covering dashboard, inbox, compose, services, settings, chat, lab, contacts, help, sidebar, REST API
+- **MCP tools**: `start_watcher`, `stop_watcher`, `watcher_status`, `add_contact`, `search_contacts`, `run_workflow`, `add_auto_rule`, `list_auto_rules`, `delete_auto_rule`, `list_pending_replies`, `approve_reply`, `auto_respond_now`
 
 ### Changed
+- justfile aligned with SOTA standards: inline dashboard, `build=uv sync`, `check=fmt+lint`, `ci` pipeline
 - Updated version to 0.4.1 across all files
 - `ruff` moved from production deps to dev deps (pyproject.toml)
 - Removed stale `[tool.black]` config (project uses ruff format)
