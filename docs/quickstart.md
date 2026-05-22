@@ -69,6 +69,20 @@ Then restart the server. For full setup guides, see:
 | MailHog / Local | [docs/local-testing.md](local-testing.md) |
 | Slack / Discord | [docs/webhook-integrations.md](webhook-integrations.md) |
 
+## Mail Watcher
+
+Monitor your inbox for new mail and get notified via webhook:
+
+```powershell
+# Start watching default INBOX every 60s, POST to robofang
+curl -X POST http://localhost:10813/api/watcher/start `
+  -H "Authorization: Basic sandra:vienna2026" `
+  -H "Content-Type: application/json" `
+  -d '{"interval":60,"webhook_url":"http://localhost:10956/api/alerts"}'
+```
+
+See [docs/mail-watcher.md](mail-watcher.md) and [docs/robofang-integration.md](robofang-integration.md) for detailed setup.
+
 ## Available MCP Tools
 
 | Tool | What it does |

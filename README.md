@@ -52,6 +52,8 @@ See [docs/quickstart.md](docs/quickstart.md) for full setup.
 | [docs/quickstart.md](docs/quickstart.md) | Installation, Claude Desktop setup, first email |
 | [docs/configuration.md](docs/configuration.md) | All env vars, mailing lists, dynamic config |
 | [docs/safety-hardening.md](docs/safety-hardening.md) | Prompt injection defense architecture |
+| [docs/mail-watcher.md](docs/mail-watcher.md) | Background IMAP polling + webhook notifications |
+| [docs/robofang-integration.md](docs/robofang-integration.md) | Integrate with robofang for TTS/light alerts |
 | [docs/gmail.md](docs/gmail.md) | Gmail app password setup |
 | [docs/outlook.md](docs/outlook.md) | Outlook/Hotmail SMTP/IMAP |
 | [docs/protonmail.md](docs/protonmail.md) | ProtonMail Bridge & direct access |
@@ -71,6 +73,9 @@ See [docs/quickstart.md](docs/quickstart.md) for full setup.
 - **Toast notifications**: live feedback for all actions
 - **Prompt injection defense**: two-layer sanitization (Unicode stripping + safety boundary wrapping)
 - **Mail Lab**: throwaway SMTP server for testing with AI-generated messages
+- **Mail Watcher**: background IMAP polling with webhook notifications for robofang/fleet-agent integration
+- **Contact import**: CSV, vCard, Google People API, Microsoft Graph API
+- **Creative Workflows**: 7 AI letter presets with ASCII art and SVG card output
 - **Structured logging**: JSON output via structlog
 
 ## Web Dashboard
@@ -83,7 +88,8 @@ See [docs/quickstart.md](docs/quickstart.md) for full setup.
 | Compose | `/compose` | Send with drafts, HTML toggle, AI Improve, AI subject |
 | Search | `/search` | Full-text IMAP search |
 | AI Chat | `/chat` | Natural language email assistant |
-| Mail Lab | `/lab` | Throwaway SMTP server with AI message generator |
+| Mail Lab | `/lab` | Throwaway SMTP server with AI message generator, mail watcher |
+| Contacts | `/contacts` | Import CSV/vCard/Google/Office 365, search, groups |
 | Services | `/services` | Form-based add/remove/test with AI Assist presets |
 | Tools | `/tools` | Execute MCP tools from the browser |
 | Settings | `/settings` | AI provider config, email credentials |
