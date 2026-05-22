@@ -69,7 +69,7 @@ test:
 # ── Build ───────────────────────────────────────────────────────────────────────
 
 # Install all dependencies (SOTA mandatory)
-build:
+build bootstrap:
     uv sync --extra test --extra dev
 
 # Build MCPB package
