@@ -17,6 +17,7 @@ import {
     Search,
     FlaskConical,
     Users,
+    MessageCircleReply,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,6 +37,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         { href: '/lab',       label: 'Mail Lab',    icon: FlaskConical },
         { href: '/services',  label: 'Services',    icon: Server },
         { href: '/contacts',  label: 'Contacts',    icon: Users },
+        { href: '/auto-respond', label: 'Auto-Reply', icon: MessageCircleReply },
         { href: '/tools',     label: 'Tools',       icon: Wrench },
         { href: '/skill',     label: 'Skill',       icon: BookOpen },
         { href: '/api-docs',  label: 'API Docs',    icon: Code2 },

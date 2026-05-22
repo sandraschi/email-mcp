@@ -2504,6 +2504,110 @@ class EmailMCP:
             response = await _router.route_query(query)
             return {"success": True, "workflow": workflow, "response": response, "format": format}
 
+        @self.mcp.tool()
+        async def add_auto_rule(
+            name: str,
+            match_pattern: str,
+            reply_body: str = "",
+            reply_subject: str = "",
+            match_field: str = "subject",
+            use_ai: bool = False,
+            auto_send: bool = False,
+            ai_prompt: str = "",
+            service: str = "default",
+        ) -> dict[str, Any]:
+            """Add an auto-respond rule.
+
+            When incoming mail matches the pattern, the rule fires.
+            use_ai=true generates a reply via LLM. auto_send sends it immediately
+            without human approval. Otherwise the reply goes to the pending queue.
+
+            ## Return Format
+            {success, rule: {id, name, match_pattern, ...}}
+
+            ## Examples
+            add_auto_rule(name="Invoice reply", match_pattern="invoice", reply_body="Thanks, we'll process this.")
+            add_auto_rule(name="AI reply", match_pattern="urgent", use_ai=True, ai_prompt="Reply politely saying I'm away", auto_send=False)
+            """
+            from .autorespond import add_rule as _ar
+
+            return _ar(name, match_field, match_pattern, reply_body, reply_subject, use_ai, auto_send, ai_prompt, service)
+
+        @self.mcp.tool()
+        async def list_auto_rules() -> dict[str, Any]:
+            """List all auto-respond rules.
+
+            ## Return Format
+            {rules: [{id, name, match_pattern, reply_body, use_ai, auto_send, enabled}]}
+            """
+            from .autorespond import list_rules as _lr
+
+            return {"rules": _lr()}
+
+        @self.mcp.tool()
+        async def delete_auto_rule(rule_id: str) -> dict[str, Any]:
+            """Delete an auto-respond rule by ID.
+
+            ## Return Format
+            {success, message}
+            """
+            from .autorespond import delete_rule as _dr
+
+            return _dr(rule_id)
+
+        @self.mcp.tool()
+        async def list_pending_replies() -> dict[str, Any]:
+            """List pending auto-replies awaiting human approval.
+
+            ## Return Format
+            {pending: [{id, email_subject, email_from, reply_body, status}]}
+            """
+            from .autorespond import list_pending as _lp
+
+            return {"pending": _lp()}
+
+        @self.mcp.tool()
+        async def approve_reply(pending_id: str) -> dict[str, Any]:
+            """Approve a pending auto-reply and queue it for sending.
+
+            ## Return Format
+            {success, message}
+            """
+            from .autorespond import approve_pending as _ap
+
+            return _ap(pending_id)
+
+        @self.mcp.tool()
+        async def auto_respond_now(
+            email_id: str,
+            service: str = "default",
+            folder: str = "INBOX",
+        ) -> dict[str, Any]:
+            """Manually trigger AI auto-respond on a specific email.
+
+            Fetches the email, generates an AI reply, and adds it to the
+            pending queue for approval.
+
+            ## Return Format
+            {success, matched, rule?: name, queued, reply_subject?}
+            """
+            result = await self.services[service].fetch_message(folder, email_id)
+            if not result.get("success"):
+                return {"success": False, "error": f"Email {email_id} not found"}
+            from .autorespond import add_pending, match_rule
+
+            rule = match_rule(result)
+            if not rule:
+                return {"success": True, "matched": False, "message": "No rule matched"}
+            from .ai import AIRouter
+
+            _router = AIRouter(self.mcp)
+            prompt = rule.get("ai_prompt", "") or f"Write a friendly reply to this email.\n\nFrom: {result.get('from', '')}\nSubject: {result.get('subject', '')}\nBody: {result.get('text_body', '')[:2000]}"
+            reply_body = await _router.route_query(prompt)
+            reply_subject = f"Re: {result.get('subject', '')}"
+            add_pending(result, reply_body, reply_subject, rule["id"], service)
+            return {"success": True, "matched": True, "rule": rule["name"], "queued": True, "reply_subject": reply_subject}
+
     def _register_prompts(self) -> None:
         """Register FastMCP 3.1 prompts (reusable message templates)."""
         mcp = self.mcp

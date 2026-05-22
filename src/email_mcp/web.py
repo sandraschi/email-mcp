@@ -126,6 +126,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
             "workflows": True,
             "contacts": True,
             "watcher": True,
+            "auto_respond": True,
         }
 
     # ── Tools ────────────────────────────────────────────────────────────────
@@ -1189,3 +1190,113 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         from .watcher import watcher_status
 
         return watcher_status()
+
+    # ── Auto-Respond ─────────────────────────────────────────────────────────
+
+    @app.get("/api/auto-rules")
+    async def auto_list_rules(_user: str = Depends(authenticate)):
+        from .autorespond import list_rules
+
+        return {"rules": list_rules()}
+
+    @app.post("/api/auto-rules")
+    async def auto_add_rule(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .autorespond import add_rule
+
+        name = payload.get("name", "").strip()
+        match_pattern = payload.get("match_pattern", "").strip()
+        if not name or not match_pattern:
+            raise HTTPException(status_code=422, detail="name and match_pattern are required")
+        return add_rule(
+            name=name,
+            match_field=payload.get("match_field", "subject"),
+            match_pattern=match_pattern,
+            reply_body=payload.get("reply_body", ""),
+            reply_subject=payload.get("reply_subject", ""),
+            use_ai=payload.get("use_ai", False),
+            auto_send=payload.get("auto_send", False),
+            ai_prompt=payload.get("ai_prompt", ""),
+            service=payload.get("service", "default"),
+        )
+
+    @app.put("/api/auto-rules/{rule_id}")
+    async def auto_update_rule(
+        rule_id: str,
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .autorespond import update_rule
+
+        return update_rule(rule_id, payload)
+
+    @app.delete("/api/auto-rules/{rule_id}")
+    async def auto_delete_rule(rule_id: str, _user: str = Depends(authenticate)):
+        from .autorespond import delete_rule
+
+        return delete_rule(rule_id)
+
+    @app.get("/api/auto-pending")
+    async def auto_list_pending(_user: str = Depends(authenticate)):
+        from .autorespond import list_pending
+
+        return {"pending": list_pending()}
+
+    @app.post("/api/auto-pending/{pending_id}/approve")
+    async def auto_approve_pending(pending_id: str, _user: str = Depends(authenticate)):
+        from .autorespond import approve_pending
+
+        result = approve_pending(pending_id)
+        if result["success"]:
+            pend = result["pending"]
+            svc = pend.get("service", "default")
+            result2 = _extract_tool_result(
+                await mcp_app.call_tool(
+                    "send_email",
+                    {
+                        "to": pend.get("email_from", ""),
+                        "subject": pend.get("reply_subject", ""),
+                        "body": pend.get("reply_body", ""),
+                        "service": svc,
+                    },
+                )
+            )
+            if result2.get("success"):
+                result["sent"] = True
+                result["send_message"] = "Reply sent"
+            else:
+                result["sent"] = False
+                result["send_message"] = result2.get("error", "Send failed")
+        return result
+
+    @app.post("/api/auto-pending/{pending_id}/reject")
+    async def auto_reject_pending(pending_id: str, _user: str = Depends(authenticate)):
+        from .autorespond import reject_pending
+
+        return reject_pending(pending_id)
+
+    @app.post("/api/auto-respond")
+    async def auto_respond_now(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        email_id = payload.get("email_id", "").strip()
+        service = payload.get("service", "default")
+        folder = payload.get("folder", "INBOX")
+        if not email_id:
+            raise HTTPException(status_code=422, detail="email_id is required")
+        result = _extract_tool_result(await mcp_app.call_tool("fetch_email_detail", {"email_id": email_id, "service": service, "folder": folder}))
+        if not result.get("success"):
+            raise HTTPException(status_code=404, detail=f"Email {email_id} not found")
+        from .autorespond import add_pending, match_rule
+
+        rule = match_rule(result)
+        if not rule:
+            return {"success": True, "matched": False, "message": "No rule matched"}
+        prompt = rule.get("ai_prompt", "") or f"Write a friendly reply to this email.\n\nFrom: {result.get('from', '')}\nSubject: {result.get('subject', '')}\nBody: {result.get('text_body', '')[:2000]}"
+        reply_body = await ai_router.route_query(prompt)
+        reply_subject = f"Re: {result.get('subject', '')}"
+        entry = add_pending(result, reply_body, reply_subject, rule["id"], service)
+        return {"success": True, "matched": True, "rule": rule["name"], "queued": True, "pending_id": entry["id"]}

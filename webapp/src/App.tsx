@@ -16,6 +16,7 @@ import { SearchPage } from '@/pages/search';
 import { Services } from '@/pages/services';
 import { Lab } from '@/pages/lab';
 import { Contacts } from '@/pages/contacts';
+import { AutoRespond } from '@/pages/auto-respond';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -38,6 +39,7 @@ function App() {
               <Route path="/services" element={<Services />} />
               <Route path="/lab" element={<Lab />} />
               <Route path="/contacts" element={<Contacts />} />
+              <Route path="/auto-respond" element={<AutoRespond />} />
               <Route path="/skill" element={<Skill />} />
               <Route path="/api-docs" element={<ApiDocs />} />
               <Route path="/help" element={<Help />} />
