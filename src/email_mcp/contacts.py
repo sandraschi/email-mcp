@@ -1,6 +1,7 @@
 """Contact store — import, manage, and search contacts for email composition.
 
-Stores contacts in a JSON file. Supports CSV, vCard (.vcf), and manual entry.
+Stores contacts in a JSON file. Supports CSV, vCard (.vcf), Google People API,
+Microsoft Graph API, and manual entry.
 """
 
 from __future__ import annotations
@@ -14,6 +15,8 @@ import time
 import uuid
 from pathlib import Path
 from typing import Any
+
+import httpx
 
 _CONTACTS: list[dict[str, Any]] = []
 _CONTACTS_FILE = Path(os.getenv("EMAIL_MCP_CONTACTS_FILE", Path(__file__).resolve().parent.parent / "contacts.json"))
@@ -145,6 +148,76 @@ def get_groups() -> list[str]:
         if c.get("group"):
             groups.add(c["group"])
     return sorted(groups)
+
+
+async def import_google(token: str) -> dict[str, Any]:
+    """Import contacts from Google People API using an OAuth access token.
+
+    The token must have the https://www.googleapis.com/auth/contacts.readonly scope.
+    Generate one at https://developers.google.com/oauthplayground
+    """
+    imported = 0
+    errors: list[str] = []
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(
+                "https://people.googleapis.com/v1/people/me/connections",
+                params={"personFields": "names,emailAddresses,phoneNumbers", "pageSize": 1000},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            if r.status_code != 200:
+                return {"success": False, "imported": 0, "errors": [f"Google API error {r.status_code}: {r.text[:200]}"]}
+            data = r.json()
+            for person in data.get("connections", []):
+                names = person.get("names", [])
+                emails = person.get("emailAddresses", [])
+                phones = person.get("phoneNumbers", [])
+                name = names[0].get("displayName", "") if names else ""
+                email = emails[0].get("value", "") if emails else ""
+                phone = phones[0].get("value", "") if phones else ""
+                if email:
+                    result = add_contact(name, email, phone, group="Google")
+                    if result.get("success"):
+                        imported += 1
+                    else:
+                        errors.append(f"{email}: {result.get('error')}")
+    except Exception as e:
+        return {"success": False, "imported": imported, "errors": [f"Google import failed: {e}"]}
+    return {"success": True, "imported": imported, "errors": errors}
+
+
+async def import_microsoft(token: str) -> dict[str, Any]:
+    """Import contacts from Microsoft Graph API using an OAuth access token.
+
+    The token must have the Contacts.Read scope.
+    Generate one at https://developer.microsoft.com/en-us/graph/graph-explorer
+    """
+    imported = 0
+    errors: list[str] = []
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(
+                "https://graph.microsoft.com/v1.0/me/contacts",
+                params={"$top": 1000, "$select": "displayName,emailAddresses,telephone"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            if r.status_code != 200:
+                return {"success": False, "imported": 0, "errors": [f"Microsoft API error {r.status_code}: {r.text[:200]}"]}
+            data = r.json()
+            for contact in data.get("value", []):
+                name = contact.get("displayName", "") or ""
+                emails = contact.get("emailAddresses", [])
+                email = emails[0].get("address", "") if emails else ""
+                phone = contact.get("telephone", "") or ""
+                if email:
+                    result = add_contact(name, email, phone, group="Office 365")
+                    if result.get("success"):
+                        imported += 1
+                    else:
+                        errors.append(f"{email}: {result.get('error')}")
+    except Exception as e:
+        return {"success": False, "imported": imported, "errors": [f"Microsoft import failed: {e}"]}
+    return {"success": True, "imported": imported, "errors": errors}
 
 
 # Load at module init

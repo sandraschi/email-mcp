@@ -25,6 +25,10 @@ export function Contacts() {
     const [importFormat, setImportFormat] = useState("csv");
     const [saving, setSaving] = useState(false);
     const [importing, setImporting] = useState(false);
+    const [googleToken, setGoogleToken] = useState("");
+    const [googleImporting, setGoogleImporting] = useState(false);
+    const [msftToken, setMsftToken] = useState("");
+    const [msftImporting, setMsftImporting] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
 
     const loadContacts = useCallback(async () => {
@@ -86,6 +90,40 @@ export function Contacts() {
         finally { setImporting(false); }
     };
 
+    const handleImportGoogle = async () => {
+        if (!googleToken.trim()) { toast("error", "Enter a Google OAuth token"); return; }
+        setGoogleImporting(true);
+        try {
+            const data = await fetchWithAuth("/api/contacts/import-google", {
+                method: "POST",
+                body: JSON.stringify({ token: googleToken.trim() }),
+            });
+            if (data.success) {
+                toast("success", `Imported ${data.imported} contact(s) from Google`);
+                if (data.errors?.length) toast("error", `${data.errors.length} error(s): ${data.errors[0]}`);
+                loadContacts();
+            } else { toast("error", data.errors?.[0] || "Import failed"); }
+        } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Import failed"); }
+        finally { setGoogleImporting(false); }
+    };
+
+    const handleImportMicrosoft = async () => {
+        if (!msftToken.trim()) { toast("error", "Enter a Microsoft Graph token"); return; }
+        setMsftImporting(true);
+        try {
+            const data = await fetchWithAuth("/api/contacts/import-microsoft", {
+                method: "POST",
+                body: JSON.stringify({ token: msftToken.trim() }),
+            });
+            if (data.success) {
+                toast("success", `Imported ${data.imported} contact(s) from Microsoft`);
+                if (data.errors?.length) toast("error", `${data.errors.length} error(s): ${data.errors[0]}`);
+                loadContacts();
+            } else { toast("error", data.errors?.[0] || "Import failed"); }
+        } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Import failed"); }
+        finally { setMsftImporting(false); }
+    };
+
     const groups = [...new Set(contacts.map(c => c.group).filter(Boolean))];
 
     return (
@@ -133,17 +171,48 @@ export function Contacts() {
                             <Upload className="h-4 w-4 text-purple-400" /> Import Contacts
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                        <div className="flex gap-2">
-                            <Button size="sm" variant={importFormat === "csv" ? "default" : "outline"} className={importFormat === "csv" ? "bg-blue-600" : "border-slate-700 text-slate-300"} onClick={() => setImportFormat("csv")}>CSV</Button>
-                            <Button size="sm" variant={importFormat === "vcard" ? "default" : "outline"} className={importFormat === "vcard" ? "bg-blue-600" : "border-slate-700 text-slate-300"} onClick={() => setImportFormat("vcard")}>vCard (.vcf)</Button>
+                    <CardContent className="space-y-4">
+                        {/* CSV / vCard */}
+                        <div className="space-y-2">
+                            <div className="flex gap-2">
+                                <Button size="sm" variant={importFormat === "csv" ? "default" : "outline"} className={importFormat === "csv" ? "bg-blue-600" : "border-slate-700 text-slate-300"} onClick={() => setImportFormat("csv")}>CSV</Button>
+                                <Button size="sm" variant={importFormat === "vcard" ? "default" : "outline"} className={importFormat === "vcard" ? "bg-blue-600" : "border-slate-700 text-slate-300"} onClick={() => setImportFormat("vcard")}>vCard (.vcf)</Button>
+                            </div>
+                            <textarea className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white resize-y min-h-[80px] font-mono"
+                                placeholder={importFormat === "csv" ? "name,email,phone,notes,group\nJohn,john@test.com,555-0100,,Friends" : "BEGIN:VCARD\nFN:John\nEMAIL:john@test.com\nEND:VCARD"}
+                                value={importText} onChange={(e) => setImportText(e.target.value)} />
+                            <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={handleImport} disabled={importing || !importText.trim()}>
+                                {importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />} Import
+                            </Button>
                         </div>
-                        <textarea className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white resize-y min-h-[100px] font-mono"
-                            placeholder={importFormat === "csv" ? "name,email,phone,notes,group\nJohn,john@test.com,555-0100,,Friends" : "BEGIN:VCARD\nFN:John\nEMAIL:john@test.com\nEND:VCARD"}
-                            value={importText} onChange={(e) => setImportText(e.target.value)} />
-                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={handleImport} disabled={importing || !importText.trim()}>
-                            {importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />} Import
-                        </Button>
+
+                        <div className="h-px bg-slate-800" />
+
+                        {/* Google Contacts */}
+                        <div className="space-y-2">
+                            <p className="text-xs text-slate-400 flex items-center gap-1"><Mail className="h-3 w-3" /> Google Contacts</p>
+                            <Input className="bg-slate-900 border-slate-700 text-white text-sm font-mono" placeholder="Google OAuth token (needs contacts.readonly scope)" value={googleToken} onChange={(e) => setGoogleToken(e.target.value)} />
+                            <div className="flex gap-2 items-center">
+                                <Button size="sm" className="bg-red-600 hover:bg-red-700 text-xs" onClick={handleImportGoogle} disabled={googleImporting || !googleToken.trim()}>
+                                    {googleImporting ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Download className="h-3 w-3 mr-1" />} Fetch from Google
+                                </Button>
+                                <a className="text-xs text-blue-400 hover:underline" href="https://developers.google.com/oauthplayground" target="_blank">Get token →</a>
+                            </div>
+                        </div>
+
+                        <div className="h-px bg-slate-800" />
+
+                        {/* Office 365 */}
+                        <div className="space-y-2">
+                            <p className="text-xs text-slate-400 flex items-center gap-1"><Mail className="h-3 w-3" /> Office 365 / Outlook</p>
+                            <Input className="bg-slate-900 border-slate-700 text-white text-sm font-mono" placeholder="Microsoft Graph token (needs Contacts.Read scope)" value={msftToken} onChange={(e) => setMsftToken(e.target.value)} />
+                            <div className="flex gap-2 items-center">
+                                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-xs" onClick={handleImportMicrosoft} disabled={msftImporting || !msftToken.trim()}>
+                                    {msftImporting ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Download className="h-3 w-3 mr-1" />} Fetch from Microsoft
+                                </Button>
+                                <a className="text-xs text-blue-400 hover:underline" href="https://developer.microsoft.com/en-us/graph/graph-explorer" target="_blank">Get token →</a>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             )}

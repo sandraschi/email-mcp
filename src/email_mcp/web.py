@@ -124,6 +124,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
             "delete": "delete_email" in tool_names,
             "drafts": True,
             "workflows": True,
+            "contacts": True,
         }
 
     # ── Tools ────────────────────────────────────────────────────────────────
@@ -707,6 +708,30 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         elif fmt == "vcard":
             return import_vcard(text)
         raise HTTPException(status_code=422, detail="format must be 'csv' or 'vcard'")
+
+    @app.post("/api/contacts/import-google")
+    async def import_google_contacts(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .contacts import import_google
+
+        token = payload.get("token", "").strip()
+        if not token:
+            raise HTTPException(status_code=422, detail="OAuth token is required")
+        return await import_google(token)
+
+    @app.post("/api/contacts/import-microsoft")
+    async def import_microsoft_contacts(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .contacts import import_microsoft
+
+        token = payload.get("token", "").strip()
+        if not token:
+            raise HTTPException(status_code=422, detail="OAuth token is required")
+        return await import_microsoft(token)
 
     @app.get("/api/contacts/groups")
     async def list_groups(_user: str = Depends(authenticate)):
