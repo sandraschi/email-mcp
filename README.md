@@ -9,33 +9,23 @@
   <a href="https://github.com/PrefectHQ/fastmcp"><img src="https://img.shields.io/badge/FastMCP-3.2-7c5cfc?style=flat-square" alt="FastMCP"></a>
 </p>
 
+A full-featured email server for MCP clients. Send and receive mail through SMTP/IMAP, transactional APIs (SendGrid, Mailgun, Resend), local test servers (MailHog), and webhooks (Slack, Discord). Includes a web dashboard with AI-assisted compose, a throwaway SMTP lab, folder management, contact import, background mail watching, and creative AI workflows (love letters, complaints, ASCII art, SVG cards).
 
-> 📖 **[Installation Guide](INSTALL.md)** — quick start, manual setup, and troubleshooting
-
-Multi-service email platform for MCP clients. Send and receive email via SMTP/IMAP, transactional APIs, local test servers, and webhooks.
-
-**v0.4.1** — FastMCP 3.2+, web dashboard, AI assistant, mailing list presets, prompt injection defense, MailLab throwaway server.
+**v0.4.1** — 86 tests passing, 15 MCP tools, FastMCP 3.2+, dual transport (stdio + HTTP).
 
 ---
 
 ## Quick Start
 
 ```powershell
-git clone https://github.com/sandraschi/email-mcp
-cd email-mcp
-just
+.\start.ps1
 ```
 
-This opens an interactive dashboard showing all available commands. Run `just bootstrap` to install dependencies, then `just serve` or `just dev` to start.
+Opens the web dashboard at `http://localhost:10812`. Backend runs on port 10813.
 
-### Manual Setup
+**Requirements**: Python 3.12+, [uv](https://docs.astral.sh/uv/). Start configuring services from the Settings page.
 
-If you don't have `just` installed:
-# Start the web dashboard
-.\start.ps1
-# Open http://localhost:10812
-uvx email-mcp  # CLI mode
-See [docs/quickstart.md](docs/quickstart.md) for full setup.
+For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/quickstart.md](docs/quickstart.md).
 
 ## Supported Email Systems
 
