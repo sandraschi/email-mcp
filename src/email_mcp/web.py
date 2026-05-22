@@ -588,6 +588,70 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    @app.post("/api/send-bulk")
+    async def send_bulk(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        """Send the same email to multiple recipients with rate limiting.
+
+        Max 50 recipients per batch. Includes anti-spam warnings.
+        """
+        recipients = payload.get("to", [])
+        if isinstance(recipients, str):
+            recipients = [r.strip() for r in recipients.replace("\n", ",").split(",") if r.strip()]
+        if not isinstance(recipients, list):
+            recipients = [str(recipients)]
+        recipients = [r.strip() for r in recipients if r.strip()]
+
+        if len(recipients) == 0:
+            raise HTTPException(status_code=422, detail="No valid recipients")
+        if len(recipients) > 50:
+            raise HTTPException(status_code=422, detail=f"Too many recipients ({len(recipients)}). Max 50 per batch. Bulk operations require review.")
+        if len(recipients) > 10 and not payload.get("confirmed"):
+            return {
+                "success": False,
+                "needs_confirmation": True,
+                "count": len(recipients),
+                "warning": f"Sending to {len(recipients)} recipients. Unsolicited bulk email (spam) is illegal under CAN-SPAM Act, GDPR, and many other laws. Only proceed with explicit consent from every recipient.",
+                "message": "Large batch requires confirmation",
+            }
+
+        subject = payload.get("subject", "").strip()
+        body = payload.get("body", "").strip()
+        if not subject or not body:
+            raise HTTPException(status_code=422, detail="subject and body are required")
+
+        service = payload.get("service", "default")
+        results: list[dict[str, Any]] = []
+        success_count = 0
+        fail_count = 0
+
+        for _i, to in enumerate(recipients):
+            try:
+                result = _extract_tool_result(
+                    await mcp_app.call_tool(
+                        "send_email",
+                        {"to": to, "subject": subject, "body": body, "service": service},
+                    )
+                )
+                if result.get("success"):
+                    success_count += 1
+                else:
+                    fail_count += 1
+                results.append({"to": to, "success": result.get("success", False), "error": result.get("error")})
+            except Exception as exc:
+                fail_count += 1
+                results.append({"to": to, "success": False, "error": str(exc)})
+
+        return {
+            "success": True,
+            "total": len(recipients),
+            "sent": success_count,
+            "failed": fail_count,
+            "results": results,
+        }
+
     # ── Drafts ───────────────────────────────────────────────────────────────
 
     @app.get("/api/drafts")
@@ -740,6 +804,27 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         from .contacts import get_groups
 
         return {"groups": get_groups()}
+
+    @app.get("/api/curated-lists")
+    async def curated_list_lists(_user: str = Depends(authenticate)):
+        from .curated_lists import list_lists
+
+        return {"lists": list_lists()}
+
+    @app.get("/api/curated-lists/{list_id}")
+    async def curated_list_detail(list_id: str, _user: str = Depends(authenticate)):
+        from .curated_lists import get_list
+
+        lst = get_list(list_id)
+        if not lst:
+            raise HTTPException(status_code=404, detail=f"List {list_id!r} not found")
+        return {"list": lst}
+
+    @app.post("/api/curated-lists/{list_id}/import")
+    async def curated_list_import(list_id: str, _user: str = Depends(authenticate)):
+        from .curated_lists import import_list
+
+        return import_list(list_id)
 
     # ── Skills ───────────────────────────────────────────────────────────────
 

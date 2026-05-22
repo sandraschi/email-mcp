@@ -29,6 +29,8 @@ export function Contacts() {
     const [googleImporting, setGoogleImporting] = useState(false);
     const [msftToken, setMsftToken] = useState("");
     const [msftImporting, setMsftImporting] = useState(false);
+    const [curatedLists, setCuratedLists] = useState<any[]>([]);
+    const [importingCurated, setImportingCurated] = useState<string | null>(null);
     const [deleting, setDeleting] = useState<string | null>(null);
 
     const loadContacts = useCallback(async () => {
@@ -42,6 +44,22 @@ export function Contacts() {
     }, [search]);
 
     useEffect(() => { loadContacts(); }, [loadContacts]);
+
+    useEffect(() => {
+        fetchWithAuth("/api/curated-lists").then(d => setCuratedLists(d.lists || [])).catch(() => {});
+    }, []);
+
+    const handleImportCurated = async (listId: string) => {
+        setImportingCurated(listId);
+        try {
+            const data = await fetchWithAuth(`/api/curated-lists/${listId}/import`, { method: "POST" });
+            if (data.success) {
+                toast("success", `Imported ${data.imported} contact(s) from ${data.list_title}`);
+                loadContacts();
+            } else { toast("error", data.error || "Import failed"); }
+        } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Import failed"); }
+        finally { setImportingCurated(null); }
+    };
 
     const handleAdd = async () => {
         if (!newEmail.trim()) { toast("error", "Email is required"); return; }
@@ -172,7 +190,6 @@ export function Contacts() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {/* CSV / vCard */}
                         <div className="space-y-2">
                             <div className="flex gap-2">
                                 <Button size="sm" variant={importFormat === "csv" ? "default" : "outline"} className={importFormat === "csv" ? "bg-blue-600" : "border-slate-700 text-slate-300"} onClick={() => setImportFormat("csv")}>CSV</Button>
@@ -185,10 +202,7 @@ export function Contacts() {
                                 {importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />} Import
                             </Button>
                         </div>
-
                         <div className="h-px bg-slate-800" />
-
-                        {/* Google Contacts */}
                         <div className="space-y-2">
                             <p className="text-xs text-slate-400 flex items-center gap-1"><Mail className="h-3 w-3" /> Google Contacts</p>
                             <Input className="bg-slate-900 border-slate-700 text-white text-sm font-mono" placeholder="Google OAuth token (needs contacts.readonly scope)" value={googleToken} onChange={(e) => setGoogleToken(e.target.value)} />
@@ -199,10 +213,7 @@ export function Contacts() {
                                 <a className="text-xs text-blue-400 hover:underline" href="https://developers.google.com/oauthplayground" target="_blank">Get token →</a>
                             </div>
                         </div>
-
                         <div className="h-px bg-slate-800" />
-
-                        {/* Office 365 */}
                         <div className="space-y-2">
                             <p className="text-xs text-slate-400 flex items-center gap-1"><Mail className="h-3 w-3" /> Office 365 / Outlook</p>
                             <Input className="bg-slate-900 border-slate-700 text-white text-sm font-mono" placeholder="Microsoft Graph token (needs Contacts.Read scope)" value={msftToken} onChange={(e) => setMsftToken(e.target.value)} />
@@ -216,6 +227,33 @@ export function Contacts() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Curated Public Lists */}
+            <details className="group">
+                <summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-200 list-none flex items-center gap-1">
+                    <BookOpen className="h-4 w-4" /> Curated Public Lists <span className="text-xs text-slate-600 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="mt-3 space-y-2">
+                    {curatedLists.length === 0 ? (
+                        <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-blue-500" /></div>
+                    ) : (
+                        curatedLists.map(lst => (
+                            <div key={lst.id} className="flex items-center gap-3 py-2 px-3 rounded bg-slate-950/50 border border-slate-800">
+                                <BookOpen className="h-4 w-4 text-slate-500 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-white truncate">{lst.title}</p>
+                                    <p className="text-xs text-slate-500 truncate">{lst.count} contacts — {lst.description}</p>
+                                </div>
+                                <Button size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7 text-xs" onClick={() => handleImportCurated(lst.id)} disabled={importingCurated === lst.id}>
+                                    {importingCurated === lst.id ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Download className="h-3 w-3 mr-1" />}
+                                    Import
+                                </Button>
+                            </div>
+                        ))
+                    )}
+                    <p className="text-xs text-amber-500">These are publicly available addresses for civic engagement. Using them for spam is illegal and unethical.</p>
+                </div>
+            </details>
 
             {/* Search */}
             <div className="relative">

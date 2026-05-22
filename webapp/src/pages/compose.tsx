@@ -75,6 +75,13 @@ export function Compose() {
     const [expandContext, setExpandContext] = useState("none");
     const [expanding, setExpanding] = useState(false);
 
+    // ── Bulk send state ──
+    const [bulkRecipients, setBulkRecipients] = useState("");
+    const [bulkConfirmed, setBulkConfirmed] = useState(false);
+    const [bulkSending, setBulkSending] = useState(false);
+    const [bulkResult, setBulkResult] = useState<{ ok: boolean; msg: string; results?: any[] } | null>(null);
+    const [showBulk, setShowBulk] = useState(false);
+
     useEffect(() => {
         fetchWithAuth("/api/services")
             .then((data) => {
@@ -201,6 +208,34 @@ export function Compose() {
         finally { setExpanding(false); }
     };
 
+    const handleBulkSend = async () => {
+        const parsed = bulkRecipients.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+        if (parsed.length === 0) { toast("error", "Paste at least one email address"); return; }
+        if (parsed.length > 50) { toast("error", "Max 50 recipients per batch"); return; }
+        setBulkSending(true);
+        setBulkResult(null);
+        try {
+            const data = await fetchWithAuth("/api/send-bulk", {
+                method: "POST",
+                body: JSON.stringify({ to: parsed, subject, body, service, confirmed: bulkConfirmed }),
+            });
+            if (data.success === false && data.needs_confirmation) {
+                setBulkResult({ ok: false, msg: data.warning || "Large batch needs confirmation" });
+                setBulkSending(false);
+                return;
+            }
+            if (data.success) {
+                setBulkResult({ ok: true, msg: `Sent to ${data.sent}/${data.total} recipients (${data.failed} failed)`, results: data.results });
+                if (data.sent > 0) toast("success", `Sent to ${data.sent} recipient(s)`);
+                if (data.failed > 0) toast("error", `${data.failed} failed`);
+            } else {
+                setBulkResult({ ok: false, msg: data.error || "Bulk send failed" });
+            }
+        } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Bulk send failed"); }
+        finally { setBulkSending(false); }
+    };
+
+    const parseCount = bulkRecipients.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean).length;
     const defaultServices = services.length > 0 ? services.find((s) => s.name === "default") : null;
 
     return (
@@ -388,6 +423,64 @@ export function Compose() {
                                         Expand
                                     </Button>
                                 </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Bulk Send Toggle */}
+                    <div className="flex justify-end">
+                        <button className={`text-xs px-2.5 py-1 rounded border transition-colors ${showBulk ? "border-red-800 text-red-300 bg-red-950/20" : "border-slate-700 text-slate-400 hover:text-slate-200"}`} onClick={() => setShowBulk(!showBulk)}>
+                            {showBulk ? "Hide Bulk Send" : "Bulk Send"}
+                        </button>
+                    </div>
+
+                    {showBulk && (
+                        <Card className="border-red-900/30 bg-red-950/10">
+                            <CardHeader className="pb-2 pt-3">
+                                <div className="flex items-center gap-2">
+                                    <Send className="h-4 w-4 text-red-400" />
+                                    <CardTitle className="text-white text-sm">Bulk Send</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <div>
+                                    <Label className="text-slate-400 text-xs">Recipients — one per line or comma-separated</Label>
+                                    <textarea className="w-full bg-slate-900 border border-red-800/30 rounded-md px-3 py-2 text-sm text-white resize-y min-h-[80px] mt-1"
+                                        placeholder="alice@example.com&#10;bob@example.com&#10;carol@example.com"
+                                        value={bulkRecipients} onChange={(e) => setBulkRecipients(e.target.value)} />
+                                    {parseCount > 0 && <p className="text-xs text-slate-500 mt-1">{parseCount} recipient{parseCount !== 1 ? "s" : ""} parsed. {parseCount > 25 ? <span className="text-amber-400">Large batch — review carefully.</span> : ""}</p>}
+                                </div>
+                                {parseCount > 10 && (
+                                    <div className="p-2 bg-red-950/30 rounded border border-red-800/30">
+                                        <p className="text-xs text-red-300">
+                                            ⚠ Sending unsolicited bulk email (spam) is illegal under CAN-SPAM Act, GDPR, UK PECR, and many other laws.
+                                            Only proceed if you have <strong>explicit consent</strong> from every recipient. You are responsible for compliance.
+                                        </p>
+                                        <label className="flex items-center gap-1 text-xs text-slate-300 cursor-pointer mt-1">
+                                            <input type="checkbox" checked={bulkConfirmed} onChange={(e) => setBulkConfirmed(e.target.checked)} className="accent-red-500" />
+                                            I confirm I have consent to email these recipients
+                                        </label>
+                                    </div>
+                                )}
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs text-slate-500">Uses current subject, body, and service</span>
+                                    <Button size="sm" className="bg-red-600 hover:bg-red-700 text-xs h-7" onClick={handleBulkSend} disabled={bulkSending || parseCount === 0 || (parseCount > 10 && !bulkConfirmed)}>
+                                        {bulkSending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Send className="h-3 w-3 mr-1" />}
+                                        Send to {parseCount} recipient{parseCount !== 1 ? "s" : ""}
+                                    </Button>
+                                </div>
+                                {bulkResult && (
+                                    <div className={`text-xs px-2 py-1.5 rounded ${bulkResult.ok ? "text-emerald-400 bg-emerald-950/30 border border-emerald-900/30" : "text-red-400 bg-red-950/30 border border-red-900/30"}`}>
+                                        {bulkResult.msg}
+                                        {bulkResult.results && bulkResult.results.filter(r => !r.success).length > 0 && (
+                                            <div className="mt-1 max-h-[100px] overflow-y-auto">
+                                                {bulkResult.results.filter(r => !r.success).map(r => (
+                                                    <div key={r.to} className="text-xs text-red-400">{r.to}: {r.error || "failed"}</div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     )}
