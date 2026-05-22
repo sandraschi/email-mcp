@@ -83,6 +83,31 @@ curl -X POST http://localhost:10813/api/watcher/start `
 
 See [docs/mail-watcher.md](mail-watcher.md) and [docs/robofang-integration.md](robofang-integration.md) for detailed setup.
 
+## Running Tests
+
+```powershell
+# All backend tests (69)
+.venv\Scripts\pytest.exe tests/ -q
+
+# Playwright e2e tests (17)
+cd webapp
+npx playwright test
+cd ..
+
+# Full suite: 86 tests
+```
+
+Test categories:
+| Category | Count | What it covers |
+|----------|-------|----------------|
+| `test_sanitize.py` | 27 | Prompt injection defense (Unicode strip + safety wrap) |
+| `test_api_services.py` | 17 | Service CRUD via REST API |
+| `test_contacts.py` | 16 | Contact CRUD, CSV/vCard import, search |
+| `test_mailing_lists.py` | 5 | Mailing list preset loading |
+| `test_e2e_real.py` | 1 | Real aiosmtpd send-and-receive |
+| `test_connection.py` | 2 | SMTP/IMAP connection (requires env vars) |
+| **Playwright e2e** | **17** | Dashboard, inbox, compose, services, settings, chat, lab, contacts, help, sidebar, topbar, REST API |
+
 ## Available MCP Tools
 
 | Tool | What it does |
