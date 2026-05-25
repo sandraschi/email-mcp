@@ -39,44 +39,27 @@ The founding team met at CERN (the same lab that gave us the World Wide Web). Th
 
 ## Connecting ProtonMail to Email-MCP
 
-Two ways to connect, depending on your account type:
-
 | | Free Account | Paid Account (Mail Plus, €3.99/mo) |
 |---|---|---|
-| **SMTP/IMAP** | ❌ No direct access | ✅ Direct access |
-| **Bridge required** | ✅ Yes — Bridge is **free** and works with free accounts | ❌ No Bridge needed |
-| **How it works** | Bridge runs locally, decrypts mail, provides ports 1025/1143 | Direct to mail.protonmail.com:587/993 |
-| **Setup** | Install Bridge app, log in, then select ProtonMail in Quick Setup | Just enable IMAP in settings |
+| **SMTP/IMAP** | ❌ Not available | ✅ Direct access |
+| **Bridge** | ❌ Not included (Bridge requires paid plan) | ✅ Included |
+| **How to connect** | Upgrade to paid — no other option | Direct to mail.protonmail.com:587/993 |
+| **Webmail** | ✅ Yes | ✅ Yes |
+| **Mobile apps** | ✅ Yes | ✅ Yes |
 
-### Option 1: Free + Bridge (recommended for free users)
+**Important**: Since late 2023, ProtonMail restricts SMTP/IMAP and Bridge access to **paid subscribers only** (Mail Plus €3.99/mo or higher). Free accounts can only use the web interface and mobile apps.
 
-The ProtonMail Bridge is a **free** desktop app. It decrypts ProtonMail's encryption locally and provides standard SMTP/IMAP.
-
-1. Download: https://proton.me/mail/bridge
-2. Install, log in with your ProtonMail credentials
-3. Bridge creates local SMTP (1025) and IMAP (1143)
-4. In email-mcp → Services → Quick Setup → **ProtonMail** — the app detects the Bridge automatically
-
-The Bridge must be running whenever email-mcp needs to send or receive.
-
-### Option 2: Paid Account (no Bridge)
-
-Upgrade to Proton Mail Plus (€3.99/month) for direct SMTP/IMAP:
+### Option: Upgrade to Paid
 
 1. Upgrade at https://proton.me/mail/settings/upgrade
-2. Enable IMAP/SMTP in ProtonMail Settings
-3. In email-mcp → Services → Quick Setup → **ProtonMail** — connects directly
+2. Enable IMAP/SMTP in ProtonMail Settings → IMAP/SMTP
+3. In email-mcp → Services → Quick Setup → **ProtonMail** — connects automatically
 
-### Which One?
-
-- **Free + Bridge**: Zero cost, but requires the Bridge app running in the background
-- **Paid + direct**: €3.99/month, no extra software, simpler setup
-
-Either way, once connected, email-mcp shows your inbox, folders, handles send/receive, search — everything works.
+Once upgraded, email-mcp shows your inbox, folders, handles send/receive, search — everything works.
 
 ## Notes
-- The Bridge is **free** and works with **free** ProtonMail accounts
-- Paid accounts skip Bridge entirely and connect directly
-- ProtonMail uses end-to-end encryption; Bridge handles decryption locally
+- **Since late 2023**: Bridge and SMTP/IMAP access require a **paid ProtonMail subscription** (Mail Plus €3.99/mo or higher)
+- Free accounts are limited to webmail and mobile apps — no third-party client access
+- ProtonMail uses end-to-end encryption end-to-end
 - Body search is limited (content is encrypted) — subject/sender search only
 - ProtonMail also offers ProtonVPN, Proton Drive, and Proton Calendar

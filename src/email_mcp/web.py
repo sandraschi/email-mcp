@@ -373,16 +373,16 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         smtp_ok = 1025 in result["ports_open"]
         imap_ok = 1143 in result["ports_open"]
         if result["bridge_running"] and smtp_ok and imap_ok:
-            result["message"] = "ProtonMail Bridge is running. Configure with 127.0.0.1:1025 (SMTP) / 1143 (IMAP)."
+            result["message"] = "ProtonMail Bridge is running. (Note: Bridge now requires a paid ProtonMail subscription.)"
             result["status"] = "ready"
         elif result["bridge_running"] and not (smtp_ok and imap_ok):
-            result["message"] = "Bridge process found but ports not responding. Restart Bridge and try again."
+            result["message"] = "Bridge process found but ports not responding. Restart Bridge."
             result["status"] = "bridge_port_error"
         elif not result["bridge_running"] and (smtp_ok and imap_ok):
-            result["message"] = "Bridge ports open but process not detected. Something else may be using ports 1025/1143."
+            result["message"] = "Ports 1025/1143 open but Bridge not detected. Something else is using them."
             result["status"] = "unknown_service"
         else:
-            result["message"] = "ProtonMail Bridge is not running. Free ProtonMail accounts require Bridge for SMTP/IMAP access."
+            result["message"] = "ProtonMail Bridge not found. Note: Since late 2023, Bridge and SMTP/IMAP require a paid ProtonMail subscription (Mail Plus €3.99/mo). Free accounts cannot connect via SMTP/IMAP."
             result["status"] = "not_installed"
 
         return result
