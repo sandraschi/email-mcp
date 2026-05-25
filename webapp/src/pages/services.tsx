@@ -75,6 +75,19 @@ export function Services() {
     const [quickEmail, setQuickEmail] = useState("");
     const [quickPassword, setQuickPassword] = useState("");
     const [quickSettingUp, setQuickSettingUp] = useState(false);
+    const [bridgeStatus, setBridgeStatus] = useState<{ checking: boolean; status?: string; message?: string; bridge_running?: boolean; ports_open?: number[] }>({ checking: false });
+
+    // Check ProtonMail Bridge status when selected
+    useEffect(() => {
+        if (quickProvider === "protonmail") {
+            setBridgeStatus({ checking: true });
+            fetchWithAuth("/api/services/check-bridge")
+                .then(d => setBridgeStatus({ checking: false, ...d }))
+                .catch(() => setBridgeStatus({ checking: false, status: "error", message: "Could not check Bridge status" }));
+        } else {
+            setBridgeStatus({ checking: false });
+        }
+    }, [quickProvider]);
     const [deleting, setDeleting] = useState<string | null>(null);
     const [assisting, setAssisting] = useState(false);
     const [aiPrompt, setAiPrompt] = useState("");
@@ -250,13 +263,45 @@ export function Services() {
         } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Test failed"); }
     };
 
-    const handleQuickSetup = async (provider: "gmail" | "outlook") => {
+    const handleQuickSetup = async (provider: "gmail" | "outlook" | "protonmail" | "yahoo" | "icloud" | "zoho" | "gmx" | "fastmail") => {
         if (!quickEmail.trim() || !quickPassword.trim()) {
             toast("error", "Enter email and password first");
             return;
         }
         setQuickProvider(provider);
         setQuickSettingUp(true);
+
+        // ProtonMail free accounts use Bridge (localhost), not direct SMTP
+        if (provider === "protonmail" && bridgeStatus.bridge_running) {
+            try {
+                const data = await fetchWithAuth("/api/services", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        name: "protonmail",
+                        type: "smtp",
+                        config: {
+                            smtp_server: "127.0.0.1",
+                            smtp_port: 1025,
+                            smtp_user: quickEmail.trim(),
+                            smtp_password: quickPassword,
+                            smtp_from: quickEmail.trim(),
+                            imap_server: "127.0.0.1",
+                            imap_port: 1143,
+                            imap_user: quickEmail.trim(),
+                            imap_password: quickPassword,
+                        },
+                    }),
+                });
+                if (data.success) {
+                    toast("success", "ProtonMail (via Bridge) configured!");
+                    setQuickEmail(""); setQuickPassword(""); setQuickProvider(null);
+                    loadServices();
+                } else { toast("error", data.message || data.error || "Setup failed"); }
+            } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Setup failed"); }
+            finally { setQuickSettingUp(false); }
+            return;
+        }
+
         try {
             const data = await fetchWithAuth("/api/services/quick", {
                 method: "POST",
@@ -325,6 +370,14 @@ export function Services() {
                             </button>
                         ))}
                     </div>
+                    {quickProvider === "protonmail" && (
+                        <div className={`text-xs px-3 py-2 rounded border ${bridgeStatus.status === "ready" ? "text-emerald-400 border-emerald-900/30 bg-emerald-950/20" : bridgeStatus.status === "not_installed" ? "text-amber-400 border-amber-900/30 bg-amber-950/20" : bridgeStatus.checking ? "text-slate-400 border-slate-700/30 bg-slate-900/20" : "text-red-400 border-red-900/30 bg-red-950/20"}`}>
+                            {bridgeStatus.checking ? <><Loader2 className="h-3 w-3 mr-1 inline animate-spin" /> Checking ProtonMail Bridge...</>
+                                : bridgeStatus.status === "ready" ? <>Bridge running on {bridgeStatus.ports_open?.join(", ")} — configure below</>
+                                : bridgeStatus.status === "not_installed" ? <>ProtonMail Bridge not found. Free ProtonMail accounts require the <a className="text-blue-400 hover:underline" href="https://proton.me/mail/bridge" target="_blank">Bridge app</a> for SMTP/IMAP access. Install it, log in, then come back.</>
+                                : bridgeStatus.message || "Bridge status unknown"}
+                        </div>
+                    )}
                     {quickProvider && (
                         <div className="flex gap-2 items-end flex-wrap">
                             <div className="min-w-[220px] flex-1">

@@ -37,83 +37,46 @@ The founding team met at CERN (the same lab that gave us the World Wide Web). Th
 - **Choose Gmail if**: you want the full Google ecosystem, need powerful search, or don't want to pay for email.
 - **Choose ProtonMail if**: you care about privacy, don't want a corporation reading your mail, need to communicate sensitive information, or want to de-Google your life.
 
-## Technical Setup with Email-MCP
+## Connecting ProtonMail to Email-MCP
 
-ProtonMail setup depends on your account type.
+Two ways to connect, depending on your account type:
 
-### Free Accounts (ProtonMail Bridge Required)
+| | Free Account | Paid Account (Mail Plus, €3.99/mo) |
+|---|---|---|
+| **SMTP/IMAP** | ❌ No direct access | ✅ Direct access |
+| **Bridge required** | ✅ Yes — Bridge is **free** and works with free accounts | ❌ No Bridge needed |
+| **How it works** | Bridge runs locally, decrypts mail, provides ports 1025/1143 | Direct to mail.protonmail.com:587/993 |
+| **Setup** | Install Bridge app, log in, then select ProtonMail in Quick Setup | Just enable IMAP in settings |
 
-Free accounts cannot access SMTP/IMAP directly. You **must** run the **ProtonMail Bridge** application locally. Bridge creates local SMTP and IMAP servers on your machine that decrypt ProtonMail's encryption and present it as standard email protocols.
+### Option 1: Free + Bridge (recommended for free users)
 
-#### Bridge Setup
-1. Download ProtonMail Bridge: https://proton.me/mail/bridge
-2. Install and configure Bridge with your ProtonMail account
-3. Bridge creates local SMTP (port 1025) and IMAP (port 1143) servers
+The ProtonMail Bridge is a **free** desktop app. It decrypts ProtonMail's encryption locally and provides standard SMTP/IMAP.
 
-#### Configuration
-```json
-{
-  "smtp_server": "127.0.0.1",
-  "smtp_port": 1025,
-  "smtp_user": "your-username",
-  "smtp_password": "your-protonmail-password",
-  "imap_server": "127.0.0.1",
-  "imap_port": 1143,
-  "imap_user": "your-username",
-  "imap_password": "your-protonmail-password"
-}
-```
+1. Download: https://proton.me/mail/bridge
+2. Install, log in with your ProtonMail credentials
+3. Bridge creates local SMTP (1025) and IMAP (1143)
+4. In email-mcp → Services → Quick Setup → **ProtonMail** — the app detects the Bridge automatically
 
-#### Environment Variables
-```bash
-export SMTP_SERVER="127.0.0.1"
-export SMTP_PORT="1025"
-export SMTP_USER="your-username"
-export SMTP_PASSWORD="your-protonmail-password"
-export IMAP_SERVER="127.0.0.1"
-export IMAP_PORT="1143"
-export IMAP_USER="your-username"
-export IMAP_PASSWORD="your-protonmail-password"
-```
+The Bridge must be running whenever email-mcp needs to send or receive.
 
-### Paid Accounts (Direct Access)
+### Option 2: Paid Account (no Bridge)
 
-Paid ProtonMail accounts (€3.99+/month) support direct SMTP/IMAP without Bridge.
+Upgrade to Proton Mail Plus (€3.99/month) for direct SMTP/IMAP:
 
-#### Configuration
-```json
-{
-  "smtp_server": "mail.protonmail.com",
-  "smtp_port": 587,
-  "smtp_user": "your@protonmail.com",
-  "smtp_password": "your-protonmail-password",
-  "imap_server": "mail.protonmail.com",
-  "imap_port": 993,
-  "imap_user": "your@protonmail.com",
-  "imap_password": "your-protonmail-password"
-}
-```
+1. Upgrade at https://proton.me/mail/settings/upgrade
+2. Enable IMAP/SMTP in ProtonMail Settings
+3. In email-mcp → Services → Quick Setup → **ProtonMail** — connects directly
 
-#### Environment Variables
-```bash
-export SMTP_SERVER="mail.protonmail.com"
-export SMTP_PORT="587"
-export SMTP_USER="your@protonmail.com"
-export SMTP_PASSWORD="your-protonmail-password"
-export IMAP_SERVER="mail.protonmail.com"
-export IMAP_PORT="993"
-export IMAP_USER="your@protonmail.com"
-export IMAP_PASSWORD="your-protonmail-password"
-```
+### Which One?
 
-### Setup Steps for Paid Accounts
-1. Enable SMTP/IMAP access in ProtonMail settings (Settings → IMAP/SMTP)
-2. Use your regular ProtonMail password (no app passwords needed, unlike Gmail)
-3. Configure via environment variables or the webapp Settings page
+- **Free + Bridge**: Zero cost, but requires the Bridge app running in the background
+- **Paid + direct**: €3.99/month, no extra software, simpler setup
+
+Either way, once connected, email-mcp shows your inbox, folders, handles send/receive, search — everything works.
 
 ## Notes
-- Bridge must be running for free accounts to work — it's a local desktop app
-- Paid accounts can skip Bridge entirely and connect directly
+- The Bridge is **free** and works with **free** ProtonMail accounts
+- Paid accounts skip Bridge entirely and connect directly
 - ProtonMail uses end-to-end encryption; Bridge handles decryption locally
-- Body search is limited because content is encrypted — ProtonMail cannot index what it cannot read
-- ProtonMail also offers a VPN service (ProtonVPN) and cloud storage (Proton Drive)
+- Body search is limited (content is encrypted) — subject/sender search only
+- ProtonMail also offers ProtonVPN, Proton Drive, and Proton Calendar

@@ -328,6 +328,65 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         )
         return result
 
+    @app.post("/api/services/check-bridge")
+    async def check_proton_bridge(_user: str = Depends(authenticate)):
+        """Check if ProtonMail Bridge is running and accessible.
+
+        Returns:
+          running: bool — Bridge process found running
+          ports_open: [int] — which SMTP/IMAP ports respond
+          install_url: str — download link
+          message: str — human-readable status
+        """
+        import socket
+        import subprocess
+
+        result = {"bridge_running": False, "ports_open": [], "install_url": "https://proton.me/mail/bridge", "message": ""}
+
+        # 1. Check for Bridge process (tasklist is a Windows built-in, safe)
+        try:
+            procs = subprocess.run(["tasklist", "/FI", "IMAGENAME eq protonmail-bridge*"], capture_output=True, text=True, timeout=5)
+            if "protonmail" in procs.stdout.lower():
+                result["bridge_running"] = True
+        except Exception:
+            pass
+        if not result["bridge_running"]:
+            try:
+                procs = subprocess.run(["tasklist", "/FI", "IMAGENAME eq bridge*"], capture_output=True, text=True, timeout=5)
+                if "bridge" in procs.stdout.lower():
+                    result["bridge_running"] = True
+            except Exception:
+                pass
+
+        # 2. Check ports 1025 (SMTP) and 1143 (IMAP) — these are Bridge's default ports
+        for port in [1025, 1143]:
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.settimeout(2)
+                s.connect(("127.0.0.1", port))
+                s.close()
+                result["ports_open"].append(port)
+            except Exception:
+                pass
+
+        # 3. Build message
+        smtp_ok = 1025 in result["ports_open"]
+        imap_ok = 1143 in result["ports_open"]
+        if result["bridge_running"] and smtp_ok and imap_ok:
+            result["message"] = "ProtonMail Bridge is running. Configure with 127.0.0.1:1025 (SMTP) / 1143 (IMAP)."
+            result["status"] = "ready"
+        elif result["bridge_running"] and not (smtp_ok and imap_ok):
+            result["message"] = "Bridge process found but ports not responding. Restart Bridge and try again."
+            result["status"] = "bridge_port_error"
+        elif not result["bridge_running"] and (smtp_ok and imap_ok):
+            result["message"] = "Bridge ports open but process not detected. Something else may be using ports 1025/1143."
+            result["status"] = "unknown_service"
+        else:
+            result["message"] = "ProtonMail Bridge is not running. Free ProtonMail accounts require Bridge for SMTP/IMAP access."
+            result["status"] = "not_installed"
+
+        return result
+
     # ── Stats (dashboard KPIs) ───────────────────────────────────────────────
 
     @app.get("/api/stats")
