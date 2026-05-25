@@ -21,12 +21,21 @@ Write-Host "=== email-mcp 0.4.1 (FastMCP 3.2 + Prefab UI) ===" -ForegroundColor 
 
 # ── Kill stale processes on both ports ───────────────────────────────────────
 foreach ($port in @($BackendPort, $FrontendPort)) {
-    $conns = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
-    foreach ($conn in $conns) {
-        try { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue } catch {}
+    try {
+        $conns = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
+        foreach ($conn in $conns) {
+            try { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction Stop } catch { Write-Host "  Port $port: could not kill PID $($conn.OwningProcess)" -ForegroundColor DarkGray }
+        }
+    } catch {
+        # Fallback: try netstat if Get-NetTCPConnection fails
+        $output = netstat -ano | Select-String ":$port\s"
+        foreach ($line in $output) {
+            $pid = ($line -split '\s+')[-1]
+            if ($pid -and $pid -ne '0') { try { Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue } catch {} }
+        }
     }
 }
-Start-Sleep -Milliseconds 300
+Start-Sleep -Milliseconds 500
 
 # ── Backend ──────────────────────────────────────────────────────────────────
 if (-not $FrontendOnly) {
