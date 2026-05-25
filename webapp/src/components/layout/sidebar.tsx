@@ -31,6 +31,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     const navItems = [
         { href: '/',          label: 'Dashboard',  icon: LayoutDashboard },
         { href: '/inbox',     label: 'Inbox',       icon: Inbox },
+        { href: '/mail',      label: 'Mail Reader',  icon: Mail },
         { href: '/search',    label: 'Search',      icon: Search },
         { href: '/compose',   label: 'Compose',     icon: PenSquare },
         { href: '/chat',      label: 'AI Chat',     icon: Bot },
