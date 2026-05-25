@@ -147,7 +147,6 @@ export function AutoRespond() {
                                             </select>
                                         </div>
                                     )}
-                                </div>
                                 {newRule.response_mode === "spoof" ? (
                                     <div><Label className="text-slate-300">AI Prompt (optional — leave blank for default)</Label>
                                         <textarea className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-white resize-y min-h-[60px] mt-1" placeholder="Reply politely saying I'm out of office until Monday" value={newRule.ai_prompt} onChange={(e) => setNewRule({ ...newRule, ai_prompt: e.target.value })} /></div>
