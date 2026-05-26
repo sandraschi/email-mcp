@@ -271,7 +271,14 @@ export function Services() {
         setQuickProvider(provider);
         setQuickSettingUp(true);
 
-        // ProtonMail free accounts use Bridge (localhost), not direct SMTP
+        // ProtonMail: Bridge or direct SMTP/IMAP requires a paid subscription
+        if (provider === "protonmail" && !bridgeStatus.bridge_running) {
+            toast("error", "ProtonMail SMTP/IMAP requires a paid subscription (Mail Plus €3.99/mo). Free accounts cannot connect via third-party apps.");
+            setQuickSettingUp(false);
+            return;
+        }
+
+        // ProtonMail with Bridge running: use localhost
         if (provider === "protonmail" && bridgeStatus.bridge_running) {
             try {
                 const data = await fetchWithAuth("/api/services", {

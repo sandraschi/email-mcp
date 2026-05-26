@@ -77,6 +77,7 @@
     {"name": "search_emails", "description": "Full-text IMAP search across subject and body"},
     {"name": "delete_email", "description": "Delete/move-to-trash a single email via IMAP"},
     {"name": "mark_email_read", "description": "Mark a single email as read (SEEN flag)"},
+    {"name": "mark_email_unread", "description": "Mark a single email as unread (remove SEEN flag)"},
     {"name": "email_status", "description": "Get server configuration and connectivity status"},
     {"name": "configure_service", "description": "Configure different email services dynamically at runtime"},
     {"name": "remove_service", "description": "Remove a dynamically configured email service"},
@@ -85,6 +86,22 @@
     {"name": "mailing_lists_catalog", "description": "List named mailing-list presets from EMAIL_MCP_MAILING_LISTS"},
     {"name": "mailing_list_latest", "description": "Fetch newest messages for a named mailing-list preset"},
     {"name": "suggest_email_subject", "description": "Suggest 1-3 email subject lines via MCP sampling"},
-    {"name": "email_agentic_assist", "description": "Plan a short multi-step email workflow via sampling"}
+    {"name": "email_agentic_assist", "description": "Plan a short multi-step email workflow via sampling"},
+    {"name": "list_folders", "description": "List all IMAP folders/mailboxes for a service"},
+    {"name": "create_folder", "description": "Create a new IMAP folder"},
+    {"name": "delete_folder", "description": "Delete an IMAP folder"},
+    {"name": "rename_folder", "description": "Rename an IMAP folder"},
+    {"name": "start_watcher", "description": "Start background IMAP polling for new emails"},
+    {"name": "stop_watcher", "description": "Stop the background mail watcher"},
+    {"name": "watcher_status", "description": "Check if the mail watcher is running"},
+    {"name": "add_contact", "description": "Add a contact to the address book"},
+    {"name": "search_contacts", "description": "Search contacts by name or email"},
+    {"name": "run_workflow", "description": "Generate a creative email using a preset workflow"},
+    {"name": "add_auto_rule", "description": "Add an auto-respond rule"},
+    {"name": "list_auto_rules", "description": "List all auto-respond rules"},
+    {"name": "delete_auto_rule", "description": "Delete an auto-respond rule by ID"},
+    {"name": "list_pending_replies", "description": "List pending auto-replies awaiting human approval"},
+    {"name": "approve_reply", "description": "Approve a pending auto-reply and queue it for sending"},
+    {"name": "auto_respond_now", "description": "Manually trigger AI auto-respond on a specific email"}
   ]
 }
