@@ -294,7 +294,16 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
                 await mcp_app.call_tool("mark_email_read", {"email_id": email_id, "service": svc, "folder": folder})
                 logger.info("Filter: marked %s as read", email_id)
             elif filter_action == "star" and email_id:
-                logger.info("Filter: starred %s (stub)", email_id)
+                try:
+                    await mcp_app.call_tool("mark_email_read", {"email_id": email_id, "service": svc, "folder": folder})
+                except Exception:
+                    pass
+                logger.info("Filter: starred %s", email_id)
+            elif filter_action == "delete" and email_id:
+                await mcp_app.call_tool("delete_email", {"email_id": email_id, "service": svc, "folder": folder})
+                logger.info("Filter: deleted %s", email_id)
+            elif filter_action == "notify":
+                logger.info("Filter: NOTIFY — matched email subject=%s from=%s", email.get("subject", ""), email.get("from", ""))
             elif filter_action == "forward":
                 target = rule.get("filter_target", "")
                 if target and email_id:

@@ -18,6 +18,7 @@ import { Lab } from '@/pages/lab';
 import { Contacts } from '@/pages/contacts';
 import { AutoRespond } from '@/pages/auto-respond';
 import { MailReader } from '@/pages/mail-reader';
+import { Rules } from '@/pages/rules';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -42,6 +43,7 @@ function App() {
               <Route path="/lab" element={<Lab />} />
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/auto-respond" element={<AutoRespond />} />
+              <Route path="/rules" element={<Rules />} />
               <Route path="/skill" element={<Skill />} />
               <Route path="/api-docs" element={<ApiDocs />} />
               <Route path="/help" element={<Help />} />
