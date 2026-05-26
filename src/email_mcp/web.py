@@ -617,6 +617,93 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    @app.get("/api/inbox/{message_id}/attachment/{part_index}")
+    async def get_attachment(
+        message_id: str,
+        part_index: int,
+        service: str = "default",
+        folder: str = "INBOX",
+        _user: str = Depends(authenticate),
+    ):
+        """Download an email attachment by MIME part index."""
+        import asyncio
+        import imaplib
+        from email import message_from_bytes
+
+        from fastapi.responses import Response
+
+        service_obj = mcp_app.services.get(service) if hasattr(mcp_app, "services") else None
+        if not service_obj or not hasattr(service_obj, "imap_server"):
+            raise HTTPException(status_code=400, detail="Service does not support IMAP")
+        try:
+
+            def fetch_attachment():
+                mail = imaplib.IMAP4_SSL(service_obj.imap_server, service_obj.imap_port)
+                mail.login(service_obj.imap_user, service_obj.imap_password)
+                mail.select(folder)
+                eid = message_id.encode() if isinstance(message_id, str) else message_id
+                status, data = mail.fetch(eid, "(RFC822)")
+                mail.close()
+                mail.logout()
+                if status != "OK":
+                    return None
+                msg = message_from_bytes(data[0][1])
+                idx = 0
+                for part in msg.walk():
+                    cd = str(part.get("Content-Disposition", ""))
+                    if "attachment" in cd.lower() or ("filename" in cd.lower() and part.get_content_maintype() not in ("text", "multipart")):
+                        idx += 1
+                        if idx == part_index:
+                            return {
+                                "data": part.get_payload(decode=True),
+                                "content_type": part.get_content_type(),
+                                "filename": part.get_filename() or f"attachment-{part_index}",
+                            }
+                return None
+
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, fetch_attachment)
+            if not result:
+                raise HTTPException(status_code=404, detail="Attachment not found")
+            return Response(content=result["data"], media_type=result["content_type"], headers={"Content-Disposition": f'attachment; filename="{result["filename"]}"'})
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.get("/api/inbox/unified")
+    async def get_unified_inbox(
+        limit: int = 20,
+        unread_only: bool = False,
+        _user: str = Depends(authenticate),
+    ):
+        """Fetch emails from all configured services merged by date."""
+        status_result = _extract_tool_result(await mcp_app.call_tool("email_status"))
+        services = status_result.get("services", {})
+        all_emails = []
+        errors: list[str] = []
+        for svc_name, svc_info in services.items():
+            if not svc_info.get("connected"):
+                continue
+            if svc_info.get("type") not in ("smtp", "local"):
+                continue
+            try:
+                result = _extract_tool_result(
+                    await mcp_app.call_tool(
+                        "check_inbox",
+                        {"service": svc_name, "limit": limit, "unread_only": unread_only},
+                    )
+                )
+                if result.get("success"):
+                    for email in result.get("emails", []):
+                        email["_service"] = svc_name
+                        all_emails.append(email)
+            except Exception as e:
+                errors.append(f"{svc_name}: {e}")
+        # Sort by date descending (most recent first)
+        all_emails.sort(key=lambda e: e.get("date", ""), reverse=True)
+        return {"emails": all_emails[:limit], "count": len(all_emails), "total": len(all_emails), "errors": errors}
+
     # ── Send ─────────────────────────────────────────────────────────────────
 
     @app.post("/api/send")

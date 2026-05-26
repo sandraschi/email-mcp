@@ -529,6 +529,25 @@ class SMTPEmailService(EmailService):
                     except Exception:
                         text_body = str(email_message.get_payload() or "")
 
+                # Extract attachments
+                attachments = []
+                if email_message.is_multipart():
+                    for part in email_message.walk():
+                        content_disposition = str(part.get("Content-Disposition", ""))
+                        if "attachment" in content_disposition.lower() or ("filename" in content_disposition.lower() and part.get_content_maintype() not in ("text", "multipart")):
+                            filename = part.get_filename()
+                            if filename:
+                                payload = part.get_payload(decode=True)
+                                attachments.append(
+                                    {
+                                        "filename": decode_email_header(filename),
+                                        "content_type": part.get_content_type(),
+                                        "size": len(payload) if payload else 0,
+                                        "content_id": part.get("Content-ID", ""),
+                                        "part_index": len(attachments) + 1,
+                                    }
+                                )
+
                 return {
                     "id": email_id,
                     "subject": sanitize_text(decode_email_header(email_message.get("Subject", ""))),
@@ -538,6 +557,7 @@ class SMTPEmailService(EmailService):
                     "date": sanitize_text(decode_email_header(email_message.get("Date", ""))),
                     "text_body": sanitize_text(text_body),
                     "html_body": sanitize_text(html_body) or None,
+                    "attachments": attachments,
                     "headers": dict(email_message.items()),
                 }
 
