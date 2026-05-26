@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Send, CheckCircle2, AlertCircle, Loader2, Wand2, Save, FileText, Trash2, Sparkles, RefreshCw } from "lucide-react";
+import { Send, CheckCircle2, AlertCircle, Loader2, Wand2, Save, FileText, Trash2, Sparkles, RefreshCw, Clock, BookTemplate, PenLine, User } from "lucide-react";
 import { fetchWithAuth } from "@/lib/api";
 import { useToast } from "@/components/toast";
 
@@ -81,6 +81,37 @@ export function Compose() {
     const [bulkSending, setBulkSending] = useState(false);
     const [bulkResult, setBulkResult] = useState<{ ok: boolean; msg: string; results?: any[] } | null>(null);
     const [showBulk, setShowBulk] = useState(false);
+
+    // ── Templates state ──
+    const [templates, setTemplates] = useState<any[]>([]);
+    const [showTemplates, setShowTemplates] = useState(false);
+    const [signature, setSignature] = useState("");
+    const [scheduleAt, setScheduleAt] = useState("");
+    const [showSchedule, setShowSchedule] = useState(false);
+    const [contactSuggestions, setContactSuggestions] = useState<any[]>([]);
+    const [showContactSuggestions, setShowContactSuggestions] = useState(false);
+    const toRef = useRef<HTMLInputElement>(null);
+
+    // Load templates
+    useEffect(() => {
+        fetchWithAuth("/api/templates").then(d => setTemplates(d.templates || [])).catch(() => {});
+    }, []);
+
+    // Load signature when service changes
+    useEffect(() => {
+        fetchWithAuth(`/api/signatures?service=${encodeURIComponent(service)}`).then(d => setSignature(d.signature || "")).catch(() => {});
+    }, [service]);
+
+    // Contact autocomplete
+    useEffect(() => {
+        const val = to.split(/[,;]/).pop()?.trim() || "";
+        if (val.length >= 2) {
+            fetchWithAuth(`/api/contacts?q=${encodeURIComponent(val)}`).then(d => {
+                setContactSuggestions(d.contacts || []);
+                setShowContactSuggestions(d.contacts?.length > 0);
+            }).catch(() => {});
+        } else { setShowContactSuggestions(false); }
+    }, [to]);
 
     useEffect(() => {
         fetchWithAuth("/api/services")
@@ -236,6 +267,41 @@ export function Compose() {
     };
 
     const parseCount = bulkRecipients.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean).length;
+
+    const handleTemplateSelect = (tmpl: any) => {
+        setSubject(tmpl.subject || subject);
+        setBody(tmpl.body || body);
+        if (tmpl.html) {
+            setHtmlBody(tmpl.html);
+            setUseHtml(true);
+        }
+        setShowTemplates(false);
+        toast("info", `Loaded template: ${tmpl.name}`);
+    };
+
+    const handleScheduleSend = async () => {
+        const ts = new Date(scheduleAt).getTime() / 1000;
+        if (!ts || ts <= Date.now() / 1000) { toast("error", "Pick a future time"); return; }
+        try {
+            const data = await fetchWithAuth("/api/schedule", {
+                method: "POST",
+                body: JSON.stringify({ to: to.trim(), subject: subject.trim(), body: body.trim(), send_at: ts, service }),
+            });
+            if (data.success) {
+                toast("success", `Scheduled for ${new Date(scheduleAt).toLocaleString()}`);
+                setScheduleAt("");
+                setShowSchedule(false);
+            } else { toast("error", data.error || "Schedule failed"); }
+        } catch (err: unknown) { toast("error", err instanceof Error ? err.message : "Schedule failed"); }
+    };
+
+    const handleSelectContact = (contact: any) => {
+        const parts = to.split(/[,;]/);
+        parts[parts.length - 1] = contact.email;
+        setTo(parts.join(", "));
+        setShowContactSuggestions(false);
+    };
+
     const defaultServices = services.length > 0 ? services.find((s) => s.name === "default") : null;
 
     return (
@@ -248,6 +314,9 @@ export function Compose() {
                 <div className="flex gap-2">
                     <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => setShowDrafts((d) => !d)}>
                         <FileText className="h-4 w-4 mr-1" /> Drafts ({drafts.length})
+                    </Button>
+                    <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => setShowTemplates((t) => !t)}>
+                        <BookTemplate className="h-4 w-4 mr-1" /> Templates ({templates.length})
                     </Button>
                 </div>
             </div>
@@ -274,6 +343,30 @@ export function Compose() {
                 </Card>
             )}
 
+            {/* Templates panel */}
+            {showTemplates && (
+                <Card className="border-indigo-800 bg-indigo-950/20">
+                    <CardHeader className="pb-2"><CardTitle className="text-white text-sm">Email Templates</CardTitle></CardHeader>
+                    <CardContent>
+                        {templates.length === 0 ? (
+                            <div className="text-sm text-slate-500">No templates yet. Save a template from Settings.</div>
+                        ) : (
+                            <div className="space-y-1">
+                                {templates.map((t) => (
+                                    <div key={t.id} className="flex items-center justify-between py-2 px-3 rounded hover:bg-slate-900/50 transition-colors cursor-pointer" onClick={() => handleTemplateSelect(t)}>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm text-slate-300 truncate">{t.name}</p>
+                                            <p className="text-xs text-slate-500 truncate">{t.subject || "(no subject)"} {t.category ? `· [${t.category}]` : ""}</p>
+                                        </div>
+                                        <BookTemplate className="h-4 w-4 text-indigo-400 shrink-0 ml-2" />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
             <Card className="border-slate-800 bg-slate-950/50">
                 <CardHeader className="pb-3">
                     <CardTitle className="text-white text-base">New Message</CardTitle>
@@ -286,9 +379,21 @@ export function Compose() {
                             {services.filter((s) => s.name !== "default").map((s) => (<option key={s.name} value={s.name}>{s.name} ({s.type})</option>))}
                         </select>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 relative">
                         <Label className="text-slate-300 w-16 shrink-0">To</Label>
-                        <Input className="bg-slate-900 border-slate-700 text-white flex-1" placeholder="recipient@example.com" value={to} onChange={(e) => setTo(e.target.value)} />
+                        <Input className="bg-slate-900 border-slate-700 text-white flex-1" placeholder="recipient@example.com" value={to} onChange={(e) => setTo(e.target.value)}
+                            ref={toRef} onFocus={() => { if (contactSuggestions.length) setShowContactSuggestions(true); }} onBlur={() => setTimeout(() => setShowContactSuggestions(false), 200)} />
+                        {showContactSuggestions && (
+                            <div className="absolute left-16 top-full mt-1 w-64 bg-slate-900 border border-slate-700 rounded-md shadow-xl z-50 max-h-[200px] overflow-y-auto">
+                                {contactSuggestions.map((c: any) => (
+                                    <div key={c.id} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 cursor-pointer" onClick={() => handleSelectContact(c)} onMouseDown={(e) => e.preventDefault()}>
+                                        <User className="h-3 w-3 text-blue-400 shrink-0" />
+                                        <span className="truncate">{c.name || c.email}</span>
+                                        <span className="text-xs text-slate-500 ml-auto">{c.email}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-3">
                         <Label className="text-slate-300 w-16 shrink-0">CC</Label>
@@ -492,7 +597,19 @@ export function Compose() {
                         </div>
                     )}
 
+                    {showSchedule && (
+                        <div className="flex gap-2 items-center pt-1">
+                            <Label className="text-slate-400 text-xs">Send at</Label>
+                            <input type="datetime-local" className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} />
+                            <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-xs h-7" onClick={handleScheduleSend} disabled={!scheduleAt}>
+                                <Clock className="h-3 w-3 mr-1" /> Schedule
+                            </Button>
+                        </div>
+                    )}
                     <div className="flex justify-end gap-2 pt-2">
+                        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-white text-xs h-7" onClick={() => setShowSchedule(!showSchedule)}>
+                            <Clock className="h-3 w-3 mr-1" /> {showSchedule ? "Hide Schedule" : "Schedule"}
+                        </Button>
                         <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => { setTo(""); setCc(""); setBcc(""); setSubject(""); setBody(""); setHtmlBody(""); setResult(null); setDraftId(null); }}>
                             Clear
                         </Button>
@@ -505,8 +622,7 @@ export function Compose() {
                             Send
                         </Button>
                     </div>
-                </CardContent>
-            </Card>
+                    {signature && <p className="text-xs text-slate-500 border-t border-slate-800 pt-2 mt-2">Signature: {signature.slice(0, 80)}...</p>}
         </div>
     );
 }

@@ -972,6 +972,87 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
 
         return import_list(list_id)
 
+    # ── Templates ─────────────────────────────────────────────────────────────
+
+    @app.get("/api/templates")
+    async def template_list(_user: str = Depends(authenticate)):
+        from .templates import list_templates
+
+        return {"templates": list_templates()}
+
+    @app.post("/api/templates")
+    async def template_add(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .templates import add_template
+
+        name = payload.get("name", "").strip()
+        if not name:
+            raise HTTPException(status_code=422, detail="name is required")
+        return add_template(name, payload.get("subject", ""), payload.get("body", ""), payload.get("html", ""), payload.get("category", ""))
+
+    @app.delete("/api/templates/{template_id}")
+    async def template_delete(template_id: str, _user: str = Depends(authenticate)):
+        from .templates import delete_template
+
+        return delete_template(template_id)
+
+    # ── Signatures ────────────────────────────────────────────────────────────
+
+    @app.get("/api/signatures")
+    async def signature_get(service: str = "default", _user: str = Depends(authenticate)):
+        from .signatures import get_signature
+
+        return get_signature(service)
+
+    @app.put("/api/signatures/{service}")
+    async def signature_set(
+        service: str,
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .signatures import set_signature
+
+        return set_signature(service, payload.get("signature", ""))
+
+    @app.delete("/api/signatures/{service}")
+    async def signature_delete(service: str, _user: str = Depends(authenticate)):
+        from .signatures import delete_signature
+
+        return delete_signature(service)
+
+    # ── Scheduled Send ────────────────────────────────────────────────────────
+
+    @app.post("/api/schedule")
+    async def schedule_create(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .scheduler import schedule_send, start_scheduler
+
+        to = payload.get("to", "").strip()
+        subject = payload.get("subject", "").strip()
+        body = payload.get("body", "").strip()
+        send_at = payload.get("send_at", 0)
+        if not to or not subject or not body or not send_at:
+            raise HTTPException(status_code=422, detail="to, subject, body, and send_at are required")
+        result = schedule_send(to, subject, body, send_at, payload.get("service", "default"))
+        start_scheduler(mcp_app)
+        return result
+
+    @app.get("/api/schedule")
+    async def schedule_list(_user: str = Depends(authenticate)):
+        from .scheduler import list_scheduled
+
+        return {"scheduled": list_scheduled()}
+
+    @app.delete("/api/schedule/{scheduled_id}")
+    async def schedule_cancel(scheduled_id: str, _user: str = Depends(authenticate)):
+        from .scheduler import cancel_scheduled
+
+        return cancel_scheduled(scheduled_id)
+
     # ── Skills ───────────────────────────────────────────────────────────────
 
     @app.get("/api/skills")

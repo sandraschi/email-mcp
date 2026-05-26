@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchWithAuth } from "@/lib/api";
 import { useToast } from "@/components/toast";
-import { Loader2, RefreshCw, Search, Trash2, Star, Paperclip, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, RefreshCw, Search, Trash2, Star, Paperclip, Download, ChevronLeft, ChevronRight, Bell, BellOff, Clock } from "lucide-react";
 
 type Email = { id: string; subject: string; from: string; date: string; read: boolean; _service?: string };
 type Attachment = { filename: string; content_type: string; size: number; content_id: string; part_index: number };
@@ -44,6 +44,38 @@ export function MailReader() {
     const resizeRef = useRef<HTMLDivElement>(null);
     const dragging = useRef(false);
     const [listWidth, setListWidth] = useState(380);
+    const [notifyEnabled, setNotifyEnabled] = useState(false);
+    const [snoozedIds, setSnoozedIds] = useState<Set<string>>(new Set());
+    const prevEmailIds = useRef<Set<string>>(new Set());
+
+    // Request notification permission
+    useEffect(() => {
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+    }, []);
+
+    // Check for new emails and notify
+    useEffect(() => {
+        if (!notifyEnabled || emails.length === 0) return;
+        const currentIds = new Set(emails.map(e => e.id));
+        const newIds = [...currentIds].filter(id => !prevEmailIds.current.has(id));
+        if (newIds.length > 0 && "Notification" in window && Notification.permission === "granted") {
+            const newEmails = emails.filter(e => newIds.includes(e.id));
+            newEmails.slice(0, 3).forEach(e => {
+                new Notification(`📬 ${e.from}`, { body: e.subject || "(No Subject)", icon: "/favicon.ico" });
+            });
+        }
+        prevEmailIds.current = currentIds;
+    }, [emails, notifyEnabled]);
+
+    const handleSnooze = (emailId: string) => {
+        setSnoozedIds(prev => new Set(prev).add(emailId));
+        setTimeout(() => setSnoozedIds(prev => { const n = new Set(prev); n.delete(emailId); return n; }), 30 * 60 * 1000); // 30 min
+        toast("info", "Snoozed for 30 minutes");
+    };
+
+    const filteredEmails = emails.filter(e => !snoozedIds.has(e.id));
 
     const fetchEmails = useCallback(async () => {
         setLoading(true);
@@ -135,6 +167,9 @@ export function MailReader() {
                     <input className="w-full bg-slate-900 border border-slate-700 rounded-md pl-7 pr-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder={selectedService === "unified" ? "Search (uses first service)" : "Search..."} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                 </div>
                 <label className="flex items-center gap-1 text-xs text-slate-400 cursor-pointer"><input type="checkbox" checked={unreadOnly} onChange={(e) => setUnreadOnly(e.target.checked)} className="accent-blue-500" /> Unread</label>
+                <button className={`p-1.5 rounded text-xs ${notifyEnabled ? "text-blue-400" : "text-slate-500 hover:text-white"}`} onClick={() => setNotifyEnabled(!notifyEnabled)} title={notifyEnabled ? "Notifications on" : "Notifications off"}>
+                    {notifyEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                </button>
                 <button className="p-1.5 text-slate-500 hover:text-white rounded" onClick={fetchEmails}><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button>
             </div>
 
@@ -144,9 +179,9 @@ export function MailReader() {
                     <div className="flex-1 overflow-y-auto">
                         {loading && emails.length === 0 ? <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-blue-500" /></div>
                         : emails.length === 0 ? <div className="text-slate-500 text-sm text-center py-12 italic">No messages</div>
-                        : emails.map(email => (
+                        : filteredEmails.map(email => (
                             <div key={`${email._service}-${email.id}`}
-                                className={`flex items-start gap-2.5 px-3 py-2.5 cursor-pointer border-b border-slate-800/50 transition-colors ${selectedEmail?.id === email.id ? "bg-blue-950/20" : "hover:bg-slate-900/30"} ${!email.read ? "bg-slate-900/20" : ""}`}
+                                className={`group flex items-start gap-2.5 px-3 py-2.5 cursor-pointer border-b border-slate-800/50 transition-colors ${selectedEmail?.id === email.id ? "bg-blue-950/20" : "hover:bg-slate-900/30"} ${!email.read ? "bg-slate-900/20" : ""}`}
                                 onClick={() => handleSelect(email)}>
                                 <Avatar name={email.from} email={email.from} />
                                 <div className="flex-1 min-w-0">
@@ -157,6 +192,7 @@ export function MailReader() {
                                     <p className={`text-xs truncate mt-0.5 ${email.read ? "text-slate-500" : "text-slate-300"}`}>{email.subject || "(No Subject)"}</p>
                                     {email._service && <p className="text-[10px] text-blue-400 mt-0.5">{email._service}</p>}
                                 </div>
+                                <button onClick={(e) => { e.stopPropagation(); handleSnooze(email.id); }} className="p-1 text-slate-600 hover:text-amber-400 opacity-0 group-hover:opacity-100 shrink-0" title="Snooze 30min"><Clock className="h-3 w-3" /></button>
                                 <button onClick={(e) => handleDelete(e, email.id)} className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0"><Trash2 className="h-3 w-3" /></button>
                             </div>
                         ))}
