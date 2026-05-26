@@ -230,6 +230,23 @@ class EmailService(ABC):
         """Delete/move-to-trash a single email by ID."""
         return {"success": False, "error": f"delete_message not supported for {self.name}"}
 
+    async def move_message(
+        self,
+        from_folder: str,
+        to_folder: str,
+        email_id: str,
+    ) -> dict[str, Any]:
+        """Move a single email between folders (COPY + DELETE)."""
+        return {"success": False, "error": f"move_message not supported for {self.name}"}
+
+    async def flag_spam(
+        self,
+        folder: str,
+        email_id: str,
+    ) -> dict[str, Any]:
+        """Flag an email as spam and move to Spam folder."""
+        return {"success": False, "error": f"flag_spam not supported for {self.name}"}
+
     async def mark_read(
         self,
         folder: str,
@@ -603,6 +620,64 @@ class SMTPEmailService(EmailService):
 
         except Exception as e:
             return {"success": False, "error": f"IMAP delete failed: {e!s}"}
+
+    async def move_message(
+        self,
+        from_folder: str,
+        to_folder: str,
+        email_id: str,
+    ) -> dict[str, Any]:
+        """Move a single email between IMAP folders (COPY + DELETE)."""
+        if not self.imap_server or not self.imap_user or not self.imap_password:
+            return {"success": False, "error": f"IMAP not configured for {self.name}"}
+        try:
+
+            def move_sync():
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail.login(self.imap_user, self.imap_password)
+                mail.select(from_folder)
+                eid = email_id.encode() if isinstance(email_id, str) else email_id
+                mail.copy(eid, to_folder)
+                mail.store(eid, "+FLAGS", "\\Deleted")
+                mail.expunge()
+                mail.close()
+                mail.logout()
+                return True
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, move_sync)
+            return {"success": True, "service": self.name, "email_id": email_id, "message": f"Moved {email_id} to {to_folder}"}
+        except Exception as e:
+            return {"success": False, "error": f"IMAP move failed: {e!s}"}
+
+    async def flag_spam(
+        self,
+        folder: str,
+        email_id: str,
+    ) -> dict[str, Any]:
+        """Flag a single email as spam and move to Spam folder."""
+        if not self.imap_server or not self.imap_user or not self.imap_password:
+            return {"success": False, "error": f"IMAP not configured for {self.name}"}
+        try:
+
+            def spam_sync():
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail.login(self.imap_user, self.imap_password)
+                mail.select(folder)
+                eid = email_id.encode() if isinstance(email_id, str) else email_id
+                mail.store(eid, "+FLAGS", "\\Junk")
+                mail.copy(eid, "Spam")
+                mail.store(eid, "+FLAGS", "\\Deleted")
+                mail.expunge()
+                mail.close()
+                mail.logout()
+                return True
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, spam_sync)
+            return {"success": True, "service": self.name, "email_id": email_id, "message": f"Flagged {email_id} as spam"}
+        except Exception as e:
+            return {"success": False, "error": f"IMAP spam flag failed: {e!s}"}
 
     async def mark_read(
         self,
@@ -2239,6 +2314,37 @@ class EmailMCP:
             if service not in self.services:
                 return {"success": False, "error": f"Service {service!r} not available"}
             return await self.services[service].delete_message(folder, email_id)
+
+        @self.mcp.tool()
+        async def move_email(
+            email_id: str,
+            to_folder: str,
+            service: str = "default",
+            folder: str = "INBOX",
+        ) -> dict[str, Any]:
+            """Move an email between IMAP folders (COPY + DELETE).
+
+            ## Return Format
+            {success, service, email_id, message}
+            """
+            if service not in self.services:
+                return {"success": False, "error": f"Service {service!r} not available"}
+            return await self.services[service].move_message(folder, to_folder, email_id)
+
+        @self.mcp.tool()
+        async def flag_spam(
+            email_id: str,
+            service: str = "default",
+            folder: str = "INBOX",
+        ) -> dict[str, Any]:
+            """Flag an email as spam (Junk flag + move to Spam folder).
+
+            ## Return Format
+            {success, service, email_id, message}
+            """
+            if service not in self.services:
+                return {"success": False, "error": f"Service {service!r} not available"}
+            return await self.services[service].flag_spam(folder, email_id)
 
         @self.mcp.tool()
         async def mark_email_read(

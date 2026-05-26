@@ -12,6 +12,8 @@ type Rule = { id: string; name: string; match_field: string; match_pattern: stri
 const ACTIONS = [
     { value: "mark_read", label: "Mark as Read", color: "text-blue-400" },
     { value: "star", label: "Star / Flag", color: "text-amber-400" },
+    { value: "move", label: "Move to Folder", color: "text-indigo-400" },
+    { value: "spam", label: "Flag as Spam", color: "text-red-400" },
     { value: "delete", label: "Delete", color: "text-red-400" },
     { value: "forward", label: "Forward to", color: "text-purple-400" },
     { value: "notify", label: "Notify (log)", color: "text-emerald-400" },
@@ -93,6 +95,9 @@ export function Rules() {
                             </div>
                             {newRule.filter_action === "forward" && (
                                 <div className="md:col-span-2"><Label className="text-slate-300">Forward To</Label><Input className="bg-slate-900 border-slate-700 text-white mt-1" placeholder="target@example.com" value={newRule.filter_target} onChange={(e) => setNewRule({ ...newRule, filter_target: e.target.value })} /></div>
+                            )}
+                            {newRule.filter_action === "move" && (
+                                <div className="md:col-span-2"><Label className="text-slate-300">Target Folder</Label><Input className="bg-slate-900 border-slate-700 text-white mt-1" placeholder="Archive / Projects / Trash" value={newRule.filter_target} onChange={(e) => setNewRule({ ...newRule, filter_target: e.target.value })} /></div>
                             )}
                         </div>
                         <div className="flex gap-2">

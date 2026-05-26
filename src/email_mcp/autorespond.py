@@ -302,6 +302,20 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
             elif filter_action == "delete" and email_id:
                 await mcp_app.call_tool("delete_email", {"email_id": email_id, "service": svc, "folder": folder})
                 logger.info("Filter: deleted %s", email_id)
+            elif filter_action == "move":
+                target = rule.get("filter_target", "")
+                if target and email_id:
+                    try:
+                        await mcp_app.call_tool("move_email", {"email_id": email_id, "to_folder": target, "service": svc, "folder": folder})
+                        logger.info("Filter: moved %s to %s", email_id, target)
+                    except Exception as e:
+                        logger.warning("Filter move failed: %s", e)
+            elif filter_action == "spam" and email_id:
+                try:
+                    await mcp_app.call_tool("flag_spam", {"email_id": email_id, "service": svc, "folder": folder})
+                    logger.info("Filter: flagged %s as spam", email_id)
+                except Exception as e:
+                    logger.warning("Filter spam flag failed: %s", e)
             elif filter_action == "notify":
                 logger.info("Filter: NOTIFY — matched email subject=%s from=%s", email.get("subject", ""), email.get("from", ""))
             elif filter_action == "forward":
