@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchWithAuth } from "@/lib/api";
 import { useToast } from "@/components/toast";
-import { Loader2, RefreshCw, Search, Trash2, Star, Paperclip, Download, ChevronLeft, ChevronRight, Bell, BellOff, Clock } from "lucide-react";
+import { Loader2, RefreshCw, Search, Trash2, Star, Paperclip, Download, ChevronLeft, ChevronRight, Bell, BellOff, Clock, Archive } from "lucide-react";
 
 type Email = { id: string; subject: string; from: string; date: string; read: boolean; _service?: string };
 type Attachment = { filename: string; content_type: string; size: number; content_id: string; part_index: number };
@@ -28,7 +28,7 @@ function formatSize(bytes: number): string {
     return `${(bytes / 1048576).toFixed(1)}MB`;
 }
 
-function MailRow({ email, selectedEmail, onSelect, onDelete, onSnooze, timeAgo, indent }: { email: Email; selectedEmail: EmailDetail | null; onSelect: (e: Email) => void; onDelete: (e: React.MouseEvent, id: string) => void; onSnooze: (id: string) => void; timeAgo: (s: string) => string; indent?: boolean }) {
+function MailRow({ email, selectedEmail, onSelect, onDelete, onSnooze, onArchive, onStar, timeAgo, indent, starred }: { email: Email; selectedEmail: EmailDetail | null; onSelect: (e: Email) => void; onDelete: (e: React.MouseEvent, id: string) => void; onSnooze: (id: string) => void; onArchive?: (e: React.MouseEvent, id: string) => void; onStar?: (e: React.MouseEvent, id: string) => void; timeAgo: (s: string) => string; indent?: boolean; starred?: boolean }) {
     return (
         <div className={`group flex items-start gap-2.5 px-3 py-2.5 cursor-pointer border-b border-slate-800/50 transition-colors ${selectedEmail?.id === email.id ? "bg-blue-950/20" : "hover:bg-slate-900/30"} ${!email.read ? "bg-slate-900/20" : ""} ${indent ? "pl-8" : ""}`}
             onClick={() => onSelect(email)}>
@@ -41,6 +41,8 @@ function MailRow({ email, selectedEmail, onSelect, onDelete, onSnooze, timeAgo, 
                 <p className={`text-xs truncate mt-0.5 ${email.read ? "text-slate-500" : "text-slate-300"}`}>{email.subject || "(No Subject)"}</p>
                 {email._service && <p className="text-[10px] text-blue-400 mt-0.5">{email._service}</p>}
             </div>
+            {onStar && <button onClick={(e) => { e.stopPropagation(); onStar(e, email.id); }} className={`p-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ${starred ? "opacity-100 text-amber-400" : "text-slate-600 hover:text-amber-400"}`}><Star className="h-3 w-3" /></button>}
+            {onArchive && <button onClick={(e) => { e.stopPropagation(); onArchive(e, email.id); }} className="p-1 text-slate-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 shrink-0" title="Archive"><Archive className="h-3 w-3" /></button>}
             <button onClick={(e) => { e.stopPropagation(); onSnooze(email.id); }} className="p-1 text-slate-600 hover:text-amber-400 opacity-0 group-hover:opacity-100 shrink-0" title="Snooze 30min"><Clock className="h-3 w-3" /></button>
             <button onClick={(e) => onDelete(e, email.id)} className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0"><Trash2 className="h-3 w-3" /></button>
         </div>
@@ -65,6 +67,7 @@ export function MailReader() {
     const [listWidth, setListWidth] = useState(380);
     const [notifyEnabled, setNotifyEnabled] = useState(false);
     const [snoozedIds, setSnoozedIds] = useState<Set<string>>(new Set());
+    const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
     const [threaded, setThreaded] = useState(false);
     const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
     const prevEmailIds = useRef<Set<string>>(new Set());
@@ -94,6 +97,21 @@ export function MailReader() {
         setSnoozedIds(prev => new Set(prev).add(emailId));
         setTimeout(() => setSnoozedIds(prev => { const n = new Set(prev); n.delete(emailId); return n; }), 30 * 60 * 1000); // 30 min
         toast("info", "Snoozed for 30 minutes");
+    };
+
+    const handleArchive = async (e: React.MouseEvent, emailId: string) => {
+        e.stopPropagation();
+        const svc = selectedEmail?._service || selectedService;
+        try {
+            await fetchWithAuth(`/api/inbox/${encodeURIComponent(emailId)}?service=${encodeURIComponent(svc)}&folder=${folder}`, { method: "DELETE" });
+            setEmails(prev => prev.filter(e => e.id !== emailId));
+            if (selectedEmail?.id === emailId) setSelectedEmail(null);
+            toast("success", "Archived");
+        } catch { toast("error", "Archive failed"); }
+    };
+
+    const handleStar = async (_e: React.MouseEvent, emailId: string) => {
+        setStarredIds(prev => { const n = new Set(prev); n.has(emailId) ? n.delete(emailId) : n.add(emailId); return n; });
     };
 
     const filteredEmails = emails.filter(e => !snoozedIds.has(e.id));
@@ -221,7 +239,7 @@ export function MailReader() {
                         {loading && emails.length === 0 ? <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-blue-500" /></div>
                         : emails.length === 0 ? <div className="text-slate-500 text-sm text-center py-12 italic">No messages</div>
                         : !threaded ? filteredEmails.map(email => (
-                            <MailRow key={`${email._service}-${email.id}`} email={email} selectedEmail={selectedEmail} onSelect={handleSelect} onDelete={handleDelete} onSnooze={handleSnooze} timeAgo={timeAgo} />
+                            <MailRow key={`${email._service}-${email.id}`} email={email} selectedEmail={selectedEmail} onSelect={handleSelect} onDelete={handleDelete} onSnooze={handleSnooze} onArchive={handleArchive} onStar={handleStar} starred={starredIds.has(email.id)} timeAgo={timeAgo} />
                         )) : threadKeys.map(key => {
                             const thread = threads.get(key)!;
                             const latest = thread[0];
@@ -240,7 +258,7 @@ export function MailReader() {
                                         </div>
                                     </div>
                                     {expanded && thread.map(email => (
-                                        <MailRow key={`${email._service}-${email.id}`} email={email} selectedEmail={selectedEmail} onSelect={handleSelect} onDelete={handleDelete} onSnooze={handleSnooze} timeAgo={timeAgo} indent />
+                                        <MailRow key={`${email._service}-${email.id}`} email={email} selectedEmail={selectedEmail} onSelect={handleSelect} onDelete={handleDelete} onSnooze={handleSnooze} onArchive={handleArchive} onStar={handleStar} starred={starredIds.has(email.id)} timeAgo={timeAgo} indent />
                                     ))}
                                 </div>
                             );

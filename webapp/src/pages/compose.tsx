@@ -180,7 +180,11 @@ export function Compose() {
         setSending(true);
         setResult(null);
         try {
-            const payload: Record<string, unknown> = { to: to.trim(), subject: subject.trim(), body: body.trim(), service, ...(cc.trim() ? { cc: cc.split(",").map((s) => s.trim()).filter(Boolean) } : {}), ...(bcc.trim() ? { bcc: bcc.split(",").map((s) => s.trim()).filter(Boolean) } : {}), ...(htmlBody && useHtml ? { html: htmlBody } : {}) };
+            let finalBody = body.trim();
+            if (signature && !finalBody.includes(signature.trim().slice(0, 20))) {
+                finalBody += `\n\n${signature}`;
+            }
+            const payload: Record<string, unknown> = { to: to.trim(), subject: subject.trim(), body: finalBody, service, ...(cc.trim() ? { cc: cc.split(",").map((s) => s.trim()).filter(Boolean) } : {}), ...(bcc.trim() ? { bcc: bcc.split(",").map((s) => s.trim()).filter(Boolean) } : {}), ...(htmlBody && useHtml ? { html: htmlBody } : {}) };
             const data = await fetchWithAuth("/api/send", { method: "POST", body: JSON.stringify(payload) });
             if (data.success) {
                 setResult({ ok: true, msg: `Sent via ${data.service || service}.` });
