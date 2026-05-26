@@ -627,6 +627,8 @@ export function Compose() {
                         </Button>
                     </div>
                     {signature && <p className="text-xs text-slate-500 border-t border-slate-800 pt-2 mt-2">Signature: {signature.slice(0, 80)}...</p>}
+                </CardContent>
+            </Card>
         </div>
     );
 }
