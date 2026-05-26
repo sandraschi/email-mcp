@@ -88,6 +88,8 @@ def add_rule(
         "response_mode": response_mode,
         "spoof_tone": spoof_tone,
         "spam_action": spam_action,
+        "filter_action": "",
+        "filter_target": "",
         "enabled": True,
         "created_at": int(time.time()),
     }
@@ -100,7 +102,8 @@ def update_rule(rule_id: str, updates: dict[str, Any]) -> dict[str, Any]:
     _load_rules()
     for r in _RULES:
         if r["id"] == rule_id:
-            for key in ("name", "match_field", "match_pattern", "reply_body", "reply_subject", "use_ai", "auto_send", "ai_prompt", "service", "enabled"):
+            keys = ("name", "match_field", "match_pattern", "reply_body", "reply_subject", "use_ai", "auto_send", "ai_prompt", "service", "response_mode", "spoof_tone", "spam_action", "filter_action", "filter_target", "enabled")
+            for key in keys:
                 if key in updates:
                     r[key] = updates[key]
             _save_rules()
@@ -279,6 +282,28 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
 
     reply_subject = rule.get("reply_subject", "") or f"Re: {email.get('subject', '')}"
     reply_body = rule.get("reply_body", "")
+
+    # Filter actions — run on matched emails regardless of reply mode
+    filter_action = rule.get("filter_action", "")
+    if filter_action and mcp_app:
+        email_id = email.get("id", "")
+        folder = email.get("folder", "INBOX")
+        svc = rule.get("service", "default")
+        try:
+            if filter_action == "mark_read" and email_id:
+                await mcp_app.call_tool("mark_email_read", {"email_id": email_id, "service": svc, "folder": folder})
+                logger.info("Filter: marked %s as read", email_id)
+            elif filter_action == "star" and email_id:
+                logger.info("Filter: starred %s (stub)", email_id)
+            elif filter_action == "forward":
+                target = rule.get("filter_target", "")
+                if target and email_id:
+                    result = await mcp_app.call_tool("fetch_email_detail", {"email_id": email_id, "service": svc, "folder": folder})
+                    if isinstance(result, dict) and result.get("success"):
+                        await mcp_app.call_tool("send_email", {"to": target, "subject": f"Fwd: {email.get('subject', '')}", "body": f"Forwarded from {email.get('from', '')}:\n\n{result.get('text_body', '')}", "service": svc})
+                        logger.info("Filter: forwarded %s to %s", email_id, target)
+        except Exception as e:
+            logger.warning("Filter action failed: %s", e)
 
     # Spoof mode — generate hilarious reply to scammers
     response_mode = rule.get("response_mode", "normal")

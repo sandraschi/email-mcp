@@ -28,6 +28,25 @@ function formatSize(bytes: number): string {
     return `${(bytes / 1048576).toFixed(1)}MB`;
 }
 
+function MailRow({ email, selectedEmail, onSelect, onDelete, onSnooze, timeAgo, indent }: { email: Email; selectedEmail: EmailDetail | null; onSelect: (e: Email) => void; onDelete: (e: React.MouseEvent, id: string) => void; onSnooze: (id: string) => void; timeAgo: (s: string) => string; indent?: boolean }) {
+    return (
+        <div className={`group flex items-start gap-2.5 px-3 py-2.5 cursor-pointer border-b border-slate-800/50 transition-colors ${selectedEmail?.id === email.id ? "bg-blue-950/20" : "hover:bg-slate-900/30"} ${!email.read ? "bg-slate-900/20" : ""} ${indent ? "pl-8" : ""}`}
+            onClick={() => onSelect(email)}>
+            <Avatar name={email.from} email={email.from} />
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                    <p className={`text-sm truncate ${email.read ? "text-slate-300" : "text-white font-medium"}`}>{email.from}</p>
+                    <span className="text-xs text-slate-500 shrink-0">{timeAgo(email.date)}</span>
+                </div>
+                <p className={`text-xs truncate mt-0.5 ${email.read ? "text-slate-500" : "text-slate-300"}`}>{email.subject || "(No Subject)"}</p>
+                {email._service && <p className="text-[10px] text-blue-400 mt-0.5">{email._service}</p>}
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); onSnooze(email.id); }} className="p-1 text-slate-600 hover:text-amber-400 opacity-0 group-hover:opacity-100 shrink-0" title="Snooze 30min"><Clock className="h-3 w-3" /></button>
+            <button onClick={(e) => onDelete(e, email.id)} className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0"><Trash2 className="h-3 w-3" /></button>
+        </div>
+    );
+}
+
 export function MailReader() {
     const { toast } = useToast();
     const [emails, setEmails] = useState<Email[]>([]);
@@ -46,6 +65,8 @@ export function MailReader() {
     const [listWidth, setListWidth] = useState(380);
     const [notifyEnabled, setNotifyEnabled] = useState(false);
     const [snoozedIds, setSnoozedIds] = useState<Set<string>>(new Set());
+    const [threaded, setThreaded] = useState(false);
+    const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
     const prevEmailIds = useRef<Set<string>>(new Set());
 
     // Request notification permission
@@ -76,6 +97,23 @@ export function MailReader() {
     };
 
     const filteredEmails = emails.filter(e => !snoozedIds.has(e.id));
+
+    // Threading
+    function normalizeSubject(subj: string): string {
+        return subj.replace(/^(?:\[.*?\]\s*)?(?:Re|Fwd|Aw|回复|RE|FWD|AW|回覆|Antw|Sv|VS):\s*/i, "").replace(/\[.*?\]/g, "").trim().toLowerCase() || subj.toLowerCase();
+    }
+    const threads = new Map<string, Email[]>();
+    if (threaded) {
+        filteredEmails.forEach(email => {
+            const key = normalizeSubject(email.subject || "");
+            if (!threads.has(key)) threads.set(key, []);
+            threads.get(key)!.push(email);
+        });
+    }
+    const threadKeys = threaded ? [...threads.keys()].sort((a, b) => {
+        const aDate = threads.get(a)![0]?.date || ""; const bDate = threads.get(b)![0]?.date || "";
+        return bDate.localeCompare(aDate);
+    }) : [];
 
     const fetchEmails = useCallback(async () => {
         setLoading(true);
@@ -170,6 +208,9 @@ export function MailReader() {
                 <button className={`p-1.5 rounded text-xs ${notifyEnabled ? "text-blue-400" : "text-slate-500 hover:text-white"}`} onClick={() => setNotifyEnabled(!notifyEnabled)} title={notifyEnabled ? "Notifications on" : "Notifications off"}>
                     {notifyEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
                 </button>
+                <button className={`p-1.5 rounded text-xs ${threaded ? "text-indigo-400" : "text-slate-500 hover:text-white"}`} onClick={() => { setThreaded(!threaded); setExpandedThreads(new Set()); }} title={threaded ? "Threaded view" : "Flat view"}>
+                    <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                </button>
                 <button className="p-1.5 text-slate-500 hover:text-white rounded" onClick={fetchEmails}><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button>
             </div>
 
@@ -179,23 +220,31 @@ export function MailReader() {
                     <div className="flex-1 overflow-y-auto">
                         {loading && emails.length === 0 ? <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-blue-500" /></div>
                         : emails.length === 0 ? <div className="text-slate-500 text-sm text-center py-12 italic">No messages</div>
-                        : filteredEmails.map(email => (
-                            <div key={`${email._service}-${email.id}`}
-                                className={`group flex items-start gap-2.5 px-3 py-2.5 cursor-pointer border-b border-slate-800/50 transition-colors ${selectedEmail?.id === email.id ? "bg-blue-950/20" : "hover:bg-slate-900/30"} ${!email.read ? "bg-slate-900/20" : ""}`}
-                                onClick={() => handleSelect(email)}>
-                                <Avatar name={email.from} email={email.from} />
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <p className={`text-sm truncate ${email.read ? "text-slate-300" : "text-white font-medium"}`}>{email.from}</p>
-                                        <span className="text-xs text-slate-500 shrink-0">{timeAgo(email.date)}</span>
+                        : !threaded ? filteredEmails.map(email => (
+                            <MailRow key={`${email._service}-${email.id}`} email={email} selectedEmail={selectedEmail} onSelect={handleSelect} onDelete={handleDelete} onSnooze={handleSnooze} timeAgo={timeAgo} />
+                        )) : threadKeys.map(key => {
+                            const thread = threads.get(key)!;
+                            const latest = thread[0];
+                            const expanded = expandedThreads.has(key);
+                            return (
+                                <div key={key}>
+                                    <div className="group flex items-start gap-2.5 px-3 py-2.5 cursor-pointer border-b border-slate-800/50 transition-colors hover:bg-slate-900/30 bg-slate-900/10"
+                                        onClick={() => setExpandedThreads(prev => { const n = new Set(prev); expanded ? n.delete(key) : n.add(key); return n; })}>
+                                        <div className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-medium shrink-0">{thread.length}</div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <p className="text-sm text-white font-medium truncate">{latest.subject || "(No Subject)"}</p>
+                                                <span className="text-xs text-slate-500 shrink-0">{timeAgo(latest.date)}</span>
+                                            </div>
+                                            <p className="text-xs text-slate-400 truncate mt-0.5">{thread.slice(0, 3).map(e => e.from).join(", ")}{thread.length > 3 ? ` +${thread.length - 3}` : ""}</p>
+                                        </div>
                                     </div>
-                                    <p className={`text-xs truncate mt-0.5 ${email.read ? "text-slate-500" : "text-slate-300"}`}>{email.subject || "(No Subject)"}</p>
-                                    {email._service && <p className="text-[10px] text-blue-400 mt-0.5">{email._service}</p>}
+                                    {expanded && thread.map(email => (
+                                        <MailRow key={`${email._service}-${email.id}`} email={email} selectedEmail={selectedEmail} onSelect={handleSelect} onDelete={handleDelete} onSnooze={handleSnooze} timeAgo={timeAgo} indent />
+                                    ))}
                                 </div>
-                                <button onClick={(e) => { e.stopPropagation(); handleSnooze(email.id); }} className="p-1 text-slate-600 hover:text-amber-400 opacity-0 group-hover:opacity-100 shrink-0" title="Snooze 30min"><Clock className="h-3 w-3" /></button>
-                                <button onClick={(e) => handleDelete(e, email.id)} className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0"><Trash2 className="h-3 w-3" /></button>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 
