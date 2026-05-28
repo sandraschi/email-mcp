@@ -1,9 +1,9 @@
-[build-system]
+  EDITED  D:\Dev\repos\email-mcp\pyproject.toml [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "schip-mcp-email"
+name = "email-mcp"
 version = "0.4.1"
 description = "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations (FastMCP 3.2, Prefab UI)"
 readme = "README.md"
