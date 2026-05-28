@@ -79,3 +79,5 @@ cd webapp && npx playwright test && cd ..                    # 17 Playwright tes
 ### Ports
 - 10812: Vite frontend
 - 10813: FastAPI backend + MCP HTTP
+
+Install docs: follow mcp-central-docs/standards/AGENT_INSTALL_REFERENCE.md
