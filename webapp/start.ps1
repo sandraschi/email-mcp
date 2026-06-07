@@ -1,26 +1,23 @@
-param(
+﻿param(
     [switch]$Headless,
     [switch]$BackendOnly,
     [switch]$FrontendOnly,
     [switch]$NoBrowser
 )
 
-. "D:/Dev/repos/mcp-central-docs/standards/FleetStartMode.ps1"
-$FleetStart = Initialize-FleetStartMode @PSBoundParameters
-Enter-FleetHeadlessConsole -Headless:$Headless -BackendOnly:$BackendOnly
-
-# Webapp Start - Standardized SOTA (Auto-Repaired V2.5)
 $WebPort = 10812
 $BackendPort = 10813
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 
-# 1. Kill any process squatting on the ports
-Write-Host "Checking for port squatters on $WebPort and $BackendPort..." -ForegroundColor Yellow
-$pids = Get-NetTCPConnection -LocalPort $WebPort, $BackendPort -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -gt 4 } | Select-Object -ExpandProperty OwningProcess -Unique
-foreach ($p in $pids) {
-    Write-Host "Found squatter (PID: $p). Terminating..." -ForegroundColor Red
-    try { Stop-Process -Id $p -Force -ErrorAction Stop } catch { Write-Host "Warning: Could not terminate PID $p." -ForegroundColor Gray }
+$FleetStartPath = Join-Path $ProjectRoot "scripts\FleetStartMode.ps1"
+if (-not (Test-Path -LiteralPath $FleetStartPath)) {
+    Write-Host "ERROR: Missing vendored launcher helper: $FleetStartPath" -ForegroundColor Red
+    exit 1
 }
+. $FleetStartPath
+$FleetStart = Initialize-FleetStartMode @PSBoundParameters
+Enter-FleetHeadlessConsole -Headless:$Headless -BackendOnly:$BackendOnly
+Stop-FleetPortSquatters -Ports @($WebPort, $BackendPort) -Label "email-mcp"
 
 # 2. Setup
 Set-Location $PSScriptRoot
@@ -34,7 +31,7 @@ $backendCmd = "`$env:PYTHONPATH = '$ProjectRoot;$ProjectRoot\src'; Set-Location 
 
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd -WorkingDirectory $ProjectRoot -WindowStyle Normal
 
-# Wait until uvicorn accepts TCP (dashboard /api/* requires Basic auth — port open is enough)
+# Wait until uvicorn accepts TCP (dashboard /api/* requires Basic auth - port open is enough)
 $ready = $false
 for ($i = 0; $i -lt 90; $i++) {
     try {
@@ -66,6 +63,8 @@ Start-Process powershell -ArgumentList "-NoProfile", "-WindowStyle", "Hidden", "
 Write-Host "Browser will open automatically when Vite is ready." -ForegroundColor Gray
 if (-not $FleetStart.RunFrontend) { return }
 npm run dev -- --port $WebPort --host
+
+
 
 
 

@@ -62,7 +62,7 @@ if (-not $FrontendOnly) {
     if ($ready) {
         Write-Host "[backend] Ready at http://127.0.0.1:$BackendPort" -ForegroundColor Green
     } else {
-        Write-Host "[backend] Did not respond in 15s — check logs" -ForegroundColor Red
+        Write-Host "[backend] Did not respond in 15s - check logs" -ForegroundColor Red
     }
 }
 
@@ -95,7 +95,7 @@ if ($fready) {
     Write-Host "[frontend] Ready at $url" -ForegroundColor Green
     if (-not $NoBrowser) { Start-Process $url }
 } else {
-    Write-Host "[frontend] Not yet ready — opening anyway: $url" -ForegroundColor Yellow
+    Write-Host "[frontend] Not yet ready - opening anyway: $url" -ForegroundColor Yellow
     if (-not $NoBrowser) { Start-Process $url }
 }
 
