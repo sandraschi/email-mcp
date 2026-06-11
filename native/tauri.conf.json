@@ -5,11 +5,13 @@
   "build": {
     "frontendDist": "../webapp/dist",
     "devUrl": "http://localhost:10812",
-    "beforeDevCommand": "npm --prefix ../webapp run dev"
+    "beforeDevCommand": "npm --prefix ../webapp run dev",
+    "beforeBuildCommand": "pwsh -NoProfile -Command \"$env:VITE_API_BASE='http://127.0.0.1:10813'; npm --prefix ../webapp run build\""
   },
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Email MCP",
         "width": 1100,
         "height": 750,
@@ -23,13 +25,41 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
-    "externalBin": ["binaries/email-mcp-backend"]
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "resources/email-mcp-backend.exe",
+      "../scripts/install-mcp-clients.ps1"
+    ],
+    "targets": [
+      "nsis"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "skip"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "createDesktopShortcut": true,
+        "createStartMenuShortcut": true,
+        "installerHooks": "./windows/hooks.nsh"
+      }
+    }
   },
   "plugins": {
-    "shell": { "open": true },
-    "fs": { "requireLiteralLeadingDot": false },
-    "process": { "all": true }
+    "shell": {
+      "open": true
+    },
+    "fs": {
+      "requireLiteralLeadingDot": false
+    },
+    "process": {
+      "all": true
+    }
   }
 }

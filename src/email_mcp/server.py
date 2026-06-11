@@ -2942,9 +2942,15 @@ email_mcp = EmailMCP()
 _mcp_http = email_mcp.mcp.http_app(path="/")
 app = FastAPI(title="Email-MCP", lifespan=_mcp_http.lifespan)
 
+_tauri_mode = os.environ.get("EMAIL_MCP_TAURI", "").lower() in ("1", "true")
+_cors_origins = ["*"]
+if _tauri_mode:
+    _cors_origins = ["*"]  # still permissive but allows tauri.localhost
+    _cors_origins.append("http://tauri.localhost")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
