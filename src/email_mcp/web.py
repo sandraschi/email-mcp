@@ -30,6 +30,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import time
@@ -67,6 +68,20 @@ def _extract_tool_result(result: Any) -> dict[str, Any]:
             except (json.JSONDecodeError, TypeError, ValueError):
                 pass
     return {"result": str(result) if result is not None else None}
+
+
+
+async def _safe_call(mcp_app, tool_name: str, params: dict | None = None) -> dict:
+    """Call an MCP tool with guardrails. Raises HTTPException on failure."""
+    try:
+        result = await mcp_app.call_tool(tool_name, params or {})
+        return _extract_tool_result(result)
+    except asyncio.CancelledError:
+        raise
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"{tool_name}: {exc}") from exc
 
 
 # In-memory draft store (survives one process lifetime)
@@ -1086,7 +1101,8 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         resources = await mcp_app.list_resources()
         skills: list[dict[str, str]] = []
         for r in resources:
-            uri = getattr(r, "uri", None) or str(getattr(r, "name", ""))
+            raw = getattr(r, "uri", None) or getattr(r, "name", "")
+            uri = str(raw)
             if uri.startswith("skill://") and "/SKILL.md" in uri:
                 name = uri.replace("skill://", "").split("/")[0]
                 skills.append({"name": name, "uri": uri})
