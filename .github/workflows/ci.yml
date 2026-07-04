@@ -2,25 +2,8 @@ name: Email MCP CI/CD
 
 on:
   push:
-    branches:
-      - main
-      - develop
-    paths:
-      - 'src/email_mcp/**'
-      - 'tests/**'
-      - 'pyproject.toml'
-      - '.github/workflows/ci.yml'
-      - '.pre-commit-config.yaml'
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - 'src/email_mcp/**'
-      - 'tests/**'
-      - 'pyproject.toml'
-      - '.github/workflows/ci.yml'
-      - '.pre-commit-config.yaml'
+    tags: ["v*"]
+  workflow_dispatch:
 
 jobs:
   build:

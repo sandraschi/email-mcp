@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Print repository statistics (Markdown, tools/, MCP tools, FastMCP). Run from repo root.
 
-Vendored across fleet justfiles — keep self-contained (stdlib only).
+Vendored across fleet justfiles -- keep self-contained (stdlib only).
 """
 
 from __future__ import annotations
@@ -203,8 +203,8 @@ def main() -> None:
     lines = [
         f"=== Repo stats: {name or '?'} ({folder}) ===",
         f"pyproject: {name or '(no name)'}  {version or ''}  |  Python {requires_py or '(unknown)'}",
-        f"FastMCP (declared in pyproject): {fastmcp_decl or '—'}",
-        f"FastMCP (installed in current env): {fastmcp_installed or '—'}",
+        f"FastMCP (declared in pyproject): {fastmcp_decl or '--'}",
+        f"FastMCP (installed in current env): {fastmcp_installed or '--'}",
         f"Markdown files: {len(md_all)} total  |  active (excl. not-mcp-related): {md_active}"
         + (f"  |  archived: {md_archived}" if md_archived else ""),
         f"tools/*.py: {n_tools_py}  |  scripts/*.py: {n_scripts_py}",
@@ -217,7 +217,7 @@ def main() -> None:
     if gh:
         lines.append(f"Git: {gh}" + (f" ({br})" if br else ""))
     else:
-        lines.append("Git: —")
+        lines.append("Git: --")
 
     out = "\n".join(lines) + "\n"
     sys.stdout.buffer.write(out.encode("utf-8", errors="replace"))

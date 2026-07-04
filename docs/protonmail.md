@@ -2,9 +2,9 @@
 
 ## About
 
-ProtonMail (now Proton Mail) is an encrypted email service founded in 2013 by a team of CERN scientists and MIT researchers — including Andy Yen, Jason Stockman, and Wei Sun. The company (Proton AG) is headquartered in **Geneva, Switzerland**, putting it under Swiss privacy law, which is among the strongest in the world and outside both US and EU jurisdiction.
+ProtonMail (now Proton Mail) is an encrypted email service founded in 2013 by a team of CERN scientists and MIT researchers -- including Andy Yen, Jason Stockman, and Wei Sun. The company (Proton AG) is headquartered in **Geneva, Switzerland**, putting it under Swiss privacy law, which is among the strongest in the world and outside both US and EU jurisdiction.
 
-The founding team met at CERN (the same lab that gave us the World Wide Web). They launched ProtonMail after Edward Snowden's 2013 NSA revelations, with the explicit goal of making encryption accessible to everyone. The company has never taken venture capital that would compromise its privacy mission — it's funded entirely by its users through paid plans.
+The founding team met at CERN (the same lab that gave us the World Wide Web). They launched ProtonMail after Edward Snowden's 2013 NSA revelations, with the explicit goal of making encryption accessible to everyone. The company has never taken venture capital that would compromise its privacy mission -- it's funded entirely by its users through paid plans.
 
 ## Why Use ProtonMail Instead of Gmail?
 
@@ -43,7 +43,7 @@ The founding team met at CERN (the same lab that gave us the World Wide Web). Th
 |---|---|---|
 | **SMTP/IMAP** | ❌ Not available | ✅ Direct access |
 | **Bridge** | ❌ Not included (Bridge requires paid plan) | ✅ Included |
-| **How to connect** | Upgrade to paid — no other option | Direct to mail.protonmail.com:587/993 |
+| **How to connect** | Upgrade to paid -- no other option | Direct to mail.protonmail.com:587/993 |
 | **Webmail** | ✅ Yes | ✅ Yes |
 | **Mobile apps** | ✅ Yes | ✅ Yes |
 
@@ -53,13 +53,13 @@ The founding team met at CERN (the same lab that gave us the World Wide Web). Th
 
 1. Upgrade at https://proton.me/mail/settings/upgrade
 2. Enable IMAP/SMTP in ProtonMail Settings → IMAP/SMTP
-3. In email-mcp → Services → Quick Setup → **ProtonMail** — connects automatically
+3. In email-mcp → Services → Quick Setup → **ProtonMail** -- connects automatically
 
-Once upgraded, email-mcp shows your inbox, folders, handles send/receive, search — everything works.
+Once upgraded, email-mcp shows your inbox, folders, handles send/receive, search -- everything works.
 
 ## Notes
 - **Since late 2023**: Bridge and SMTP/IMAP access require a **paid ProtonMail subscription** (Mail Plus €3.99/mo or higher)
-- Free accounts are limited to webmail and mobile apps — no third-party client access
+- Free accounts are limited to webmail and mobile apps -- no third-party client access
 - ProtonMail uses end-to-end encryption end-to-end
-- Body search is limited (content is encrypted) — subject/sender search only
+- Body search is limited (content is encrypted) -- subject/sender search only
 - ProtonMail also offers ProtonVPN, Proton Drive, and Proton Calendar

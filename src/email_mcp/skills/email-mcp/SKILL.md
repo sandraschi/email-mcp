@@ -21,29 +21,29 @@ Multi-service email server supporting SMTP/IMAP, transactional APIs, local testi
 ## Tools (15)
 
 ### Service Management
-- `list_services()` — List all configured email services with type and status
-- `email_status(service?)` — Test connectivity; omit to test all
-- `configure_service(name, type, config)` — Add SMTP/API/local/webhook service
-- `remove_service(name)` — Remove a runtime-configured service
+- `list_services()` -- List all configured email services with type and status
+- `email_status(service?)` -- Test connectivity; omit to test all
+- `configure_service(name, type, config)` -- Add SMTP/API/local/webhook service
+- `remove_service(name)` -- Remove a runtime-configured service
 
 ### Email Operations
-- `send_email(to, subject, body, service?, html?, cc?, bcc?)` — Send via any configured service
-- `check_inbox(service?, folder?, limit?, unread_only?)` — Read inbox via IMAP
-- `fetch_email_detail(email_id, service?, folder?)` — Full message with text + HTML body
-- `search_emails(query, service?, folder?, limit?)` — Full-text IMAP search
-- `delete_email(email_id, service?, folder?)` — Delete/move-to-trash
-- `mark_email_read(email_id, service?, folder?)` — Mark as read (SEEN flag)
-- `mark_email_unread(email_id, service?, folder?)` — Mark as unread
+- `send_email(to, subject, body, service?, html?, cc?, bcc?)` -- Send via any configured service
+- `check_inbox(service?, folder?, limit?, unread_only?)` -- Read inbox via IMAP
+- `fetch_email_detail(email_id, service?, folder?)` -- Full message with text + HTML body
+- `search_emails(query, service?, folder?, limit?)` -- Full-text IMAP search
+- `delete_email(email_id, service?, folder?)` -- Delete/move-to-trash
+- `mark_email_read(email_id, service?, folder?)` -- Mark as read (SEEN flag)
+- `mark_email_unread(email_id, service?, folder?)` -- Mark as unread
 
 ### Folder Management
-- `list_folders(service?)` — List all IMAP folders/mailboxes
-- `create_folder(folder, service?)` — Create a new IMAP folder
-- `rename_folder(old_name, new_name, service?)` — Rename an IMAP folder
-- `delete_folder(folder, service?)` — Delete an IMAP folder
+- `list_folders(service?)` -- List all IMAP folders/mailboxes
+- `create_folder(folder, service?)` -- Create a new IMAP folder
+- `rename_folder(old_name, new_name, service?)` -- Rename an IMAP folder
+- `delete_folder(folder, service?)` -- Delete an IMAP folder
 
 ### AI & Sampling
-- `suggest_email_subject(body)` — Generate subject lines via MCP sampling
-- `email_agentic_assist(goal)` — Multi-step email workflow plan ("clean my inbox", "archive newsletters")
+- `suggest_email_subject(body)` -- Generate subject lines via MCP sampling
+- `email_agentic_assist(goal)` -- Multi-step email workflow plan ("clean my inbox", "archive newsletters")
 
 ## Creative Workflows (7 presets, `/api/workflow`)
 
@@ -68,14 +68,14 @@ Each supports **3 output formats**:
 
 ## Prefab UI Cards (rich in-chat UI)
 
-- `show_email_status_card()` — Grid of all services with connection status
-- `show_inbox_card(service?, limit?, unread_only?)` — Email list with subject/sender/date
-- `show_services_card()` — All configured services as card list
+- `show_email_status_card()` -- Grid of all services with connection status
+- `show_inbox_card(service?, limit?, unread_only?)` -- Email list with subject/sender/date
+- `show_services_card()` -- All configured services as card list
 
 ## Prompts
 
-- `email_compose_request(recipient, purpose, tone)` — Structured ask to draft an email
-- `email_help_request(topic)` — Narrow help on one topic
+- `email_compose_request(recipient, purpose, tone)` -- Structured ask to draft an email
+- `email_help_request(topic)` -- Narrow help on one topic
 
 ## Quick Setup (web dashboard / API)
 
@@ -108,19 +108,19 @@ Start a real `aiosmtpd` SMTP server for testing from `/lab`:
 
 ## History of Email
 
-- **1971**: Ray Tomlinson sent the first email on ARPANET between two DEC-10 computers sitting next to each other. He didn't remember what it said — "something like QWERTYUIOP." He also chose the `@` symbol for addressing.
+- **1971**: Ray Tomlinson sent the first email on ARPANET between two DEC-10 computers sitting next to each other. He didn't remember what it said -- "something like QWERTYUIOP." He also chose the `@` symbol for addressing.
 - **1976**: Queen Elizabeth II became the first head of state to send an email, on the Royal Signals and Radar Establishment network.
-- **1978**: Gary Thuerk sent the first spam email to 400 ARPANET recipients, promoting a new computer model. It worked — he sold $12M worth.
+- **1978**: Gary Thuerk sent the first spam email to 400 ARPANET recipients, promoting a new computer model. It worked -- he sold $12M worth.
 - **1982**: Scott Fahlman proposed `:-)` and `:-(` as the first email emoticons.
 - **1983**: The first known email from space was sent via the Shuttle Columbia.
 - **1989**: The first commercial email service (MCI Mail) connected to the internet.
 - **1991**: The first webmail interface (CGI-based) appeared.
 - **1996**: Hotmail launched as the first free webmail service.
 - **1998**: The first email with an attachment virus (Melissa) spread via Word macros.
-- **2004**: Gmail launched on April 1st — many thought it was a joke.
+- **2004**: Gmail launched on April 1st -- many thought it was a joke.
 - **2018**: Over 281 billion emails were sent per day.
 
-There is no "Mary Had a Little Lamb" equivalent for email. Tomlinson's first message was intentionally forgettable — just a test transmission between two machines. The closest we have is the RFC 5321 test email `test@example.com` with body "This is a test." But the *spirit* of Mary Had a Little Lamb lives in every first email you send from a new account: that nervous, careful "Hello, this is a test" to yourself before you trust it's real.
+There is no "Mary Had a Little Lamb" equivalent for email. Tomlinson's first message was intentionally forgettable -- just a test transmission between two machines. The closest we have is the RFC 5321 test email `test@example.com` with body "This is a test." But the *spirit* of Mary Had a Little Lamb lives in every first email you send from a new account: that nervous, careful "Hello, this is a test" to yourself before you trust it's real.
 
 ## Classic Email Scams (for the AI Generator)
 
@@ -150,7 +150,7 @@ When using the Mail Lab's AI Message Generator with the "spam" scenario, these a
 2. **Verify**: `list_services()` then `email_status()` to confirm connectivity
 3. **Read**: `check_inbox(limit=10, unread_only=True)` or `search_emails(query="meeting")`
 4. **Act**: `send_email()` to send, `delete_email()` to remove, `mark_email_read()` to triage
-5. **Create**: Use `/api/workflow` for love letters, complaints, fan mail — with ASCII art or SVG card output
+5. **Create**: Use `/api/workflow` for love letters, complaints, fan mail -- with ASCII art or SVG card output
 6. **Test**: Mail Lab at `/lab` for throwaway SMTP testing without affecting real accounts
 
 ## Examples

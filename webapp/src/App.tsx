@@ -1,24 +1,30 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AppLayout } from '@/components/layout/app-layout';
-import { ToastProvider } from '@/components/toast';
-import { Dashboard } from '@/pages/dashboard';
-import { Inbox } from '@/pages/inbox';
-import { Compose } from '@/pages/compose';
-import { Chat } from '@/pages/chat';
-import { Tools } from '@/pages/tools';
-import { Help } from '@/pages/help';
-import { Skill } from '@/pages/skill';
-import { Settings } from '@/pages/settings';
-import { ApiDocs } from '@/pages/api-docs';
-import { EmailDetail } from '@/pages/email-detail';
-import { SearchPage } from '@/pages/search';
-import { Services } from '@/pages/services';
-import { Lab } from '@/pages/lab';
-import { Contacts } from '@/pages/contacts';
-import { AutoRespond } from '@/pages/auto-respond';
-import { MailReader } from '@/pages/mail-reader';
-import { Rules } from '@/pages/rules';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+} from "react-router-dom";
+import { AppLayout } from "@/components/layout/app-layout";
+import { ToastProvider } from "@/components/toast";
+import { ApiDocs } from "@/pages/api-docs";
+import { AutoRespond } from "@/pages/auto-respond";
+import { Chat } from "@/pages/chat";
+import { Compose } from "@/pages/compose";
+import { Contacts } from "@/pages/contacts";
+import { Dashboard } from "@/pages/dashboard";
+import { EmailDetail } from "@/pages/email-detail";
+import { Help } from "@/pages/help";
+import { Inbox } from "@/pages/inbox";
+import { Lab } from "@/pages/lab";
+import Logs from "@/pages/logs";
+import { MailReader } from "@/pages/mail-reader";
+import { Rules } from "@/pages/rules";
+import { SearchPage } from "@/pages/search";
+import { Services } from "@/pages/services";
+import { Settings } from "@/pages/settings";
+import { Skill } from "@/pages/skill";
+import { Tools } from "@/pages/tools";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -46,6 +52,7 @@ function App() {
               <Route path="/rules" element={<Rules />} />
               <Route path="/skill" element={<Skill />} />
               <Route path="/api-docs" element={<ApiDocs />} />
+              <Route path="/logs" element={<Logs />} />
               <Route path="/help" element={<Help />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />

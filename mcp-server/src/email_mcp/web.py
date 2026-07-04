@@ -22,7 +22,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP):
         response = await ai_router.route_query(query)
         return {"response": response}
 
-    # Skill content (FastMCP 3.1) — SOTA page: show skill so client/IDE knows how to use the server
+    # Skill content (FastMCP 3.1) -- SOTA page: show skill so client/IDE knows how to use the server
     @app.get("/api/skills")
     async def list_skills(user: str = Depends(authenticate)):
         """List skills exposed by the MCP server (skill:// URIs ending with /SKILL.md)."""

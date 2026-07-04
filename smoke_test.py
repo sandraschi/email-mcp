@@ -41,7 +41,7 @@ def check_server_import():
 
     spec = importlib.util.spec_from_file_location("email_mcp.server", r"D:\Dev\repos\email-mcp\src\email_mcp\server.py")
     mod = importlib.util.module_from_spec(spec)
-    # Don't exec — just parse
+    # Don't exec -- just parse
     import ast
     import pathlib
 

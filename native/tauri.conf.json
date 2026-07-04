@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' http://127.0.0.1:10813 ipc: http://ipc.localhost; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'"
     }
   },
   "bundle": {
@@ -34,6 +34,7 @@
     ],
     "resources": [
       "resources/email-mcp-backend.exe",
+            "resources/.env",
       "../scripts/install-mcp-clients.ps1"
     ],
     "targets": [
@@ -45,9 +46,7 @@
       },
       "nsis": {
         "installMode": "currentUser",
-        "createDesktopShortcut": true,
-        "createStartMenuShortcut": true,
-        "installerHooks": "./windows/hooks.nsh"
+"installerHooks": "./windows/hooks.nsh"
       }
     }
   },
@@ -63,3 +62,6 @@
     }
   }
 }
+
+
+

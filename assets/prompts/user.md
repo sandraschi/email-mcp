@@ -1,4 +1,4 @@
-# Email MCP Server — Quick Reference
+# Email MCP Server -- Quick Reference
 
 ## Sending
 
@@ -11,7 +11,7 @@ send an email to #general with subject "Alert" and body "CPU high" via slack
 ## Reading
 
 ```
-check my inbox — show the last 10 emails
+check my inbox -- show the last 10 emails
 check my inbox for unread emails from notifications@github.com
 show me emails about "meeting" in my inbox
 ```
@@ -37,7 +37,7 @@ remove the slack service
 ## AI Features
 
 ```
-improve this email: [text] — make it more professional and concise
+improve this email: [text] -- make it more professional and concise
 suggest a subject line for this email body: [text]
 plan an email workflow to clean up my inbox
 ```

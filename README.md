@@ -11,7 +11,7 @@
 
 A full-featured email server for MCP clients. Send and receive mail through SMTP/IMAP, transactional APIs (SendGrid, Mailgun, Resend), local test servers (MailHog), and webhooks (Slack, Discord). Includes a web dashboard with AI-assisted compose, a throwaway SMTP lab, folder management, contact import, background mail watching, and creative AI workflows (love letters, complaints, ASCII art, SVG cards).
 
-**v0.4.1** — 86 tests passing, 15 MCP tools, FastMCP 3.2+, dual transport (stdio + HTTP).
+**v0.4.1** -- 86 tests passing, 15 MCP tools, FastMCP 3.2+, dual transport (stdio + HTTP).
 
 ---
 
@@ -129,7 +129,7 @@ just build-native
 # native/target/release/bundle/nsis/Email MCP_0.1.0_x64-setup.exe
 ```
 
-Requires [Rust](https://rustup.rs), [Node.js 20+](https://nodejs.org), and Visual Studio Build Tools (for C++ compilation). The backend is compiled via PyInstaller and bundled as a Tauri sidecar — no Python runtime needed.
+Requires [Rust](https://rustup.rs), [Node.js 20+](https://nodejs.org), and Visual Studio Build Tools (for C++ compilation). The backend is compiled via PyInstaller and bundled as a Tauri sidecar -- no Python runtime needed.
 
 ## Development
 

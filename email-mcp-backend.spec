@@ -13,9 +13,10 @@ a = Analysis(
     ["run_server.py"],
     pathex=["src"],
     binaries=[],
+    
     datas=datas,
     hiddenimports=[
-    "_strptime",
+
     "_datetime",
         "uvicorn.logging",
         "uvicorn.loops",
@@ -35,12 +36,14 @@ a = Analysis(
         "email_mcp.sanitize",
         "email_mcp.transport",
         "email_mcp.web",
-    ],
+    "_strptime",
+],
     hookspath=[],
+    
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
-    noarchive=False,
+    noarchive=True,
     optimize=0,
 )
 pyz = PYZ(a.pure)
@@ -52,6 +55,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
+    
     name="email-mcp-backend",
     debug=False,
     bootloader_ignore_signals=False,
@@ -66,3 +70,8 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
+
+
+
+
+

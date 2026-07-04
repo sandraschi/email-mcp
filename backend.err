@@ -1,0 +1,26 @@
+Starting email-mcp v0.4.0
+Transport: HTTP
+Running in HTTP Streamable mode: http://127.0.0.1:10813/mcp
+
+
++-----------------------------------------------------------------------------+
+|                                                                             |
+|                                                                             |
+|                        \u2584\u2580\u2580 \u2584\u2580\u2588 \u2588\u2580\u2580 \u2580\u2588\u2580 \u2588\u2580\u2584\u2580\u2588 \u2588\u2580\u2580 \u2588\u2580\u2588                        |
+|                        \u2588\u2580  \u2588\u2580\u2588 \u2584\u2584\u2588  \u2588  \u2588 \u2580 \u2588 \u2588\u2584\u2584 \u2588\u2580\u2580                        |
+|                                                                             |
+|                                                                             |
+|                                FastMCP 3.4.2                                |
+|                            https://gofastmcp.com                            |
+|                                                                             |
+|                 \U0001f5a5  Server:      Email-MCP, 0.4.0                            |
+|                 \U0001f680 Deploy free: https://horizon.prefect.io                  |
+|                                                                             |
++-----------------------------------------------------------------------------+
+
+
+{"version": "0.4.0", "event": "Email MCP server starting up", "logger": "__main__", "level": "info", "timestamp": "2026-07-03T18:57:16.463947Z"}
+[07/03/26 20:57:16] INFO     Starting MCP server 'Email-MCP'   transport.py:304
+                             with transport 'http' on                          
+                             http://127.0.0.1:10813/mcp                        
+StreamableHTTP session manager started

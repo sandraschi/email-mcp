@@ -19,22 +19,22 @@ description: Multi-service email MCP - SMTP, APIs, MailHog, webhooks; FastMCP 3.
 
 ## Tools
 
-- **`list_services()`** — List all configured email services with type, status, and metadata.
-- **`email_status(service)`** — Test connectivity. Use before bulk sends to verify credentials.
-- **`send_email(to, subject, body, service, html, cc, bcc, attachments)`** — Send via configured service.
-- **`check_inbox(service, folder, limit, unread_only)`** — Read inbox via IMAP or local test services.
-- **`fetch_email_detail(service, message_id)`** — Full message body and headers.
-- **`delete_email(service, message_id)`** — Remove messages.
-- **`mark_email_read(service, message_id, is_read)`** — Toggle read/unread status.
-- **`search_emails(service, query, folder, limit)`** — Search by subject, sender, body text, or date range.
-- **`remove_service(service_name)`** — Remove a configured email service.
-- **`suggest_email_subject(body, tone)`** — Generate subject lines via sampling.
-- **`email_agentic_assist(goal)`** — High-level email task automation: "organize my inbox", "archive old newsletters", "find all messages from [sender]".
+- **`list_services()`** -- List all configured email services with type, status, and metadata.
+- **`email_status(service)`** -- Test connectivity. Use before bulk sends to verify credentials.
+- **`send_email(to, subject, body, service, html, cc, bcc, attachments)`** -- Send via configured service.
+- **`check_inbox(service, folder, limit, unread_only)`** -- Read inbox via IMAP or local test services.
+- **`fetch_email_detail(service, message_id)`** -- Full message body and headers.
+- **`delete_email(service, message_id)`** -- Remove messages.
+- **`mark_email_read(service, message_id, is_read)`** -- Toggle read/unread status.
+- **`search_emails(service, query, folder, limit)`** -- Search by subject, sender, body text, or date range.
+- **`remove_service(service_name)`** -- Remove a configured email service.
+- **`suggest_email_subject(body, tone)`** -- Generate subject lines via sampling.
+- **`email_agentic_assist(goal)`** -- High-level email task automation: "organize my inbox", "archive old newsletters", "find all messages from [sender]".
 
 ## Prompts
 
-- **`email_compose_request`** — Structured ask to draft an email.
-- **`email_help_request`** — Narrow help on one topic.
+- **`email_compose_request`** -- Structured ask to draft an email.
+- **`email_help_request`** -- Narrow help on one topic.
 
 ## Web Dashboard
 

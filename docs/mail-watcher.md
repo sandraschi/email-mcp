@@ -1,4 +1,4 @@
-# Mail Watcher — Background IMAP Polling with Webhook Notifications
+# Mail Watcher -- Background IMAP Polling with Webhook Notifications
 
 The Mail Watcher continuously monitors configured email services for new unread messages. When new mail arrives, it POSTs a structured JSON payload to a configurable webhook URL, enabling integration with notification systems like **robofang** (TTS alerts, desktop notifications) and **fleet-agent** (workflow triggers).
 
@@ -106,7 +106,7 @@ The Mail Watcher controls are on the **Mail Lab** page (`/lab`):
 - **Start/Stop** toggle button
 - **Interval** input (seconds)
 - **Webhook URL** input
-- **Status indicator** — animated green pulse when running
+- **Status indicator** -- animated green pulse when running
 - Auto-polls `GET /api/watcher/status` every 5 seconds
 
 ## Integration with robofang
@@ -158,7 +158,7 @@ curl -X POST http://localhost:10813/api/watcher/stop -H "Authorization: Basic ..
 ## Security
 
 - All `/api/watcher/*` endpoints require HTTP Basic authentication
-- Webhook payloads are sent as-is to the configured URL — ensure the target is HTTPS in production
+- Webhook payloads are sent as-is to the configured URL -- ensure the target is HTTPS in production
 - The watcher uses the same IMAP credentials as the configured email service
 - Webhook URLs are stored in memory only, not persisted to disk
 
@@ -166,6 +166,6 @@ curl -X POST http://localhost:10813/api/watcher/stop -H "Authorization: Basic ..
 
 - Runs as a single `asyncio.Task` created from the event loop
 - Tracked message IDs are stored in memory (not persisted across restarts)
-- On first poll, all existing unread emails are treated as "seen" — only subsequent new arrivals fire webhooks
+- On first poll, all existing unread emails are treated as "seen" -- only subsequent new arrivals fire webhooks
 - Error handling: failed polls log warnings but don't stop the watcher
 - Watch multiple services by adding entries to the `services` array

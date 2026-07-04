@@ -47,6 +47,6 @@ For business/enterprise accounts, use the same endpoints. If your organization u
 - HTML and plain text formats
 
 ## Notes
-- Microsoft may block "less secure apps" — enable SMTP/IMAP in account settings
+- Microsoft may block "less secure apps" -- enable SMTP/IMAP in account settings
 - For 365 accounts, check with your admin for SMTP/IMAP access policies
 - OAuth2 is recommended but not yet supported (use app passwords)

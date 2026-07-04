@@ -1,4 +1,18 @@
-﻿# Changelog
+
+## [Unreleased] -- 2026-06-14
+
+### Added
+- Tauri CORS: 	auri://localhost, http://tauri.localhost, https://tauri.localhost in CORS origins
+- Tauri CORS: _TAURI env var toggle with llow_origin_regex for secure WebView access
+- build.ps1: auto-copy NSIS installer to dist/ on build
+- CUA-NSIS: config-driven smoke test (`scripts/cua-smoke.py`, `scripts/cua-nsis-config.json`)
+- CUA-NSIS: `just build-native` + `just cua-nsis-test` recipes
+- CUA-NSIS: 11-phase smoke (install, launch, WebView OCR, feature route, diagnostics, uninstall)
+- CUA-NSIS: local certification -- all 11 phases pass locally (2026-06-14)
+
+### Changed
+- CORS: llow_origins=["*"] → explicit origins list for Tauri webview compatibility
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -10,13 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Auto-Respond system**: rule engine with regex matching (subject/from/body), AI drafting, pending queue for human approval, auto-send
 - **Spam detection**: 10 pattern groups, `POST /api/check-spam` endpoint
-- **Spoof mode**: hilarious AI-generated replies to scammers — 4 tones (irate, mock-stupid, absurd, polite-but-confused)
+- **Spoof mode**: hilarious AI-generated replies to scammers -- 4 tones (irate, mock-stupid, absurd, polite-but-confused)
 - **Bulk send**: paste email lists, max 50/batch, CAN-SPAM/GDPR warnings, consent checkbox
-- **Curated public lists**: US Congress (10), Austrian Parliament (7), EU Commission (3) — importable to contacts with one click
+- **Curated public lists**: US Congress (10), Austrian Parliament (7), EU Commission (3) -- importable to contacts with one click
 - **Mail Watcher**: background IMAP polling with webhook notifications (`start_watcher`, `stop_watcher`, `watcher_status` MCP tools)
 - **Contact import**: Google People API, Microsoft Graph API (OAuth token-based), plus full CRUD + CSV/vCard import
 - **Folder CRUD**: list, create, delete, rename IMAP folders (MCP tools + REST + frontend)
-- **Quick Setup**: 8 provider presets (Gmail/Outlook/Yahoo/iCloud/ProtonMail/Zoho/GMX/Fastmail) — one-click with email+password
+- **Quick Setup**: 8 provider presets (Gmail/Outlook/Yahoo/iCloud/ProtonMail/Zoho/GMX/Fastmail) -- one-click with email+password
 - **Creative Workflows**: 7 presets (love-letter, breakup, thank-you, complaint, apology, fan-mail, hate-mail) with text/ascii/svg format
 - **Expander**: short-note-to-full-email with 6 context scenarios (Venice Biennale, Mars Colony, Medieval Castle, etc.)
 - **Playwright e2e tests**: 17 tests covering dashboard, inbox, compose, services, settings, chat, lab, contacts, help, sidebar, REST API
@@ -95,7 +109,7 @@ pm install before Tauri CLI
 
 ### Fixed
 - **
-ative/main.rs**: uvicorn readiness detection now checks both CommandEvent::Stdout and CommandEvent::Stderr — uvicorn's startup message (Uvicorn running on ...) is emitted via Python logging to stderr, so the previous stdout-only check never fired
+ative/main.rs**: uvicorn readiness detection now checks both CommandEvent::Stdout and CommandEvent::Stderr -- uvicorn's startup message (Uvicorn running on ...) is emitted via Python logging to stderr, so the previous stdout-only check never fired
 
 ## [0.3.1] - 2026-03-20
 
@@ -206,4 +220,5 @@ ative/main.rs**: uvicorn readiness detection now checks both CommandEvent::Stdou
 - Basic service configuration
 - Core email sending and receiving functionality
 - Async operations support
+
 

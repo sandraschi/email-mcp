@@ -1,31 +1,31 @@
 """FastAPI routes for the Email MCP web dashboard.
 
 Endpoints:
-    GET  /api/status              — server health
-    GET  /api/capabilities        — feature flags for runtime gating
-    GET  /api/tools               — list MCP tools
-    GET  /api/stats               — KPI stats for dashboard
-    GET  /api/services            — list + connectivity of all services
-    GET  /api/services/{name}     — single service config
-    POST /api/services            — add a new service
-    PUT  /api/services/{name}     — update service config
-    DELETE /api/services/{name}   — remove a service
-    GET  /api/inbox               — fetch inbox (service, folder, limit, unread_only)
-    GET  /api/inbox/{message_id}  — fetch single email with full body
-    POST /api/inbox/{message_id}/mark-read  — mark as read
-    POST /api/inbox/{message_id}/unread      — mark as unread
-    DELETE /api/inbox/{message_id} — delete email
-    GET  /api/search              — search emails via IMAP
-    POST /api/send                — send email
-    GET  /api/skills              — list skill:// resources
-    GET  /api/skills/{name}       — skill markdown content
-    GET  /api/llm/models          — probe local LLM providers (Ollama/LM Studio)
-    POST /api/llm/configure       — update AI provider settings at runtime
-    POST /api/chat                — natural language → AI router
-    GET  /api/drafts              — list drafts
-    POST /api/drafts              — save draft
-    PUT  /api/drafts/{draft_id}   — update draft
-    DELETE /api/drafts/{draft_id} — delete draft
+    GET  /api/status              -- server health
+    GET  /api/capabilities        -- feature flags for runtime gating
+    GET  /api/tools               -- list MCP tools
+    GET  /api/stats               -- KPI stats for dashboard
+    GET  /api/services            -- list + connectivity of all services
+    GET  /api/services/{name}     -- single service config
+    POST /api/services            -- add a new service
+    PUT  /api/services/{name}     -- update service config
+    DELETE /api/services/{name}   -- remove a service
+    GET  /api/inbox               -- fetch inbox (service, folder, limit, unread_only)
+    GET  /api/inbox/{message_id}  -- fetch single email with full body
+    POST /api/inbox/{message_id}/mark-read  -- mark as read
+    POST /api/inbox/{message_id}/unread      -- mark as unread
+    DELETE /api/inbox/{message_id} -- delete email
+    GET  /api/search              -- search emails via IMAP
+    POST /api/send                -- send email
+    GET  /api/skills              -- list skill:// resources
+    GET  /api/skills/{name}       -- skill markdown content
+    GET  /api/llm/models          -- probe local LLM providers (Ollama/LM Studio)
+    POST /api/llm/configure       -- update AI provider settings at runtime
+    POST /api/chat                -- natural language → AI router
+    GET  /api/drafts              -- list drafts
+    POST /api/drafts              -- save draft
+    PUT  /api/drafts/{draft_id}   -- update draft
+    DELETE /api/drafts/{draft_id} -- delete draft
 """
 
 from __future__ import annotations
@@ -41,6 +41,7 @@ import httpx
 from fastapi import Body, Depends, FastAPI, HTTPException
 from fastmcp import FastMCP
 
+from .activity_log import ActivityLog, create_log_router
 from .ai import AIRouter
 from .auth import authenticate
 
@@ -91,9 +92,11 @@ def _save_drafts() -> None:
         pass
 
 
-def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
+def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) -> None:
     """Register all SOTA web endpoints for the Email MCP dashboard."""
     ai_router = AIRouter(mcp_app)
+    mcp_log = ActivityLog()
+    app.include_router(create_log_router(mcp_log), prefix="/api")
     _load_drafts()
 
     # ── Basic health ──────────────────────────────────────────────────────────
@@ -101,6 +104,23 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
     @app.get("/api/status")
     async def get_status(user: str = Depends(authenticate)):
         return {"status": "connected", "user": user, "mcp": mcp_app.name, "version": "0.4.1"}
+
+    @app.get("/api/v1/diagnostics")
+    async def diagnostics(user: str = Depends(authenticate)):
+        try:
+            import psutil
+            cpu = psutil.cpu_percent()
+            mem = psutil.virtual_memory().percent
+            disk = psutil.disk_usage("/").percent
+        except ImportError:
+            cpu = mem = disk = None
+        return {
+            "success": True,
+            "backend": {"port": 10813, "status": "running"},
+            "system": {"cpu_percent": cpu, "memory_percent": mem, "disk_percent": disk},
+            "tools": {"total": 0},
+            "cua_status": {"tesseract_available": False, "window_found": False},
+        }
 
     @app.get("/api/capabilities")
     async def get_capabilities(_user: str = Depends(authenticate)):
@@ -333,10 +353,10 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         """Check if ProtonMail Bridge is running and accessible.
 
         Returns:
-          running: bool — Bridge process found running
-          ports_open: [int] — which SMTP/IMAP ports respond
-          install_url: str — download link
-          message: str — human-readable status
+          running: bool -- Bridge process found running
+          ports_open: [int] -- which SMTP/IMAP ports respond
+          install_url: str -- download link
+          message: str -- human-readable status
         """
         import socket
         import subprocess
@@ -358,7 +378,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
             except Exception:
                 pass
 
-        # 2. Check ports 1025 (SMTP) and 1143 (IMAP) — these are Bridge's default ports
+        # 2. Check ports 1025 (SMTP) and 1143 (IMAP) -- these are Bridge's default ports
         for port in [1025, 1143]:
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -626,20 +646,25 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         _user: str = Depends(authenticate),
     ):
         """Download an email attachment by MIME part index."""
-        import asyncio
-        import imaplib
         from email import message_from_bytes
 
         from fastapi.responses import Response
 
-        service_obj = mcp_app.services.get(service) if hasattr(mcp_app, "services") else None
-        if not service_obj or not hasattr(service_obj, "imap_server"):
-            raise HTTPException(status_code=400, detail="Service does not support IMAP")
+        svc_obj = getattr(server_instance, "services", {}).get(service) if server_instance else None
+        if not svc_obj:
+            raise HTTPException(status_code=400, detail=f"Service '{service}' not found")
+        imap_server = getattr(svc_obj, "imap_server", None)
+        imap_port = getattr(svc_obj, "imap_port", 993)
+        imap_user = getattr(svc_obj, "imap_user", None)
+        imap_password = getattr(svc_obj, "imap_password", None)
+        if not imap_server or not imap_user or not imap_password:
+            raise HTTPException(status_code=400, detail="Service does not support IMAP attachment download")
         try:
 
             def fetch_attachment():
-                mail = imaplib.IMAP4_SSL(service_obj.imap_server, service_obj.imap_port)
-                mail.login(service_obj.imap_user, service_obj.imap_password)
+                import imaplib
+                mail = imaplib.IMAP4_SSL(imap_server, imap_port)
+                mail.login(imap_user, imap_password)
                 mail.select(folder)
                 eid = message_id.encode() if isinstance(message_id, str) else message_id
                 status, data = mail.fetch(eid, "(RFC822)")
@@ -661,6 +686,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
                             }
                 return None
 
+            import asyncio
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(None, fetch_attachment)
             if not result:
@@ -716,19 +742,19 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
         if missing:
             raise HTTPException(status_code=422, detail=f"Missing fields: {missing}")
         try:
+            kw = {
+                "to": payload["to"],
+                "subject": payload["subject"],
+                "body": payload["body"],
+                "service": payload.get("service", "default"),
+                "html": payload.get("html"),
+                "cc": payload.get("cc"),
+                "bcc": payload.get("bcc"),
+            }
+            if payload.get("attachments"):
+                kw["attachments"] = payload["attachments"]
             result = _extract_tool_result(
-                await mcp_app.call_tool(
-                    "send_email",
-                    {
-                        "to": payload["to"],
-                        "subject": payload["subject"],
-                        "body": payload["body"],
-                        "service": payload.get("service", "default"),
-                        "html": payload.get("html"),
-                        "cc": payload.get("cc"),
-                        "bcc": payload.get("bcc"),
-                    },
-                )
+                await mcp_app.call_tool("send_email", kw)
             )
             return result
         except Exception as exc:
@@ -1391,7 +1417,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
             "from (email), to (array of emails), subject, body (plain text). "
             "Make them realistic: varied senders, timestamps implied in the body, "
             "and scenario-appropriate content. "
-            "No markdown, no code fences, no explanations — just the JSON array."
+            "No markdown, no code fences, no explanations -- just the JSON array."
         )
         response = await ai_router.route_json_query(prompt)
         import json as _json
@@ -1443,21 +1469,8 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP) -> None:
 
     # ── Creative Workflows ────────────────────────────────────────────────────
 
-    WORKFLOWS: dict[str, str] = {
-        "love-letter": ("Write a love letter. Make it {tone} and {mood}. The recipient is my {recipient}. Sign it with love. Output format: {fmt_text}"),
-        "breakup": ("Write a breakup email to my {recipient}. Make it {tone} and {mood}. Output format: {fmt_text}"),
-        "thank-you": ("Write a warm thank-you note to my {recipient}. Make it {tone}. Output format: {fmt_text}"),
-        "complaint": ("Write a {mood} complaint letter to my {recipient}. Make it {tone}. Output format: {fmt_text}"),
-        "apology": ("Write an apology email to my {recipient}. Make it {tone}. Output format: {fmt_text}"),
-        "fan-mail": ("Write an enthusiastic fan letter to my {recipient}. Make it {tone}. Mention something you admire. Output format: {fmt_text}"),
-        "hate-mail": ("Write a hilariously passive-aggressive email to my {recipient}. Make it comedic and over-the-top, not actually mean. Tone: {tone}. Output format: {fmt_text}"),
-    }
-
-    FORMAT_INSTRUCTIONS: dict[str, str] = {
-        "text": "Return ONLY the email body as plain text.",
-        "ascii": "Include a large ASCII art illustration at the top. Use chars like @ # % * / \\ | ( ) - + = . Make it impressive.",
-        "svg": "Return an inline SVG document wrapped in ```svg ... ``` that renders the email as a decorative card, max 800x600, then the text below.",
-    }
+    from .workflows import FORMAT_INSTRUCTIONS
+    from .workflows import WORKFLOW_TEMPLATES as WORKFLOWS
 
     @app.post("/api/workflow")
     async def run_workflow(

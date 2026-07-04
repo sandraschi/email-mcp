@@ -135,7 +135,7 @@ Start a local SMTP server for testing from the web dashboard at `/lab`:
 1. Go to **Mail Lab** in the sidebar
 2. Click **Start** to launch a real aiosmtpd SMTP server on a free port
 3. Use the **AI Message Generator** to populate the inbox with realistic test emails (10 scenarios)
-4. Capture emails appear in real-time — click to expand full body
+4. Capture emails appear in real-time -- click to expand full body
 5. **Forward** captured emails to your real email address via configured services
 
 Or start from the CLI: `just lab`

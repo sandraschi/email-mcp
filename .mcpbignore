@@ -1,16 +1,25 @@
-# MCPB Pack Exclusion List
-tests/
-.git/
-__pycache__/
-*.pyc
+# Logic/Dev Bloat
 .venv/
+node_modules/
+__pycache__/
+.ruff_cache/
+.pytest_cache/
+tests/
+
+# Discovery & Fleet Metadata
+glama.json
+llms.txt
+llms-full.txt
+.git/
+.github/
+.vscode/
+
+# Build Artifacts
 dist/
 build/
-target/
-docs/
+*.mcpb
+
+# Non-MCP components (webapp, native, scripts)
+native/
+web_sota/
 scripts/
-.cursor/
-.windsurf/
-.pytest_cache/
-.coverage
-Cargo.lock

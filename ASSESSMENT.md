@@ -1,76 +1,49 @@
-# minimail-mcp - Project Assessment
+# email-mcp -- Project Assessment
 
-**Category**: MCP Server + AI Orchestrator
-**Assessment Date**: 2026-01-12
-**Status**: SOTA Compliant + AI Features
+**Category**: MCP Server + Email Platform
+**Assessment Date**: 2026-06-27
+**Version**: 0.4.1
 
 ---
 
-## Assessment Summary
+## Summary
 
 | Metric | Value |
 |--------|-------|
-| **Status** | SOTA Compliant + AI Orchestrator |
-| **Development Status** | Complete + AI Features |
-| **MCPB Packaging** | Implemented |
-| **AI Orchestration** | Implemented |
-| **Last Modified** | 01/12/2026 |
-| **Git Repository** | Ready |
-| **Project Structure** | Standards Compliant |
-| **CI/CD Pipeline** | Implemented |
-| **Monitoring Stack** | Implemented |
+| Status | Stable + Active Development |
+| MCP Tools | 32+ (15 core + folder CRUD + watcher + contacts + auto-respond + creative workflows) |
+| Tests | 86 (69 backend pytest + 17 Playwright e2e) |
+| Framework | FastMCP 3.2+, FastAPI, React 19 |
+| Security | Two-layer prompt injection defense |
+| AI Integration | Multi-provider (Ollama, OpenAI, Anthropic, Google, LM Studio) |
 
 ---
 
-## Standards Compliance
+## Features
 
-- ✅ MCPB packaging (manifest.json)
-- ✅ Glama integration (glama.json)
-- ✅ CI/CD pipeline (GitHub Actions)
-- ✅ Monitoring stack (health checks, metrics)
-- ✅ Professional documentation
-- ✅ Comprehensive testing
-- ✅ Code quality enforcement
----
-
-## Implementation Status
-
-### Completed
-- MCPB manifest.json with complete tool definitions
-- Glama.json configuration for discovery
-- GitHub Actions CI/CD pipeline
-- Health monitoring and metrics collection
-- Comprehensive README documentation
-- Testing framework with pytest
-- Code quality tools (Ruff, MyPy)
-- Professional project structure
-- Gmail integration verified working
-
-### AI Orchestrator Features
-- Server composition architecture (minimail-mcp + local-llm-mcp)
-- weed_trash AI-powered email cleanup tool
-- email_summarizer intelligent inbox summaries
-- smart_email_filter AI-generated filtering rules
-- Safety-first design with dry_run modes
-- Local LLM integration for private AI processing
-- Comprehensive orchestrator documentation
-
-### Ready for Production
-- Package building and distribution
-- Service health monitoring
-- Performance metrics tracking
-- Multiple email service support
-- Async operation handling
-- Error handling and logging
----
-
-## 📚 **References**
-
-- [MCP Central Documentation Standards](../STANDARDS.md)
-- [FastMCP 2.12 Migration Guide](../FASTMCP_2.12_MIGRATION.md)
-- [MCPB Packaging Standards](../MCPB_PACKAGING_STANDARDS.md)
-- [Monitoring Standards](../monitoring/README.md)
+- Multi-service email (SMTP/IMAP, SendGrid, Mailgun, Resend, SES, webhooks)
+- Web dashboard with AI-assisted compose, inbox management, contacts
+- Auto-respond engine with rule matching, spam detection, spoof mode
+- Mail Watcher: background IMAP polling with webhook POST
+- Mail Lab: throwaway aiosmtpd SMTP server
+- Contact import (CSV, vCard, Google People, Microsoft Graph, curated official lists)
+- Creative AI workflows (7 presets with text/ASCII/SVG output)
+- Folder management (CRUD IMAP folders)
+- Scheduled send, drafts, signatures, templates
+- Bulk send with rate limiting
+- Dual transport: stdio + HTTP streamable
+- Tauri 2.0 native desktop app
 
 ---
 
-*Assessment generated on 2026-01-01 21:47:42*
+## Code Quality
+- Ruff linting (line-length 230, py312 target)
+- JSON file-based persistence
+- Structured logging (structlog)
+- No external database dependency
+
+---
+
+## Docs
+- [README.md](README.md) -- full feature overview and quick start
+- [docs/](docs/) -- 11 sub-documents covering setup, configuration, providers

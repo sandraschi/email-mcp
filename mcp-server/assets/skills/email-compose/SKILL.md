@@ -19,20 +19,20 @@ description: Compose and send emails using the email MCP server (send_email, che
 
 ## Tools
 
-- **`send_email(to, subject, body, service, html, cc, bcc, attachments)`** — Send email via configured service. Required: `to`, `subject`, `body`. Optional: `service` (default: first configured), `html` (HTML body), `cc`, `bcc`, `attachments` (file paths).
-- **`check_inbox(service, folder, limit, unread_only)`** — List messages from IMAP or local test services. Returns sender, subject, date, snippet, read status.
-- **`fetch_email_detail(service, message_id)`** — Get full email body and headers for a specific message.
-- **`delete_email(service, message_id)`** — Delete a message from the server.
-- **`mark_email_read(service, message_id, is_read=True)`** — Mark message as read or unread.
-- **`search_emails(service, query, folder, limit)`** — Search emails by subject, sender, or body text.
-- **`list_services()`** — List configured email services with their type (SMTP, SendGrid, Mailgun, Resend, MailHog, Slack, Discord).
-- **`email_status()`** — Test connectivity for all configured services. Use before bulk sends.
-- **`suggest_email_subject(body, tone)`** — LLM-based subject line generation (uses sampling). Provide body text, get 3-5 subject suggestions.
+- **`send_email(to, subject, body, service, html, cc, bcc, attachments)`** -- Send email via configured service. Required: `to`, `subject`, `body`. Optional: `service` (default: first configured), `html` (HTML body), `cc`, `bcc`, `attachments` (file paths).
+- **`check_inbox(service, folder, limit, unread_only)`** -- List messages from IMAP or local test services. Returns sender, subject, date, snippet, read status.
+- **`fetch_email_detail(service, message_id)`** -- Get full email body and headers for a specific message.
+- **`delete_email(service, message_id)`** -- Delete a message from the server.
+- **`mark_email_read(service, message_id, is_read=True)`** -- Mark message as read or unread.
+- **`search_emails(service, query, folder, limit)`** -- Search emails by subject, sender, or body text.
+- **`list_services()`** -- List configured email services with their type (SMTP, SendGrid, Mailgun, Resend, MailHog, Slack, Discord).
+- **`email_status()`** -- Test connectivity for all configured services. Use before bulk sends.
+- **`suggest_email_subject(body, tone)`** -- LLM-based subject line generation (uses sampling). Provide body text, get 3-5 subject suggestions.
 
 ## Prompts
 
-- **`email_compose_request`** — Generates a structured compose request: recipient, purpose, tone, key points.
-- **`email_help_request`** — Generates a narrow help request for a specific email topic.
+- **`email_compose_request`** -- Generates a structured compose request: recipient, purpose, tone, key points.
+- **`email_help_request`** -- Generates a narrow help request for a specific email topic.
 
 ## Workflow
 

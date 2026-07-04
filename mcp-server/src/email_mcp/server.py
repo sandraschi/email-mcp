@@ -1337,7 +1337,7 @@ class EmailMCP:
 
         @self.mcp.tool()
         async def mailing_lists_catalog() -> Dict[str, Any]:
-            """MAILING_LISTS_CATALOG — List named mailing-list presets from EMAIL_MCP_MAILING_LISTS (JSON).
+            """MAILING_LISTS_CATALOG -- List named mailing-list presets from EMAIL_MCP_MAILING_LISTS (JSON).
 
             Configure labels/folders once (e.g. Gmail filter → IMAP folder), then use mailing_list_latest(id).
 
@@ -1362,7 +1362,7 @@ class EmailMCP:
             limit: Optional[int] = None,
             unread_only: Optional[bool] = None,
         ) -> Dict[str, Any]:
-            """MAILING_LIST_LATEST — Fetch newest messages for a preset id (see mailing_lists_catalog).
+            """MAILING_LIST_LATEST -- Fetch newest messages for a preset id (see mailing_lists_catalog).
 
             Loads folder/service/filters from EMAIL_MCP_MAILING_LISTS. Typical use: newsletter drops in a
             dedicated IMAP folder (Alpha Signal, etc.). Optional limit/unread_only override entry defaults.
@@ -1848,7 +1848,7 @@ class EmailMCP:
 
         @mcp.tool()
         async def suggest_email_subject(body: str, ctx: Context) -> str:
-            """Suggest 1–3 concise email subject lines for the given body (uses MCP sampling when available)."""
+            """Suggest 1-3 concise email subject lines for the given body (uses MCP sampling when available)."""
             result = await ctx.sample(
                 messages=(
                     "Suggest 1 to 3 short, clear email subject lines for this body. "

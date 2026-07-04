@@ -1,8 +1,8 @@
-# AGENTS.md — Session Context
+# AGENTS.md -- Session Context
 
 ## Repo: email-mcp
 
-Full-featured email server for MCP clients. Web dashboard at 10812, backend at 10813. 86 tests, 0 ruff warnings.
+Full-featured email server for MCP clients. Web dashboard at 10812, backend at 10813. 86 tests, 0 ruff warnings. 32+ MCP tools.
 
 ---
 
@@ -26,7 +26,7 @@ Full-featured email server for MCP clients. Web dashboard at 10812, backend at 1
 ## Current State (2026-05-23)
 
 ### Features
-- **15 MCP tools**: send, receive, search, delete, mark-read/unread, list/configure/remove services, mailing lists, email_help, suggest_subject, agentic_assist, folders CRUD
+- **32+ MCP tools**: send, receive, search, delete, mark-read/unread, folders CRUD, list/configure/remove services, mailing lists, email_help, suggest_subject, agentic_assist, watcher, contacts, workflows, auto-respond
 - **Auto-Respond**: rule engine + AI drafting + pending queue + spam spoof mode (irate/mock-stupid/absurd/polite-but-confused)
 - **Bulk Send**: paste email lists, max 50, anti-spam warnings
 - **Mail Watcher**: background IMAP polling with webhook POST

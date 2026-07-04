@@ -1,22 +1,12 @@
 # email-mcp
-> Multi-service email platform for MCP-compatible clients. **Version 0.3.0-alpha** - FastMCP 2.14.3 Standards Compliance See [CHANGELOG.md](CHANGELOG.md) for version history. - **SMTP/IMAP**: Standard e...
+> Multi-service email platform for MCP-compatible clients. **Version 0.4.1** - FastMCP 3.2+.
 
-This project includes automated llms.txt generation for AI accessibility.
+See [README.md](README.md) for full documentation.
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-## Docs
-- [Readme](README.md): Multi-service email platform for MCP-compatible clients.
-- [Cursor Setup](CURSOR_SETUP.md): The minimail-mcp now supports **15+ email services** including:
-- [Changelog](CHANGELOG.md): All notable changes to this project will be documented in this file.
-- [Assessment](ASSESSMENT.md): **Category**: MCP Server + AI Orchestrator
-
-## Examples
-- [Examples](examples/): Example code and implementations
-
-## Configuration
-- [Pyproject](pyproject.toml): Python project configuration and dependencies
-- [Package](webapp\package.json): Node.js project configuration and dependencies
-- [Cargo](Cargo.toml): Rust project configuration and dependencies
-- [Config](.git\config): Application configuration files
-
-## Optional
-- [Changelog](CHANGELOG.md): Project changelog information
+## Key Files
+- [README.md](README.md): Full feature overview, tools list, quick start
+- [CHANGELOG.md](CHANGELOG.md): Version history
+- [pyproject.toml](pyproject.toml): Python project configuration
+- [docs/quickstart.md](docs/quickstart.md): Installation and setup guide
+- [docs/configuration.md](docs/configuration.md): Environment variables reference

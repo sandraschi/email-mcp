@@ -1,4 +1,4 @@
-"""MailLab — throwaway SMTP server for testing.
+"""MailLab -- throwaway SMTP server for testing.
 
 Manages a real aiosmtpd SMTP server in a background thread, captures all
 incoming emails, and exposes them for the web dashboard (inbox view, AI
@@ -119,7 +119,11 @@ def start_server(port: int = 0) -> dict[str, Any]:
     _captured.clear()
     _server = Controller(_CaptureHandler(), hostname="127.0.0.1", port=port)
     _server.start()
-    _server_port = _server.server.server_address[1]  # actual port assigned
+    try:
+        svr = getattr(_server, "server", None)
+        _server_port = svr.sockets[0].getsockname()[1] if svr and hasattr(svr, "sockets") and svr.sockets else port
+    except Exception:
+        _server_port = port or 1025
     return {
         "running": True,
         "port": _server_port,

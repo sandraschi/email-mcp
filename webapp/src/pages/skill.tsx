@@ -1,7 +1,13 @@
-import { useState, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BookOpen, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { fetchWithAuth } from "@/lib/api";
 
 interface SkillEntry {
@@ -27,7 +33,7 @@ export function Skill() {
         console.error("Failed to fetch skills:", err);
         setLoading(false);
       });
-  }, []);
+  }, [selected]);
 
   useEffect(() => {
     if (!selected) return;
@@ -46,9 +52,12 @@ export function Skill() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-white">Skill (MCP client instructions)</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-white">
+          Skill (MCP client instructions)
+        </h2>
         <p className="text-slate-400">
-          Anthropic-style skill content so the MCP client/IDE knows how to use this server. FastMCP 3.1 exposes these as resources.
+          Anthropic-style skill content so the MCP client/IDE knows how to use
+          this server. FastMCP 3.1 exposes these as resources.
         </p>
       </div>
 
@@ -59,7 +68,8 @@ export function Skill() {
             <CardTitle className="text-white text-md">Skill content</CardTitle>
           </div>
           <CardDescription className="text-slate-400">
-            Select a skill to show its instruction text (SKILL.md). Use this page in the web SOTA standard to surface skill content.
+            Select a skill to show its instruction text (SKILL.md). Use this
+            page in the web SOTA standard to surface skill content.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -77,7 +87,9 @@ export function Skill() {
                     key={s.name}
                     onClick={() => setSelected(s.name)}
                     className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      selected === s.name ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      selected === s.name
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     }`}
                   >
                     {s.name}

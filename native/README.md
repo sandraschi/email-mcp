@@ -36,5 +36,5 @@ Tauri (Rust) ←──→ Webapp (Vite, :10812) ←─proxied─→ Backend (Fas
 
 - Tauri hosts the webapp in a native WebView window
 - The webapp communicates with the MCP backend via HTTP (proxy configured in `vite.config.ts`)
-- No Python is bundled — the backend runs as a separate process
+- No Python is bundled -- the backend runs as a separate process
 - Rust tray icon allows system tray minimisation

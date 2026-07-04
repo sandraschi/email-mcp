@@ -170,6 +170,7 @@ class EmailService(ABC):
         html: str | None = None,
         cc: list[str] | None = None,
         bcc: list[str] | None = None,
+        attachments: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Send an email via this service.
 
@@ -180,6 +181,7 @@ class EmailService(ABC):
             html: Optional HTML email body for rich formatting.
             cc: Optional carbon copy recipients.
             bcc: Optional blind carbon copy recipients.
+            attachments: Optional list of attachment dicts with keys: filename, content (bytes), content_type.
 
         Returns:
             Dict containing success status and service-specific results.
@@ -307,13 +309,18 @@ class SMTPEmailService(EmailService):
         html: str | None = None,
         cc: list[str] | None = None,
         bcc: list[str] | None = None,
+        attachments: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Send email via SMTP."""
         if not self.smtp_server or not self.smtp_user or not self.smtp_password:
             return {"success": False, "error": f"SMTP not configured for {self.name}"}
 
         try:
-            msg = MIMEMultipart("alternative")
+            from email import encoders
+            from email.mime.base import MIMEBase
+
+            has_attachments = attachments and len(attachments) > 0
+            msg = MIMEMultipart("mixed" if has_attachments else "alternative")
             msg["Subject"] = subject
             msg["From"] = self.smtp_from
             msg["To"] = to if isinstance(to, str) else ", ".join(to)
@@ -321,9 +328,32 @@ class SMTPEmailService(EmailService):
             if cc:
                 msg["Cc"] = ", ".join(cc) if isinstance(cc, list) else cc
 
-            msg.attach(MIMEText(body, "plain"))
-            if html:
-                msg.attach(MIMEText(html, "html"))
+            if has_attachments:
+                alt = MIMEMultipart("alternative")
+                alt.attach(MIMEText(body, "plain"))
+                if html:
+                    alt.attach(MIMEText(html, "html"))
+                msg.attach(alt)
+            else:
+                msg.attach(MIMEText(body, "plain"))
+                if html:
+                    msg.attach(MIMEText(html, "html"))
+
+            for att in attachments or []:
+                filename = att.get("filename", "attachment")
+                content = att.get("content", b"")
+                content_type = att.get("content_type", "application/octet-stream")
+                if isinstance(content, str):
+                    content = content.encode("utf-8")
+                part = (
+                    MIMEBase(*content_type.split("/", 1))
+                    if "/" in content_type
+                    else MIMEBase("application", "octet-stream")
+                )
+                part.set_payload(content)
+                encoders.encode_base64(part)
+                part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+                msg.attach(part)
 
             recipients = [addr.strip() for addr in (to.split(",") if isinstance(to, str) else to)]
             if cc:
@@ -502,7 +532,9 @@ class SMTPEmailService(EmailService):
                 mail.close()
                 mail.logout()
 
-                if status != "OK" or not msg_data or not msg_data[0] or isinstance(msg_data[0], bytes):
+                if status != "OK" or not msg_data or not msg_data[0]:
+                    return None
+                if not isinstance(msg_data[0], (tuple, list)) or len(msg_data[0]) < 2:
                     return None
 
                 raw_email = msg_data[0][1]
@@ -551,7 +583,10 @@ class SMTPEmailService(EmailService):
                 if email_message.is_multipart():
                     for part in email_message.walk():
                         content_disposition = str(part.get("Content-Disposition", ""))
-                        if "attachment" in content_disposition.lower() or ("filename" in content_disposition.lower() and part.get_content_maintype() not in ("text", "multipart")):
+                        if "attachment" in content_disposition.lower() or (
+                            "filename" in content_disposition.lower()
+                            and part.get_content_maintype() not in ("text", "multipart")
+                        ):
                             filename = part.get_filename()
                             if filename:
                                 payload = part.get_payload(decode=True)
@@ -646,7 +681,12 @@ class SMTPEmailService(EmailService):
 
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, move_sync)
-            return {"success": True, "service": self.name, "email_id": email_id, "message": f"Moved {email_id} to {to_folder}"}
+            return {
+                "success": True,
+                "service": self.name,
+                "email_id": email_id,
+                "message": f"Moved {email_id} to {to_folder}",
+            }
         except Exception as e:
             return {"success": False, "error": f"IMAP move failed: {e!s}"}
 
@@ -675,7 +715,12 @@ class SMTPEmailService(EmailService):
 
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, spam_sync)
-            return {"success": True, "service": self.name, "email_id": email_id, "message": f"Flagged {email_id} as spam"}
+            return {
+                "success": True,
+                "service": self.name,
+                "email_id": email_id,
+                "message": f"Flagged {email_id} as spam",
+            }
         except Exception as e:
             return {"success": False, "error": f"IMAP spam flag failed: {e!s}"}
 
@@ -1059,7 +1104,9 @@ class LocalEmailService(EmailService):
                             emails.append(
                                 {
                                     "id": msg.get("ID"),
-                                    "subject": msg.get("Content", {}).get("Headers", {}).get("Subject", ["(No Subject)"])[0],
+                                    "subject": msg.get("Content", {})
+                                    .get("Headers", {})
+                                    .get("Subject", ["(No Subject)"])[0],
                                     "from": msg.get("Content", {}).get("Headers", {}).get("From", ["Unknown"])[0],
                                     "date": msg.get("Created"),
                                     "read": True,
@@ -1560,6 +1607,7 @@ class EmailMCP:
             html: str | None = None,
             cc: list[str] | None = None,
             bcc: list[str] | None = None,
+            attachments: list[dict[str, Any]] | None = None,
         ) -> dict[str, Any]:
             """Send an email via specified email service.
 
@@ -1589,6 +1637,10 @@ class EmailMCP:
                     Example: "<h1>Title</h1><p>Content</p>"
                 cc: Optional CC (carbon copy) recipients. Same format as 'to'.
                 bcc: Optional BCC (blind carbon copy) recipients. Same format as 'to'.
+                attachments: Optional list of attachment dicts. Each dict has:
+                    - filename: str (required)
+                    - content: str (base64-encoded or raw text, required)
+                    - content_type: str (optional, default "application/octet-stream")
 
             Returns:
                 Dictionary with service-specific results:
@@ -1640,7 +1692,7 @@ class EmailMCP:
                 }
 
             email_service = self.services[service]
-            result = await email_service.send_email(to, subject, body, html, cc, bcc)
+            result = await email_service.send_email(to, subject, body, html, cc, bcc, attachments)
 
             if result.get("success"):
                 logger.info("Email sent successfully", service=service, to=to, subject=subject)
@@ -1749,7 +1801,7 @@ class EmailMCP:
 
         @self.mcp.tool()
         async def mailing_lists_catalog() -> dict[str, Any]:
-            """MAILING_LISTS_CATALOG — List named mailing-list presets from EMAIL_MCP_MAILING_LISTS (JSON).
+            """MAILING_LISTS_CATALOG -- List named mailing-list presets from EMAIL_MCP_MAILING_LISTS (JSON).
 
             Configure labels/folders once (e.g. Gmail filter → IMAP folder), then use mailing_list_latest(id).
 
@@ -1774,7 +1826,7 @@ class EmailMCP:
             limit: int | None = None,
             unread_only: bool | None = None,
         ) -> dict[str, Any]:
-            """MAILING_LIST_LATEST — Fetch newest messages for a preset id (see mailing_lists_catalog).
+            """MAILING_LIST_LATEST -- Fetch newest messages for a preset id (see mailing_lists_catalog).
 
             Loads folder/service/filters from EMAIL_MCP_MAILING_LISTS. Typical use: newsletter drops in a
             dedicated IMAP folder (Alpha Signal, etc.). Optional limit/unread_only override entry defaults.
@@ -2549,6 +2601,13 @@ class EmailMCP:
             import json as _j
 
             svc_list = _j.loads(services) if isinstance(services, str) else services
+            # Ensure each entry has at least name and folder
+            svc_list = [
+                {"name": s.get("name", "default"), "folder": s.get("folder", "INBOX")}
+                if isinstance(s, dict)
+                else {"name": str(s), "folder": "INBOX"}
+                for s in svc_list
+            ]
             from .watcher import start_watcher as _sw
 
             return _sw(interval, webhook_url, svc_list, self.mcp)
@@ -2624,23 +2683,14 @@ class EmailMCP:
             run_workflow(workflow="love-letter", recipient="Landlady", format="ascii")
             run_workflow(workflow="complaint", recipient="The WiFi Router", tone="comedic")
             """
-            if workflow not in ("love-letter", "breakup", "thank-you", "complaint", "apology", "fan-mail", "hate-mail"):
+            from .workflows import FORMAT_INSTRUCTIONS as _FMT
+            from .workflows import WORKFLOW_TEMPLATES as _TMPL
+
+            if workflow not in _TMPL:
                 return {"success": False, "error": f"Unknown workflow '{workflow}'"}
-            _TMPL = {
-                "love-letter": "Write a love letter. Make it {tone} and {mood}. The recipient is my {recipient}. Sign it with love. Output format: {fmt_text}",
-                "breakup": "Write a breakup email to my {recipient}. Make it {tone} and {mood}. Output format: {fmt_text}",
-                "thank-you": "Write a warm thank-you note to my {recipient}. Make it {tone}. Output format: {fmt_text}",
-                "complaint": "Write a {mood} complaint letter to my {recipient}. Make it {tone}. Output format: {fmt_text}",
-                "apology": "Write an apology email to my {recipient}. Make it {tone}. Output format: {fmt_text}",
-                "fan-mail": "Write an enthusiastic fan letter to my {recipient}. Make it {tone}. Output format: {fmt_text}",
-                "hate-mail": "Write a hilariously passive-aggressive email to my {recipient}. Make it comedic and over-the-top. Tone: {tone}. Output format: {fmt_text}",
-            }
-            _FMT = {
-                "text": "Return ONLY the email body as plain text.",
-                "ascii": "Include a large ASCII art illustration at the top using characters like @ # % * / \\ | ( ) - + = .",
-                "svg": "Return an inline SVG wrapped in ```svg ... ``` as a decorative card.",
-            }
-            query = _TMPL[workflow].format(recipient=recipient, tone=tone, mood=mood, fmt_text=_FMT.get(format, _FMT["text"]))
+            query = _TMPL[workflow].format(
+                recipient=recipient, tone=tone, mood=mood, fmt_text=_FMT.get(format, _FMT["text"])
+            )
             from .ai import AIRouter
 
             _router = AIRouter(self.mcp)
@@ -2674,7 +2724,9 @@ class EmailMCP:
             """
             from .autorespond import add_rule as _ar
 
-            return _ar(name, match_field, match_pattern, reply_body, reply_subject, use_ai, auto_send, ai_prompt, service)
+            return _ar(
+                name, match_field, match_pattern, reply_body, reply_subject, use_ai, auto_send, ai_prompt, service
+            )
 
         @self.mcp.tool()
         async def list_auto_rules() -> dict[str, Any]:
@@ -2711,14 +2763,32 @@ class EmailMCP:
 
         @self.mcp.tool()
         async def approve_reply(pending_id: str) -> dict[str, Any]:
-            """Approve a pending auto-reply and queue it for sending.
+            """Approve a pending auto-reply and send it immediately.
 
             ## Return Format
-            {success, message}
+            {success, message, sent}
             """
             from .autorespond import approve_pending as _ap
 
-            return _ap(pending_id)
+            result = _ap(pending_id)
+            if not result.get("success"):
+                return result
+
+            pend = result["pending"]
+            svc = pend.get("service", "default")
+            if svc not in self.services:
+                return {**result, "sent": False, "send_message": f"Service {svc!r} not available"}
+
+            send_result = await self.services[svc].send_email(
+                to=pend.get("email_from", ""),
+                subject=pend.get("reply_subject", ""),
+                body=pend.get("reply_body", ""),
+            )
+            result["sent"] = send_result.get("success", False)
+            result["send_message"] = (
+                "Reply sent" if send_result.get("success") else send_result.get("error", "Send failed")
+            )
+            return result
 
         @self.mcp.tool()
         async def auto_respond_now(
@@ -2745,11 +2815,20 @@ class EmailMCP:
             from .ai import AIRouter
 
             _router = AIRouter(self.mcp)
-            prompt = rule.get("ai_prompt", "") or f"Write a friendly reply to this email.\n\nFrom: {result.get('from', '')}\nSubject: {result.get('subject', '')}\nBody: {result.get('text_body', '')[:2000]}"
+            prompt = (
+                rule.get("ai_prompt", "")
+                or f"Write a friendly reply to this email.\n\nFrom: {result.get('from', '')}\nSubject: {result.get('subject', '')}\nBody: {result.get('text_body', '')[:2000]}"
+            )
             reply_body = await _router.route_query(prompt)
             reply_subject = f"Re: {result.get('subject', '')}"
             add_pending(result, reply_body, reply_subject, rule["id"], service)
-            return {"success": True, "matched": True, "rule": rule["name"], "queued": True, "reply_subject": reply_subject}
+            return {
+                "success": True,
+                "matched": True,
+                "rule": rule["name"],
+                "queued": True,
+                "reply_subject": reply_subject,
+            }
 
     def _register_prompts(self) -> None:
         """Register FastMCP 3.1 prompts (reusable message templates)."""
@@ -2778,8 +2857,13 @@ class EmailMCP:
         async def suggest_email_subject(body: str, ctx: Context) -> str:
             """Suggest 1-3 concise email subject lines for the given body (uses MCP sampling when available)."""
             result = await ctx.sample(
-                messages=("Suggest 1 to 3 short, clear email subject lines for this body. Reply with only the subjects, one per line.\n\nBody:\n" + body[:2000]),
-                system_prompt=("You are a concise assistant. Output only subject lines, one per line, no numbering or extra text."),
+                messages=(
+                    "Suggest 1 to 3 short, clear email subject lines for this body. Reply with only the subjects, one per line.\n\nBody:\n"
+                    + body[:2000]
+                ),
+                system_prompt=(
+                    "You are a concise assistant. Output only subject lines, one per line, no numbering or extra text."
+                ),
                 max_tokens=150,
             )
             return getattr(result, "text", None) or str(result)
@@ -2834,7 +2918,7 @@ class EmailMCP:
                 Text,
             )
         except ImportError:
-            logger.warning("prefab_ui not installed — Prefab tools skipped (pip install prefab-ui>=0.18.0)")
+            logger.warning("prefab_ui not installed -- Prefab tools skipped (pip install prefab-ui>=0.18.0)")
             return
 
         mcp = self.mcp
@@ -2844,14 +2928,16 @@ class EmailMCP:
             """Show email service connectivity status as a rich Prefab card.
 
             Displays a live grid of all configured email services with connection
-            state, type, and error info — no need to parse JSON in chat.
+            state, type, and error info -- no need to parse JSON in chat.
             """
             services_to_check = list(self.services.keys())
             service_statuses: dict = {}
             for svc_name in services_to_check:
                 svc = self.services[svc_name]
                 status = await svc.test_connection()
-                connected = status.get("connected", status.get("smtp_connected", False) or status.get("imap_connected", False))
+                connected = status.get(
+                    "connected", status.get("smtp_connected", False) or status.get("imap_connected", False)
+                )
                 service_statuses[svc_name] = {
                     "connected": connected,
                     "type": svc.config.type,
@@ -2862,7 +2948,7 @@ class EmailMCP:
             total = len(service_statuses)
 
             with Column(gap=4, css_class="p-4") as view:
-                Heading(f"Email-MCP — Service Status ({connected_count}/{total} connected)")
+                Heading(f"Email-MCP -- Service Status ({connected_count}/{total} connected)")
                 Separator()
                 with Grid(columns=3, gap=3):
                     for name, info in service_statuses.items():
@@ -2872,7 +2958,7 @@ class EmailMCP:
                         with Card(), CardContent(css_class="pt-4"):
                             Muted(name)
                             Heading(status_text)
-                            Text(f"[{info['type']}]" + (f" — {err[:40]}" if err else ""))
+                            Text(f"[{info['type']}]" + (f" -- {err[:40]}" if err else ""))
                 if not service_statuses:
                     Text("No services configured. Set SMTP_SERVER/SMTP_USER or EMAIL_SERVICES env vars.")
 
@@ -2889,7 +2975,7 @@ class EmailMCP:
             """
             if service not in self.services:
                 with Column(gap=2, css_class="p-4") as view:
-                    Heading("Inbox — Error")
+                    Heading("Inbox -- Error")
                     Text(f"Service '{service}' not found. Available: {list(self.services.keys())}")
                 return PrefabApp(view=view, title="Email Inbox")
 
@@ -2897,7 +2983,7 @@ class EmailMCP:
             emails = result.get("emails", [])
 
             with Column(gap=3, css_class="p-4") as view:
-                Heading(f"Inbox — {service} ({len(emails)} messages)")
+                Heading(f"Inbox -- {service} ({len(emails)} messages)")
                 Separator()
                 if not emails:
                     Text("No messages found.")
@@ -2907,13 +2993,13 @@ class EmailMCP:
                             Heading(msg.get("subject", "(No Subject)")[:80])
                             Muted(f"From: {msg.get('from', 'Unknown')}  •  {msg.get('date', '')[:25]}")
 
-            return PrefabApp(view=view, title=f"Inbox — {service}")
+            return PrefabApp(view=view, title=f"Inbox -- {service}")
 
         @mcp.tool(app=True)
         async def show_services_card() -> PrefabApp:
             """Show all configured email services as a rich Prefab list card."""
             with Column(gap=3, css_class="p-4") as view:
-                Heading(f"Email-MCP — Configured Services ({len(self.services)})")
+                Heading(f"Email-MCP -- Configured Services ({len(self.services)})")
                 Separator()
                 if not self.services:
                     Text("No services configured.")
@@ -2933,6 +3019,67 @@ class EmailMCP:
                                 Text("Configured" if configured else "Missing credentials")
 
             return PrefabApp(view=view, title="Email Services")
+
+        @mcp.tool(app=True)
+        async def show_mailing_list_digest_card(
+            limit: int = 15,
+        ) -> PrefabApp:
+            """Show latest emails from configured mailing lists as a rich digest card.
+
+            Fetches recent unread emails from mailing list presets (configured
+            via EMAIL_MCP_MAILING_LISTS env var). Displays sender, subject,
+            and snippet per list. Useful as a daily news intake overview.
+            """
+            try:
+                entries, err = load_mailing_list_entries()
+                if err or not entries:
+                    with Column(gap=3, css_class="p-4") as view:
+                        Heading("Mailing List Digest")
+                        Text(
+                            "No mailing lists configured. Set EMAIL_MCP_MAILING_LISTS or EMAIL_MCP_MAILING_LISTS_FILE."
+                        )
+                    return PrefabApp(view=view, title="Mailing List Digest")
+
+                from prefab_ui.components import Card, CardContent, Muted, Separator
+
+                with Column(gap=2, css_class="p-4") as view:
+                    Heading(f"Mailing List Digest ({len(entries)} lists)")
+                    Separator()
+                    total = 0
+                    for entry in entries:
+                        list_id = entry.list_id if hasattr(entry, "list_id") else entry.get("id", "?")
+                        svc_name = entry.service if hasattr(entry, "service") else entry.get("service", "default")
+                        folder = entry.folder if hasattr(entry, "folder") else entry.get("folder", "INBOX")
+                        name = list_id
+                        try:
+                            result = await self._list_emails(
+                                service=svc_name,
+                                folder=folder,
+                                limit=min(limit, 20),
+                                unread_only=True,
+                            )
+                        except Exception:
+                            continue
+                        items = result.get("emails", result.get("data", []))
+                        if isinstance(items, dict):
+                            items = items.get("emails", [])
+                        if not items:
+                            continue
+                        total += len(items)
+                        with Card(), CardContent(css_class="pt-2 pb-2"):
+                            Muted(f"List: {name} ({len(items)} new)")
+                            for msg in items[:5]:
+                                Text(f"  {msg.get('subject', '(No Subject)')[:100]}")
+                                Muted(f"  -- {msg.get('from', 'Unknown')[:60]}  {str(msg.get('date', ''))[:16]}")
+
+                    if total == 0:
+                        Text("No new messages on subscribed lists.")
+                return PrefabApp(view=view, title="Mailing List Digest")
+            except ImportError:
+                with Column(gap=3, css_class="p-4") as view:
+                    Heading("Mailing List Digest")
+                    Text("Prefab UI not available.")
+                return PrefabApp(view=view, title="Mailing List Digest")
 
 
 # Global server instance
@@ -2962,15 +3109,29 @@ async def health():
     return {"status": "ok"}
 
 
-setup_webapp(app, email_mcp.mcp)
+setup_webapp(app, email_mcp.mcp, server_instance=email_mcp)
 app.mount("/mcp", _mcp_http)
 
 
 def main() -> None:
     """CLI entry: stdio or HTTP via transport (see transport.run_server)."""
-    from .transport import run_server
+    import argparse
 
-    run_server(email_mcp.mcp, server_name="email-mcp")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--stdio", action="store_true", help="Run in STDIO mode")
+    parser.add_argument("--http", action="store_true", help="Run in HTTP mode")
+    parser.add_argument("--port", type=int, default=10813)
+    parser.add_argument("--host", default="127.0.0.1")
+    args, _ = parser.parse_known_args()
+
+    if args.http:
+        import uvicorn
+
+        uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    else:
+        from .transport import run_server
+
+        run_server(email_mcp.mcp, server_name="email-mcp")
 
 
 if __name__ == "__main__":

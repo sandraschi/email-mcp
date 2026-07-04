@@ -1,8 +1,9 @@
-"""Auto-respond engine — rule-based matching + AI drafting + spam spoofing."""
+"""Auto-respond engine -- rule-based matching + AI drafting + spam spoofing."""
 
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import time
@@ -230,7 +231,7 @@ def add_pending(email: dict[str, Any], reply_body: str, reply_subject: str, rule
     return entry
 
 
-def approve_pending(pending_id: str, mcp_app=None) -> dict[str, Any]:
+def approve_pending(pending_id: str) -> dict[str, Any]:
     _load_pending()
     for p in _PENDING:
         if p["id"] == pending_id:
@@ -265,8 +266,6 @@ def delete_pending(pending_id: str) -> dict[str, Any]:
 
 async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> dict[str, Any]:
     """Auto-respond to a new email. Called by the watcher when mail arrives."""
-    import logging
-
     logger = logging.getLogger(__name__)
 
     rule = match_rule(email)
@@ -283,7 +282,7 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
     reply_subject = rule.get("reply_subject", "") or f"Re: {email.get('subject', '')}"
     reply_body = rule.get("reply_body", "")
 
-    # Filter actions — run on matched emails regardless of reply mode
+    # Filter actions -- run on matched emails regardless of reply mode
     filter_action = rule.get("filter_action", "")
     if filter_action and mcp_app:
         email_id = email.get("id", "")
@@ -317,7 +316,7 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
                 except Exception as e:
                     logger.warning("Filter spam flag failed: %s", e)
             elif filter_action == "notify":
-                logger.info("Filter: NOTIFY — matched email subject=%s from=%s", email.get("subject", ""), email.get("from", ""))
+                logger.info("Filter: NOTIFY -- matched email subject=%s from=%s", email.get("subject", ""), email.get("from", ""))
             elif filter_action == "forward":
                 target = rule.get("filter_target", "")
                 if target and email_id:
@@ -328,7 +327,7 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
         except Exception as e:
             logger.warning("Filter action failed: %s", e)
 
-    # Spoof mode — generate hilarious reply to scammers
+    # Spoof mode -- generate hilarious reply to scammers
     response_mode = rule.get("response_mode", "normal")
     if response_mode == "spoof" and ai_router:
         tone = rule.get("spoof_tone", "mock-stupid")
