@@ -1,6 +1,7 @@
-﻿set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+import 'scripts/just/fleet.just'
 
-# ── Dashboard ──────────────────────────────────────────────────────────────────
+# -- Dashboard ------------------------------------------------------------------
 
 # Display SOTA Industrial Dashboard
 default:
@@ -10,11 +11,11 @@ default:
         Write-Host '';
         $currentCategory = '';
         foreach ($line in $lines) {
-            if ($line -match '^# ── ([^─]+) ─') {
+            if ($line -match '^# -- ([^-]+) -') {
                 $currentCategory = $matches[1].Trim();
                 Write-Host \"`n  $currentCategory\" -ForegroundColor Cyan;
-                Write-Host '  ' + ('─' * 45) -ForegroundColor Gray;
-            } elseif ($line -match '^# ([^─].+)') {
+                Write-Host '  ' + ('-' * 45) -ForegroundColor Gray;
+            } elseif ($line -match '^# ([^-].+)') {
                 $desc = $matches[1].Trim();
                 $idx = [array]::IndexOf($lines, $line);
                 if ($idx -lt $lines.Count - 1) {
@@ -31,7 +32,7 @@ default:
         Write-Host '';
     "
 
-# ── Quality ───────────────────────────────────────────────────────────────────
+# -- Quality -------------------------------------------------------------------
 
 # Execute Ruff SOTA v13.1 linting
 lint:
@@ -55,7 +56,7 @@ fix:
 # Linting & formatting (SOTA mandatory)
 check: fmt lint
 
-# ── Test ────────────────────────────────────────────────────────────────────────
+# -- Test ------------------------------------------------------------------------
 
 # Automated verification (SOTA mandatory)
 test:
@@ -66,7 +67,7 @@ test:
     npx playwright test
     Write-Host 'E2E tests passed' -ForegroundColor Green
 
-# ── Build ───────────────────────────────────────────────────────────────────────
+# -- Build -----------------------------------------------------------------------
 
 # Install all dependencies (SOTA mandatory)
 build bootstrap:
@@ -99,7 +100,7 @@ build-native-debug:
     npm install
     npx @tauri-apps/cli build --debug
 
-# ── Security ───────────────────────────────────────────────────────────────────
+# -- Security -------------------------------------------------------------------
 
 # Bandit security audit
 check-sec:
@@ -111,7 +112,7 @@ audit-deps:
     Set-Location '{{justfile_directory()}}'
     uv run safety check
 
-# ── Dev ─────────────────────────────────────────────────────────────────────────
+# -- Dev -------------------------------------------------------------------------
 
 # Repo statistics
 stats:
@@ -131,7 +132,12 @@ serve dev:
     Set-Location '{{justfile_directory()}}'
     .\start.ps1
 
-# ── Housekeeping ───────────────────────────────────────────────────────────────
+# -- Housekeeping ---------------------------------------------------------------
+
+# Run CUA-NSIS smoke test against installed NSIS app
+cua-nsis-test:
+    Set-Location '{{justfile_directory()}}'
+    uv run python scripts/cua-smoke.py
 
 # Clean build artifacts and backups
 clean:

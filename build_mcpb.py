@@ -1,6 +1,6 @@
 """Build the MCPB package for email-mcp.
 
-Produces minimail-mcp.mcpb — a gzipped tarball containing manifest.json,
+Produces minimail-mcp.mcpb -- a gzipped tarball containing manifest.json,
 server code, and assets for drag-and-drop installation in Claude Desktop.
 """
 

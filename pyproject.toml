@@ -14,7 +14,7 @@ authors = [
 ]
 dependencies = [
     "fastapi>=0.115.0",
-    "fastmcp>=3.2.0,<4",
+    "fastmcp>=3.4.2,<4",
     "pydantic>=2.0.0",
     "structlog>=24.0.0",
     "httpx>=0.25.0",
@@ -43,7 +43,7 @@ email-mcp = "email_mcp.server:main"
 packages = ["src/email_mcp"]
 
 [tool.ruff]
-line-length = 230
+line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]
