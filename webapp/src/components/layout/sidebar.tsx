@@ -57,6 +57,22 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         collapsed ? "w-16" : "w-64",
       )}
     >
+      {/* Logo + collapse toggle at the top */}
+      <div className="flex items-center justify-between h-14 px-3 border-b border-slate-800 shrink-0">
+        {!collapsed && (
+          <Link to="/" className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-blue-400" />
+            <span className="font-semibold text-sm text-slate-200">Email-MCP</span>
+          </Link>
+        )}
+        <button
+          onClick={onToggle}
+          className="p-1.5 rounded-md text-slate-500 hover:bg-slate-800 hover:text-white transition-colors"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+        </button>
+      </div>
       <div className="flex h-16 items-center border-b border-slate-800 px-4">
         <div className="flex items-center gap-2 font-semibold text-slate-100">
           <Mail className="h-6 w-6 text-blue-500" />
@@ -97,22 +113,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           );
         })}
       </nav>
-
-      <div className="border-t border-slate-800 p-2">
-        <button
-          onClick={onToggle}
-          className="flex w-full items-center justify-center rounded-md p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-        >
-          {collapsed ? (
-            <ChevronRight className="h-5 w-5" />
-          ) : (
-            <div className="flex items-center w-full">
-              <ChevronLeft className="h-5 w-5 mr-3" />
-              <span>Collapse</span>
-            </div>
-          )}
-        </button>
-      </div>
     </aside>
   );
 }

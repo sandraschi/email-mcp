@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark;
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+select, input, textarea {
+  color-scheme: dark;
+}
+
 @layer base {
   :root {
     --background: 222.2 84% 4.9%;

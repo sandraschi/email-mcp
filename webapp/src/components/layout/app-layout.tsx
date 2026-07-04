@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { useZoom } from "@/common/use-zoom";
 
 // import { Toaster } from '@/components/ui/toaster';
 
@@ -10,6 +11,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
+  useZoom();
 
   // Persist sidebar state
   useEffect(() => {
