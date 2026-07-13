@@ -12,7 +12,11 @@ Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, lo
 - Dual transport: stdio (Claude Desktop) + HTTP (`MCP_TRANSPORT=http`)
 - See [mcp-central-docs](https://github.com/sandraschi/mcp-central-docs) for fleet-wide coding standards
 
+## Session Context
+- **Before starting work**: call `email_status()` to check connectivity, then `check_inbox(service="default", unread_only=True, limit=10)` for recent activity
+- **At end of work**: send drafted emails, mark read, subscribe to mailing lists via `mailing_list_latest()`
+
 ## Key Files
 - `README.md` -- full documentation
 - `pyproject.toml` -- build config and entry points
-- `AGENTS.md` -- OpenAI Codex agent context (if present)
+- `AGENTS.md` -- Agent context

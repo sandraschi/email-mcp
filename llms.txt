@@ -1,5 +1,7 @@
 # email-mcp
 > Multi-service email platform for MCP-compatible clients. **Version 0.4.1** - FastMCP 3.2+.
+>
+> For full tool reference, architecture, and configuration: see [llms-full.txt](llms-full.txt).
 
 See [README.md](README.md) for full documentation.
 See [CHANGELOG.md](CHANGELOG.md) for version history.

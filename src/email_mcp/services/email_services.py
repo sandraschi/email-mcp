@@ -5,23 +5,17 @@ from __future__ import annotations
 import asyncio
 import email
 import imaplib
-import json
 import logging
-import os
 import smtplib
-import ssl
-import time
 from abc import ABC, abstractmethod
-from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.encoders import encode_base64
-import httpx
-from pathlib import Path
 from typing import Any
 
-from email_mcp.sanitize import sanitize_text, wrap_untrusted_list
+import httpx
 from pydantic import BaseModel, Field
+
+from email_mcp.sanitize import sanitize_text
 
 logger = logging.getLogger(__name__)
 

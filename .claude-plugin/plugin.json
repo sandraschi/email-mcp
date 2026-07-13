@@ -1,0 +1,6 @@
+{
+  "name": "email-mcp",
+  "version": "0.4.1",
+  "description": "Multi-service email platform for MCP-compatible clients",
+  "hooks": "../hooks/hooks.json"
+}

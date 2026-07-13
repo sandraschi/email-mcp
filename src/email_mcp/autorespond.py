@@ -12,10 +12,14 @@ from pathlib import Path
 from typing import Any
 
 _RULES: list[dict[str, Any]] = []
-_RULES_FILE = Path(os.getenv("EMAIL_MCP_AUTORESPOND_RULES", Path(__file__).resolve().parent.parent / "autorespond_rules.json"))
+_RULES_FILE = Path(
+    os.getenv("EMAIL_MCP_AUTORESPOND_RULES", Path(__file__).resolve().parent.parent / "autorespond_rules.json")
+)
 
 _PENDING: list[dict[str, Any]] = []
-_PENDING_FILE = Path(os.getenv("EMAIL_MCP_AUTORESPOND_PENDING", Path(__file__).resolve().parent.parent / "autorespond_pending.json"))
+_PENDING_FILE = Path(
+    os.getenv("EMAIL_MCP_AUTORESPOND_PENDING", Path(__file__).resolve().parent.parent / "autorespond_pending.json")
+)
 
 
 def _load_rules() -> None:
@@ -103,7 +107,23 @@ def update_rule(rule_id: str, updates: dict[str, Any]) -> dict[str, Any]:
     _load_rules()
     for r in _RULES:
         if r["id"] == rule_id:
-            keys = ("name", "match_field", "match_pattern", "reply_body", "reply_subject", "use_ai", "auto_send", "ai_prompt", "service", "response_mode", "spoof_tone", "spam_action", "filter_action", "filter_target", "enabled")
+            keys = (
+                "name",
+                "match_field",
+                "match_pattern",
+                "reply_body",
+                "reply_subject",
+                "use_ai",
+                "auto_send",
+                "ai_prompt",
+                "service",
+                "response_mode",
+                "spoof_tone",
+                "spam_action",
+                "filter_action",
+                "filter_target",
+                "enabled",
+            )
             for key in keys:
                 if key in updates:
                     r[key] = updates[key]
@@ -211,7 +231,9 @@ def list_pending() -> list[dict[str, Any]]:
     return sorted(_PENDING, key=lambda p: p.get("created_at", 0), reverse=True)
 
 
-def add_pending(email: dict[str, Any], reply_body: str, reply_subject: str, rule_id: str, service: str = "default") -> dict[str, Any]:
+def add_pending(
+    email: dict[str, Any], reply_body: str, reply_subject: str, rule_id: str, service: str = "default"
+) -> dict[str, Any]:
     _load_pending()
     entry = {
         "id": str(uuid.uuid4())[:12],
@@ -305,7 +327,9 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
                 target = rule.get("filter_target", "")
                 if target and email_id:
                     try:
-                        await mcp_app.call_tool("move_email", {"email_id": email_id, "to_folder": target, "service": svc, "folder": folder})
+                        await mcp_app.call_tool(
+                            "move_email", {"email_id": email_id, "to_folder": target, "service": svc, "folder": folder}
+                        )
                         logger.info("Filter: moved %s to %s", email_id, target)
                     except Exception as e:
                         logger.warning("Filter move failed: %s", e)
@@ -316,13 +340,27 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
                 except Exception as e:
                     logger.warning("Filter spam flag failed: %s", e)
             elif filter_action == "notify":
-                logger.info("Filter: NOTIFY -- matched email subject=%s from=%s", email.get("subject", ""), email.get("from", ""))
+                logger.info(
+                    "Filter: NOTIFY -- matched email subject=%s from=%s",
+                    email.get("subject", ""),
+                    email.get("from", ""),
+                )
             elif filter_action == "forward":
                 target = rule.get("filter_target", "")
                 if target and email_id:
-                    result = await mcp_app.call_tool("fetch_email_detail", {"email_id": email_id, "service": svc, "folder": folder})
+                    result = await mcp_app.call_tool(
+                        "fetch_email_detail", {"email_id": email_id, "service": svc, "folder": folder}
+                    )
                     if isinstance(result, dict) and result.get("success"):
-                        await mcp_app.call_tool("send_email", {"to": target, "subject": f"Fwd: {email.get('subject', '')}", "body": f"Forwarded from {email.get('from', '')}:\n\n{result.get('text_body', '')}", "service": svc})
+                        await mcp_app.call_tool(
+                            "send_email",
+                            {
+                                "to": target,
+                                "subject": f"Fwd: {email.get('subject', '')}",
+                                "body": f"Forwarded from {email.get('from', '')}:\n\n{result.get('text_body', '')}",
+                                "service": svc,
+                            },
+                        )
                         logger.info("Filter: forwarded %s to %s", email_id, target)
         except Exception as e:
             logger.warning("Filter action failed: %s", e)
@@ -337,7 +375,9 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
         logger.info("Spoof reply generated to %s (tone=%s)", email.get("from", ""), tone)
     elif rule.get("use_ai") and ai_router:
         body_text = (email.get("text_body") or email.get("body", ""))[:2000]
-        prompt = rule.get("ai_prompt", "") or (f"Write a friendly reply. Be concise.\nFrom: {email.get('from', '')}\nSubject: {email.get('subject', '')}\nBody: {body_text}")
+        prompt = rule.get("ai_prompt", "") or (
+            f"Write a friendly reply. Be concise.\nFrom: {email.get('from', '')}\nSubject: {email.get('subject', '')}\nBody: {body_text}"
+        )
         reply_body = await ai_router.route_query(prompt)
 
     auto_send = rule.get("auto_send", False) if response_mode != "spoof" else True

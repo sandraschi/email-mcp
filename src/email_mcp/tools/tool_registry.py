@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger(__name__)
 
+
 def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
     """Register all email tools with the FastMCP server.
 
@@ -1158,9 +1159,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         """
         from .autorespond import add_rule as _ar
 
-        return _ar(
-            name, match_field, match_pattern, reply_body, reply_subject, use_ai, auto_send, ai_prompt, service
-        )
+        return _ar(name, match_field, match_pattern, reply_body, reply_subject, use_ai, auto_send, ai_prompt, service)
 
     @mcp.tool()
     async def list_auto_rules() -> dict[str, Any]:
@@ -1219,9 +1218,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             body=pend.get("reply_body", ""),
         )
         result["sent"] = send_result.get("success", False)
-        result["send_message"] = (
-            "Reply sent" if send_result.get("success") else send_result.get("error", "Send failed")
-        )
+        result["send_message"] = "Reply sent" if send_result.get("success") else send_result.get("error", "Send failed")
         return result
 
     @mcp.tool()

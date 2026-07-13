@@ -4,14 +4,14 @@
   <a href="https://github.com/casey/just"><img src="https://img.shields.io/badge/just-ready_to_go-7c5cfc?style=flat-square&logo=just&logoColor=white" alt="Just"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.13+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"></a>
-  <a href="tests/"><img src="https://img.shields.io/badge/tests-86%20passing-brightgreen?style=flat-square" alt="Tests"></a>
+  <a href="tests/"><img src="https://img.shields.io/badge/tests-144%20passing-brightgreen?style=flat-square" alt="Tests"></a>
   <a href="https://biomejs.dev"><img src="https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat-square&logo=biome&logoColor=white" alt="Biome"></a>
   <a href="https://github.com/PrefectHQ/fastmcp"><img src="https://img.shields.io/badge/FastMCP-3.2-7c5cfc?style=flat-square" alt="FastMCP"></a>
 </p>
 
 A full-featured email server for MCP clients. Send and receive mail through SMTP/IMAP, transactional APIs (SendGrid, Mailgun, Resend), local test servers (MailHog), and webhooks (Slack, Discord). Includes a web dashboard with AI-assisted compose, a throwaway SMTP lab, folder management, contact import, background mail watching, and creative AI workflows (love letters, complaints, ASCII art, SVG cards).
 
-**v0.4.1** -- 86 tests passing, 15 MCP tools, FastMCP 3.2+, dual transport (stdio + HTTP).
+**v0.4.1** -- 144 tests passing, 32+ MCP tools, FastMCP 3.2+, dual transport (stdio + HTTP).
 
 ---
 
@@ -54,7 +54,7 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 
 ## Features
 
-- **15 MCP tools**: send, receive, search, delete, mark-read, manage email services
+- **32+ MCP tools**: send, receive, search, delete, mark-read, manage email services, contacts, auto-respond, workflows, mail lab
 - **Web dashboard**: full React SPA at `localhost:10812`
 - **AI assistant**: natural language email commands (Ollama, OpenAI, Anthropic, Google)
 - **AI Improve**: rewrite email body with style/length/mood controls
@@ -99,16 +99,22 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 | `fetch_email_detail` | Get full email with body |
 | `search_emails` | IMAP full-text search |
 | `delete_email` | Remove email (IMAP) |
-| `mark_email_read` | Mark as read |
+| `mark_email_read` / `mark_email_unread` | Toggle read status |
 | `email_status` | Test connectivity |
 | `list_services` | List configured services |
-| `configure_service` | Add service at runtime |
-| `remove_service` | Remove a service |
+| `configure_service` / `remove_service` | Manage services |
+| `quick_setup` | One-click Gmail/Outlook/Yahoo/iCloud |
+| `list_folders` / `create_folder` / `delete_folder` / `rename_folder` | IMAP folder CRUD |
 | `email_help` | Usage help and documentation |
 | `mailing_lists_catalog` | List newsletter presets |
 | `mailing_list_latest` | Fetch from a preset |
 | `suggest_email_subject` | AI subject line (sampling) |
 | `email_agentic_assist` | Multi-step email plan |
+| `add_contact` / `search_contacts` | Contact management |
+| `start_watcher` / `stop_watcher` / `watcher_status` | Background IMAP polling |
+| `run_workflow` | Creative email generation |
+| `add_auto_rule` / `list_auto_rules` / `delete_auto_rule` | Auto-respond rules |
+| `list_pending_replies` / `approve_reply` / `auto_respond_now` | Pending reply management |
 
 ## Ports
 
@@ -140,13 +146,13 @@ uv sync --extra test --extra dev
 # Start the web dashboard
 .\start.ps1
 
-# Run all backend tests (69)
+# Run all backend tests
 .venv\Scripts\pytest.exe tests -q
 
-# Run Playwright e2e tests (17)
+# Run Playwright e2e tests
 cd webapp && npx playwright test && cd ..
 
-# Full test suite: 86 tests
+# Full test suite
 .venv\Scripts\pytest.exe tests -q && cd webapp && npx playwright test && cd ..
 
 # Build MCPB package

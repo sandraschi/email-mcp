@@ -70,7 +70,6 @@ def _extract_tool_result(result: Any) -> dict[str, Any]:
     return {"result": str(result) if result is not None else None}
 
 
-
 async def _safe_call(mcp_app, tool_name: str, params: dict | None = None) -> dict:
     """Call an MCP tool with guardrails. Raises HTTPException on failure."""
     try:
@@ -124,6 +123,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
     async def diagnostics(user: str = Depends(authenticate)):
         try:
             import psutil
+
             cpu = psutil.cpu_percent()
             mem = psutil.virtual_memory().percent
             disk = psutil.disk_usage("/").percent
@@ -340,7 +340,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         }
 
         if provider not in PROFILES:
-            raise HTTPException(status_code=422, detail=f"Unknown provider '{provider}'. Supported: {', '.join(PROFILES.keys())}")
+            raise HTTPException(
+                status_code=422, detail=f"Unknown provider '{provider}'. Supported: {', '.join(PROFILES.keys())}"
+            )
 
         profile = PROFILES[provider]
         svc_name = profile["name"]
@@ -376,18 +378,27 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         import socket
         import subprocess
 
-        result = {"bridge_running": False, "ports_open": [], "install_url": "https://proton.me/mail/bridge", "message": ""}
+        result = {
+            "bridge_running": False,
+            "ports_open": [],
+            "install_url": "https://proton.me/mail/bridge",
+            "message": "",
+        }
 
         # 1. Check for Bridge process (tasklist is a Windows built-in, safe)
         try:
-            procs = subprocess.run(["tasklist", "/FI", "IMAGENAME eq protonmail-bridge*"], capture_output=True, text=True, timeout=5)
+            procs = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq protonmail-bridge*"], capture_output=True, text=True, timeout=5
+            )
             if "protonmail" in procs.stdout.lower():
                 result["bridge_running"] = True
         except Exception:
             pass
         if not result["bridge_running"]:
             try:
-                procs = subprocess.run(["tasklist", "/FI", "IMAGENAME eq bridge*"], capture_output=True, text=True, timeout=5)
+                procs = subprocess.run(
+                    ["tasklist", "/FI", "IMAGENAME eq bridge*"], capture_output=True, text=True, timeout=5
+                )
                 if "bridge" in procs.stdout.lower():
                     result["bridge_running"] = True
             except Exception:
@@ -408,7 +419,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         smtp_ok = 1025 in result["ports_open"]
         imap_ok = 1143 in result["ports_open"]
         if result["bridge_running"] and smtp_ok and imap_ok:
-            result["message"] = "ProtonMail Bridge is running. (Note: Bridge now requires a paid ProtonMail subscription.)"
+            result["message"] = (
+                "ProtonMail Bridge is running. (Note: Bridge now requires a paid ProtonMail subscription.)"
+            )
             result["status"] = "ready"
         elif result["bridge_running"] and not (smtp_ok and imap_ok):
             result["message"] = "Bridge process found but ports not responding. Restart Bridge."
@@ -417,7 +430,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             result["message"] = "Ports 1025/1143 open but Bridge not detected. Something else is using them."
             result["status"] = "unknown_service"
         else:
-            result["message"] = "ProtonMail Bridge not found. Note: Since late 2023, Bridge and SMTP/IMAP require a paid ProtonMail subscription (Mail Plus €3.99/mo). Free accounts cannot connect via SMTP/IMAP."
+            result["message"] = (
+                "ProtonMail Bridge not found. Note: Since late 2023, Bridge and SMTP/IMAP require a paid ProtonMail subscription (Mail Plus €3.99/mo). Free accounts cannot connect via SMTP/IMAP."
+            )
             result["status"] = "not_installed"
 
         return result
@@ -633,7 +648,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         _user: str = Depends(authenticate),
     ):
         try:
-            return _extract_tool_result(await mcp_app.call_tool("delete_folder", {"folder": folder_name, "service": name}))
+            return _extract_tool_result(
+                await mcp_app.call_tool("delete_folder", {"folder": folder_name, "service": name})
+            )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -648,7 +665,11 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         if not new_name:
             raise HTTPException(status_code=422, detail="new_name is required")
         try:
-            return _extract_tool_result(await mcp_app.call_tool("rename_folder", {"old_name": folder_name, "new_name": new_name, "service": name}))
+            return _extract_tool_result(
+                await mcp_app.call_tool(
+                    "rename_folder", {"old_name": folder_name, "new_name": new_name, "service": name}
+                )
+            )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -678,6 +699,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
             def fetch_attachment():
                 import imaplib
+
                 mail = imaplib.IMAP4_SSL(imap_server, imap_port)
                 mail.login(imap_user, imap_password)
                 mail.select(folder)
@@ -691,7 +713,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 idx = 0
                 for part in msg.walk():
                     cd = str(part.get("Content-Disposition", ""))
-                    if "attachment" in cd.lower() or ("filename" in cd.lower() and part.get_content_maintype() not in ("text", "multipart")):
+                    if "attachment" in cd.lower() or (
+                        "filename" in cd.lower() and part.get_content_maintype() not in ("text", "multipart")
+                    ):
                         idx += 1
                         if idx == part_index:
                             return {
@@ -702,11 +726,16 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 return None
 
             import asyncio
+
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(None, fetch_attachment)
             if not result:
                 raise HTTPException(status_code=404, detail="Attachment not found")
-            return Response(content=result["data"], media_type=result["content_type"], headers={"Content-Disposition": f'attachment; filename="{result["filename"]}"'})
+            return Response(
+                content=result["data"],
+                media_type=result["content_type"],
+                headers={"Content-Disposition": f'attachment; filename="{result["filename"]}"'},
+            )
         except HTTPException:
             raise
         except Exception as exc:
@@ -768,9 +797,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             }
             if payload.get("attachments"):
                 kw["attachments"] = payload["attachments"]
-            result = _extract_tool_result(
-                await mcp_app.call_tool("send_email", kw)
-            )
+            result = _extract_tool_result(await mcp_app.call_tool("send_email", kw))
             return result
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -794,7 +821,10 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         if len(recipients) == 0:
             raise HTTPException(status_code=422, detail="No valid recipients")
         if len(recipients) > 50:
-            raise HTTPException(status_code=422, detail=f"Too many recipients ({len(recipients)}). Max 50 per batch. Bulk operations require review.")
+            raise HTTPException(
+                status_code=422,
+                detail=f"Too many recipients ({len(recipients)}). Max 50 per batch. Bulk operations require review.",
+            )
         if len(recipients) > 10 and not payload.get("confirmed"):
             return {
                 "success": False,
@@ -1031,7 +1061,13 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         name = payload.get("name", "").strip()
         if not name:
             raise HTTPException(status_code=422, detail="name is required")
-        return add_template(name, payload.get("subject", ""), payload.get("body", ""), payload.get("html", ""), payload.get("category", ""))
+        return add_template(
+            name,
+            payload.get("subject", ""),
+            payload.get("body", ""),
+            payload.get("html", ""),
+            payload.get("category", ""),
+        )
 
     @app.delete("/api/templates/{template_id}")
     async def template_delete(template_id: str, _user: str = Depends(authenticate)):
@@ -1495,7 +1531,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
     ):
         workflow = payload.get("workflow", "").strip()
         if workflow not in WORKFLOWS:
-            raise HTTPException(status_code=422, detail=f"Unknown workflow '{workflow}'. Available: {list(WORKFLOWS.keys())}")
+            raise HTTPException(
+                status_code=422, detail=f"Unknown workflow '{workflow}'. Available: {list(WORKFLOWS.keys())}"
+            )
         template = WORKFLOWS[workflow]
         tone = payload.get("tone", "sincere")
         mood = payload.get("mood", "warm")
@@ -1638,7 +1676,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         folder = payload.get("folder", "INBOX")
         if not email_id:
             raise HTTPException(status_code=422, detail="email_id is required")
-        result = _extract_tool_result(await mcp_app.call_tool("fetch_email_detail", {"email_id": email_id, "service": service, "folder": folder}))
+        result = _extract_tool_result(
+            await mcp_app.call_tool("fetch_email_detail", {"email_id": email_id, "service": service, "folder": folder})
+        )
         if not result.get("success"):
             raise HTTPException(status_code=404, detail=f"Email {email_id} not found")
         from .autorespond import add_pending, match_rule
@@ -1646,7 +1686,10 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         rule = match_rule(result)
         if not rule:
             return {"success": True, "matched": False, "message": "No rule matched"}
-        prompt = rule.get("ai_prompt", "") or f"Write a friendly reply to this email.\n\nFrom: {result.get('from', '')}\nSubject: {result.get('subject', '')}\nBody: {result.get('text_body', '')[:2000]}"
+        prompt = (
+            rule.get("ai_prompt", "")
+            or f"Write a friendly reply to this email.\n\nFrom: {result.get('from', '')}\nSubject: {result.get('subject', '')}\nBody: {result.get('text_body', '')[:2000]}"
+        )
         reply_body = await ai_router.route_query(prompt)
         reply_subject = f"Re: {result.get('subject', '')}"
         entry = add_pending(result, reply_body, reply_subject, rule["id"], service)

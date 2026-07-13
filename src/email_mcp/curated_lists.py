@@ -44,7 +44,11 @@ LISTS: dict[str, dict[str, str | list[dict[str, str]]]] = {
         "description": "Public contact addresses for EU Commissioners. Source: ec.europa.eu. For legitimate civic engagement only.",
         "source": "https://ec.europa.eu/commission/commissioners",
         "contacts": [
-            {"name": "Ursula von der Leyen", "email": "ursula.vonderleyen@ec.europa.eu", "role": "Commission President"},
+            {
+                "name": "Ursula von der Leyen",
+                "email": "ursula.vonderleyen@ec.europa.eu",
+                "role": "Commission President",
+            },
             {"name": "Margrethe Vestager", "email": "margrethe.vestager@ec.europa.eu", "role": "Executive VP, Digital"},
             {"name": "Valdis Dombrovskis", "email": "valdis.dombrovskis@ec.europa.eu", "role": "Executive VP, Economy"},
         ],
@@ -66,7 +70,15 @@ def get_list(list_id: str) -> dict | None:
 
 
 def list_lists() -> list[dict]:
-    return [{"id": k, "title": v.get("title", k), "description": v.get("description", ""), "count": len(v.get("contacts", []))} for k, v in LISTS.items()]
+    return [
+        {
+            "id": k,
+            "title": v.get("title", k),
+            "description": v.get("description", ""),
+            "count": len(v.get("contacts", [])),
+        }
+        for k, v in LISTS.items()
+    ]
 
 
 def import_list(list_id: str) -> dict:
@@ -79,9 +91,20 @@ def import_list(list_id: str) -> dict:
     imported = 0
     errors = []
     for c in contacts:
-        result = add_contact(c.get("name", ""), c.get("email", ""), notes=c.get("role", ""), group=f"Curated: {lst.get('title', list_id)}")
+        result = add_contact(
+            c.get("name", ""),
+            c.get("email", ""),
+            notes=c.get("role", ""),
+            group=f"Curated: {lst.get('title', list_id)}",
+        )
         if result.get("success"):
             imported += 1
         else:
             errors.append(f"{c.get('email')}: {result.get('error')}")
-    return {"success": True, "imported": imported, "errors": errors, "list_id": list_id, "list_title": lst.get("title", "")}
+    return {
+        "success": True,
+        "imported": imported,
+        "errors": errors,
+        "list_id": list_id,
+        "list_title": lst.get("title", ""),
+    }
