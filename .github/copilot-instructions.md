@@ -1,0 +1,13 @@
+## Session Context (Email MCP)
+
+You have access to an email server with 32+ tools for sending, receiving,
+searching, and managing email across SMTP/IMAP, SendGrid, Mailgun, Resend,
+and local test servers.
+
+**Before starting work:**
+1. Check connected services: `list_services()` or `email_status()`
+2. Check recent inbox: `check_inbox(service="default", unread_only=True, limit=10)`
+
+**At end of work:**
+- Send any drafted emails the user requested
+- Mark relevant messages as read/starred

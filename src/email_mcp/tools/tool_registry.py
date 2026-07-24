@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
+import email
+import imaplib
 from typing import TYPE_CHECKING, Any
 
 import structlog
 from fastmcp import FastMCP
 
+from email_mcp.mailing_lists import load_mailing_list_entries
+from email_mcp.sanitize import sanitize_text, wrap_untrusted_dict, wrap_untrusted_list
 from email_mcp.services.email_services import (
     APIEmailService,
     EmailServiceConfig,
@@ -14,6 +19,7 @@ from email_mcp.services.email_services import (
     LocalEmailService,
     SMTPEmailService,
     WebhookEmailService,
+    decode_email_header,
 )
 
 if TYPE_CHECKING:
@@ -1260,3 +1266,30 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             "queued": True,
             "reply_subject": reply_subject,
         }
+
+    @mcp.tool()
+    async def email_shutdown(confirm: bool = False) -> dict[str, Any]:
+        """Gracefully shut down the Email MCP server.
+
+        Requires confirm=True to prevent accidental termination.
+
+        ## Return Format
+        {"success": bool, "message": str}
+
+        ## Examples
+        email_shutdown(confirm=True)
+        """
+        if not confirm:
+            return {"success": False, "message": "Set confirm=True to shut down the server."}
+        logger.info("Server shutdown requested via email_shutdown")
+        import asyncio
+
+        async def _shutdown():
+            await asyncio.sleep(0.5)
+            import os
+            import signal
+
+            os.kill(os.getpid(), signal.SIGTERM)
+
+        _shutdown_task = asyncio.create_task(_shutdown())
+        return {"success": True, "message": "Server shutting down..."}

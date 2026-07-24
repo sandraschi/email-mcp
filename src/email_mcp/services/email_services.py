@@ -8,6 +8,7 @@ import imaplib
 import logging
 import smtplib
 from abc import ABC, abstractmethod
+from email.header import decode_header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any
@@ -472,7 +473,7 @@ class SMTPEmailService(EmailService):
 
                 if status != "OK" or not msg_data or not msg_data[0]:
                     return None
-                if not isinstance(msg_data[0], (tuple, list)) or len(msg_data[0]) < 2:
+                if not isinstance(msg_data[0], tuple | list) or len(msg_data[0]) < 2:
                     return None
 
                 raw_email = msg_data[0][1]
@@ -858,6 +859,7 @@ class APIEmailService(EmailService):
         html: str | None = None,
         cc: list[str] | None = None,
         bcc: list[str] | None = None,
+        attachments: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Send email via API."""
         if not self.api_key or not self.api_url or not self.from_email:
@@ -998,6 +1000,7 @@ class LocalEmailService(EmailService):
         html: str | None = None,
         cc: list[str] | None = None,
         bcc: list[str] | None = None,
+        attachments: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Send email to local testing service."""
         try:
@@ -1143,6 +1146,7 @@ class WebhookEmailService(EmailService):
         html: str | None = None,
         cc: list[str] | None = None,
         bcc: list[str] | None = None,
+        attachments: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Send email via webhook."""
         if not self.webhook_url:

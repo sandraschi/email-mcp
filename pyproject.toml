@@ -10,11 +10,11 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [
-    { name = "Sandra Schipal", email = "sandra@schipal.at" }
+    { name = "Sandra Schipal", email = "sandraschipal@gmail.com" }
 ]
 dependencies = [
     "fastapi>=0.115.0",
-    "fastmcp>=3.4.2,<4",
+    "fastmcp>=3.4.4,<4",
     "pydantic>=2.0.0",
     "structlog>=24.0.0",
     "httpx>=0.25.0",

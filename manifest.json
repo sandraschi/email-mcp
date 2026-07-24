@@ -44,8 +44,7 @@
       "title": "SMTP Password/App Password",
       "description": "Password or App Password for SMTP authentication",
       "required": false,
-      "default": "",
-      "secret": true
+      "default": ""
     },
     "imap_server": {
       "type": "string",
@@ -66,8 +65,7 @@
       "title": "IMAP Password/App Password",
       "description": "Password or App Password for IMAP authentication",
       "required": false,
-      "default": "",
-      "secret": true
+      "default": ""
     }
   },
   "tools": [

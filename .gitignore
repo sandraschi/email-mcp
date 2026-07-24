@@ -97,3 +97,7 @@ Thumbs.db
 target/
 _dashboard/
 *.bak
+reports/
+.mypy_cache/
+cua-reports/
+.mcpb

@@ -88,5 +88,25 @@
     "html": null,
     "service": "default",
     "updated_at": 1783166054
+  },
+  "0adddbaa": {
+    "id": "0adddbaa",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1784927248
+  },
+  "4562c6f5": {
+    "id": "4562c6f5",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1784927649
   }
 }

@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "SessionStart": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "text",
+        "text": "## Session Context (Email MCP)\n\nYou have access to an email server with 32+ tools for sending, receiving,\nsearching, and managing email across SMTP/IMAP, SendGrid, Mailgun, Resend,\nand local test servers.\n\n**Before starting work:**\n1. Check connected services: list_services() or email_status()\n2. Check recent inbox: check_inbox(service=\"default\", unread_only=True, limit=10)\n\n**At end of work:**\n- Send any drafted emails the user requested\n- Mark relevant messages as read/starred\n- Use mailing_list_latest() to stay current on subscribed newsletters"
+      }]
+    }]
+  }
+}

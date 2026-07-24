@@ -1,6 +1,26 @@
 
 ## [Unreleased] -- 2026-06-14
 
+### Fixed (2026-07-24 — assfix)
+- CORS: replaced `allow_origins=["*"]` with fleet-standard explicit origins + `allow_origin_regex` for Tailscale/LAN
+- CORS: replaced `run_http_async()` in transport.py with `uvicorn.Server` on `mcp.http_app()` with CORS middleware
+- Imports: added missing `imaplib`, `email`, `asyncio` imports in tool_registry.py (search_emails was broken)
+- Imports: added `from email.header import decode_header` in email_services.py
+- Imports: added `decode_email_header`, `sanitize_text`, `wrap_untrusted_list`, `load_mailing_list_entries` imports in tool_registry.py
+- Imports: fixed E402 (module-level import not at top) in server.py
+- Tool: added `email_shutdown` self-termination tool
+- Service: added `attachments` parameter to LocalEmailService, APIEmailService, WebhookEmailService for interface parity
+- Test: fixed test_e2e_real.py (LocalEmailService.send_email arg count mismatch)
+
+### Added
+- `.env.example` — service config template
+- `.claude-plugin/hooks/hooks.json` — Claude Code SessionStart hook
+- `.windsurfrules` — Windsurf session context
+- `.github/copilot-instructions.md` — GitHub Copilot tool awareness
+- `.opencode/skills/email-mcp/SKILL.md` — OpenCode session context
+- `.pre-commit-config.yaml` — Ruff pre-commit hooks
+- `webapp/bun.lock` — Bun lockfile per fleet standard
+
 ### Added
 - Tauri CORS: 	auri://localhost, http://tauri.localhost, https://tauri.localhost in CORS origins
 - Tauri CORS: _TAURI env var toggle with llow_origin_regex for secure WebView access
