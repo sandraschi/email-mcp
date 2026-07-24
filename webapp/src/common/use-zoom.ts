@@ -16,7 +16,7 @@ export function useZoom() {
     localStorage.setItem("tauri-zoom", String(level));
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().setZoom(level);
+      await (getCurrentWindow() as any).setZoom(level);
       return;
     } catch {
       /* fall through to CSS zoom */

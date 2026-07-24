@@ -6,7 +6,7 @@ import {
 	Loader2,
 	Mail,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchWithAuth } from "@/lib/api";
@@ -29,26 +29,55 @@ type Stats = {
 	error?: string;
 };
 
+function useExponentialBackoff(fn: () => Promise<void>, maxRetries = 5) {
+	const retriesRef = useRef(0);
+	const mountedRef = useRef(true);
+
+	const poll = useCallback(async () => {
+		while (mountedRef.current && retriesRef.current < maxRetries) {
+			try {
+				await fn();
+				return;
+			} catch {
+				retriesRef.current += 1;
+				if (retriesRef.current >= maxRetries) return;
+				const delay = Math.min(1000 * Math.pow(2, retriesRef.current - 1), 16000);
+				await new Promise((r) => setTimeout(r, delay));
+			}
+		}
+	}, [fn, maxRetries]);
+
+	useEffect(() => {
+		poll();
+		return () => { mountedRef.current = false; };
+	}, [poll]);
+}
+
 export function Dashboard() {
 	const navigate = useNavigate();
 	const [stats, setStats] = useState<Stats | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [backendOk, setBackendOk] = useState<boolean | null>(null);
 	const [_refreshKey, setRefreshKey] = useState(0);
 
 	const fetchStats = useCallback(async () => {
-		try {
-			const data = await fetchWithAuth("/api/stats");
-			setStats(data);
-		} catch (err) {
-			console.error("Failed to fetch dashboard stats:", err);
-		} finally {
-			setLoading(false);
-		}
+		const data = await fetchWithAuth("/api/stats");
+		setStats(data);
+		setBackendOk(true);
 	}, []);
 
+	useExponentialBackoff(fetchStats, 5);
+
 	useEffect(() => {
-		fetchStats();
-	}, [fetchStats]);
+		if (!loading) return;
+		fetchStats().catch(() => {}).finally(() => setLoading(false));
+	}, [fetchStats, loading]);
+
+	// Auto-refresh every 60s
+	useEffect(() => {
+		const interval = setInterval(() => setRefreshKey((k) => k + 1), 60_000);
+		return () => clearInterval(interval);
+	}, []);
 
 	// Auto-refresh every 60s
 	useEffect(() => {
@@ -68,7 +97,7 @@ export function Dashboard() {
 	const connected = (stats?.connected_services ?? 0) > 0;
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="dashboard">
 			<div className="flex items-center justify-between">
 				<div>
 					<h2 className="text-2xl font-bold tracking-tight text-white">
@@ -78,11 +107,19 @@ export function Dashboard() {
 						Real-time mail status and system health
 					</p>
 				</div>
+				<div className="flex items-center gap-2">
+					<span data-testid="backend-dot" className={`h-2.5 w-2.5 rounded-full ${
+						backendOk === null ? "bg-gray-500" : backendOk ? "bg-green-500" : "bg-red-500"
+					}`} />
+					<span className="text-xs text-slate-500">
+						{backendOk === null ? "Connecting..." : backendOk ? "Connected" : "Offline"}
+					</span>
+				</div>
 			</div>
 
 			{/* KPI Cards */}
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-				<Card
+				<Card data-testid="kpi-unread"
 					className="border-slate-800 bg-slate-950/50 cursor-pointer hover:bg-slate-900/30 transition-colors"
 					onClick={() => navigate("/inbox")}
 				>
@@ -102,7 +139,7 @@ export function Dashboard() {
 					</CardContent>
 				</Card>
 
-				<Card
+				<Card data-testid="kpi-services"
 					className="border-slate-800 bg-slate-950/50 cursor-pointer hover:bg-slate-900/30 transition-colors"
 					onClick={() => navigate("/services")}
 				>
@@ -123,7 +160,7 @@ export function Dashboard() {
 					</CardContent>
 				</Card>
 
-				<Card
+				<Card data-testid="kpi-drafts"
 					className="border-slate-800 bg-slate-950/50 cursor-pointer hover:bg-slate-900/30 transition-colors"
 					onClick={() => navigate("/compose")}
 				>
@@ -141,7 +178,7 @@ export function Dashboard() {
 					</CardContent>
 				</Card>
 
-				<Card className="border-slate-800 bg-slate-950/50">
+				<Card data-testid="kpi-bridge" className="border-slate-800 bg-slate-950/50">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium text-slate-200">
 							Bridge Status

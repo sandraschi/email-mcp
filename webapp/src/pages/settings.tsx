@@ -30,6 +30,13 @@ type Provider = {
 	models: string[];
 };
 
+type GpuInfo = {
+	detected: boolean;
+	name?: string;
+	vram?: string;
+	driver?: string;
+};
+
 type ServiceMap = Record<
 	string,
 	{
@@ -46,6 +53,7 @@ export function Settings() {
 
 	// ── AI Provider state ──
 	const [providers, setProviders] = useState<Provider[]>([]);
+	const [gpu, setGpu] = useState<GpuInfo>({ detected: false });
 	const [loadingProviders, setLoadingProviders] = useState(true);
 	const [selectedProvider, setSelectedProvider] = useState("");
 	const [selectedModel, setSelectedModel] = useState("");
@@ -80,7 +88,9 @@ export function Settings() {
 		fetchWithAuth("/api/llm/models")
 			.then((data) => {
 				const list: Provider[] = data.providers || [];
+				const gpuInfo: GpuInfo = data.gpu || { detected: false };
 				setProviders(list);
+				setGpu(gpuInfo);
 				const local = list.find((p) => p.available === true);
 				const first = local || list[0];
 				if (first) {
@@ -453,7 +463,7 @@ export function Settings() {
 						</div>
 					) : (
 						<>
-							<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+							<div className="grid grid-cols-2 md:grid-cols-3 gap-3" data-testid="llm-provider-select">
 								{providers.map((p) => {
 									const isSelected = selectedProvider === p.id;
 									const statusDot =
@@ -497,12 +507,25 @@ export function Settings() {
 								})}
 							</div>
 
+							{/* GPU opportunity prompt */}
+							{gpu.detected && providers.every((p) => p.available !== true) && (
+								<div className="rounded-lg border border-amber-800/50 bg-amber-950/20 p-3">
+									<p className="text-sm text-amber-300 font-medium">
+										GPU Detected: {gpu.name} ({gpu.vram})
+									</p>
+									<p className="text-xs text-amber-400/70 mt-1">
+										No local LLM running. Install <strong>Ollama</strong> or{" "}
+										<strong>LM Studio</strong> to run AI features locally for free.
+									</p>
+								</div>
+							)}
+
 							{currentProvider && (
 								<div className="space-y-3 pt-1">
 									<div className="grid gap-2">
 										<Label className="text-slate-300">Model</Label>
 										{chatModels.length > 0 ? (
-											<select
+											<select data-testid="llm-model-select"
 												className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-3 py-1.5"
 												value={selectedModel}
 												onChange={(e) => setSelectedModel(e.target.value)}
@@ -512,7 +535,7 @@ export function Settings() {
 												))}
 											</select>
 										) : currentProvider.models.length > 0 ? (
-											<select
+											<select data-testid="llm-model-select"
 												className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-3 py-1.5"
 												value={selectedModel}
 												onChange={(e) => setSelectedModel(e.target.value)}

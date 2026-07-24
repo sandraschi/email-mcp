@@ -33,6 +33,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import subprocess
 import time
 import uuid
 from pathlib import Path
@@ -1162,12 +1163,11 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
     # ── Local LLM autodiscovery ───────────────────────────────────────────────
 
-    @app.get("/api/llm/models")
-    async def get_llm_models(_user: str = Depends(authenticate)):
+    async def _detect_llm() -> dict[str, Any]:
+        """Core LLM detection — shared between /api/llm/models and /api/llm/discover."""
         providers: list[dict[str, Any]] = []
 
         async with httpx.AsyncClient(timeout=3.0) as client:
-            # Try localhost and 127.0.0.1 (Windows Ollama compat)
             ollama_ok = False
             for host in ("http://localhost:11434", "http://127.0.0.1:11434"):
                 try:
@@ -1225,22 +1225,69 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                     }
                 )
 
+            try:
+                r = await client.get("http://localhost:8000/v1/models")
+                if r.status_code == 200:
+                    data = r.json()
+                    models = [m["id"] for m in data.get("data", [])]
+                    providers.append(
+                        {
+                            "id": "vllm",
+                            "name": "vLLM",
+                            "endpoint": "http://localhost:8000/v1/chat/completions",
+                            "available": True,
+                            "models": models,
+                        }
+                    )
+            except Exception:
+                providers.append(
+                    {
+                        "id": "vllm",
+                        "name": "vLLM",
+                        "endpoint": "http://localhost:8000/v1/chat/completions",
+                        "available": False,
+                        "models": [],
+                    }
+                )
+
         for cloud in [
-            {
-                "id": "anthropic",
-                "name": "Anthropic (Claude)",
-                "models": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-5-20251001"],
-            },
+            {"id": "anthropic", "name": "Anthropic (Claude)", "models": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-5-20251001"]},
             {"id": "openai", "name": "OpenAI", "models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]},
-            {
-                "id": "google",
-                "name": "Google Gemini",
-                "models": ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite"],
-            },
+            {"id": "google", "name": "Google Gemini", "models": ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite"]},
         ]:
             providers.append({**cloud, "endpoint": None, "available": None})
 
-        return {"providers": providers}
+        gpu_info: dict[str, Any] = {"detected": False}
+        try:
+            result = subprocess.run(
+                ["nvidia-smi", "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                parts = result.stdout.strip().split(", ")
+                gpu_info = {
+                    "detected": True,
+                    "name": parts[0] if len(parts) > 0 else "Unknown",
+                    "vram": parts[1] if len(parts) > 1 else "Unknown",
+                    "driver": parts[2] if len(parts) > 2 else "Unknown",
+                }
+        except Exception:
+            pass
+
+        return {"providers": providers, "gpu": gpu_info}
+
+    @app.get("/api/llm/models")
+    async def get_llm_models(_user: str = Depends(authenticate)):
+        return await _detect_llm()
+
+    @app.get("/api/llm/discover")
+    async def get_llm_discover(_user: str = Depends(authenticate)):
+        result = await _detect_llm()
+        return {
+            "status": "ok",
+            "providers": result.get("providers", []),
+            "gpu": result.get("gpu", {"detected": False}),
+        }
 
     @app.post("/api/llm/configure")
     async def configure_llm(

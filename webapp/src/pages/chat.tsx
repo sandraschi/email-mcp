@@ -23,6 +23,7 @@ import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { fetchWithAuth } from "@/lib/api";
+import { useLlmStore } from "@/store/llm-store";
 
 const STORAGE_KEY = "email-mcp-chat-history";
 const PERSONALITY_KEY = "email-mcp-chat-personality";
@@ -171,7 +172,6 @@ export function Chat() {
 	const [loading, setLoading] = useState(false);
 	const [skillContent, setSkillContent] = useState("");
 	const [skillLoaded, setSkillLoaded] = useState(false);
-	const [providerInfo, setProviderInfo] = useState("");
 	const [personalityId, setPersonalityId] = useState(loadPersonality);
 	const [customPrompt, setCustomPrompt] = useState(loadCustomPrompt);
 	const [showWorkflows, setShowWorkflows] = useState(false);
@@ -183,6 +183,9 @@ export function Chat() {
 	const [executingWorkflow, setExecutingWorkflow] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const initialized = useRef(false);
+
+	const { providers, selectedProvider, selectedModel, setProviders, setSelectedProvider, setSelectedModel, setLoading: setStoreLoading } = useLlmStore();
+	const currentProvider = providers.find((p) => p.id === selectedProvider);
 
 	useEffect(() => {
 		if (initialized.current) return;
@@ -202,20 +205,30 @@ export function Chat() {
 			}
 			let provider = "local";
 			try {
-				const models = await fetchWithAuth("/api/llm/models");
-				const firstAvail = (models as any).providers?.find(
-					(p: any) => p.available === true,
-				);
+				const data = await fetchWithAuth("/api/llm/models");
+				const list = (data as any).providers || [];
+				const gpuInfo = (data as any).gpu || { detected: false };
+				setProviders(list, gpuInfo);
+				setStoreLoading(false);
+				const firstAvail = list.find((p: any) => p.available === true);
+				const storedProv = localStorage.getItem("llm_provider");
+				const storedModel = localStorage.getItem("llm_model");
+				if (storedProv && list.some((p: any) => p.id === storedProv)) {
+					setSelectedProvider(storedProv);
+					if (storedModel) setSelectedModel(storedModel);
+				} else if (firstAvail) {
+					setSelectedProvider(firstAvail.id);
+					setSelectedModel(firstAvail.models?.[0] || "");
+				}
 				if (firstAvail)
 					provider = `${firstAvail.name} (${firstAvail.models?.[0] || "default"})`;
 				else {
-					const first = (models as any).providers?.[0];
+					const first = list[0];
 					if (first) provider = first.name;
 				}
 			} catch {
 				/* ignore */
 			}
-			setProviderInfo(provider);
 			if (messages.length === 0) {
 				const expertise = skillText
 					? `I am the Email-MCP AI expert.\n\n${skillText.replace(/^---[\s\S]*?---\n*/m, "").trim()}`
@@ -401,10 +414,33 @@ export function Chat() {
 							<BookOpen className="h-3 w-3" /> skill:email-mcp
 						</span>
 					)}
-					{providerInfo && (
-						<span className="flex items-center gap-1 text-slate-400">
-							<Cpu className="h-3 w-3" /> {providerInfo}
-						</span>
+					<select
+						data-testid="chat-provider-select"
+						className="bg-zinc-800 text-zinc-100 border border-zinc-600 rounded px-1.5 py-1 text-xs max-w-[110px]"
+						value={selectedProvider}
+						onChange={(e) => {
+							setSelectedProvider(e.target.value);
+							const p = providers.find((pr) => pr.id === e.target.value);
+							if (p?.models?.length) setSelectedModel(p.models[0]);
+						}}
+					>
+						{providers.map((p) => (
+							<option key={p.id} value={p.id}>
+								{p.available === true ? "● " : p.available === false ? "○ " : "☁ "}
+								{p.name}
+							</option>
+						))}
+					</select>
+					{currentProvider?.models && currentProvider.models.length > 0 && (
+						<select
+							className="bg-zinc-800 text-zinc-100 border border-zinc-600 rounded px-1.5 py-1 text-xs max-w-[130px]"
+							value={selectedModel}
+							onChange={(e) => setSelectedModel(e.target.value)}
+						>
+							{currentProvider.models.map((m) => (
+								<option key={m} value={m}>{m}</option>
+							))}
+						</select>
 					)}
 					<button
 						data-testid="chat-export"
