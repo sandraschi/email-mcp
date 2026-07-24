@@ -108,5 +108,15 @@
     "html": null,
     "service": "default",
     "updated_at": 1784927649
+  },
+  "e59a6b4b": {
+    "id": "e59a6b4b",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1784928489
   }
 }

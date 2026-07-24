@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { AppLayout } from "@/components/layout/app-layout";
 import { ToastProvider } from "@/components/toast";
+import { useZoom } from "@/common/use-zoom";
 import { ApiDocs } from "@/pages/api-docs";
 import { AutoRespond } from "@/pages/auto-respond";
 import { Chat } from "@/pages/chat";
@@ -31,6 +32,7 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+	useZoom();
 	return (
 		<QueryClientProvider client={queryClient}>
 			<ToastProvider>

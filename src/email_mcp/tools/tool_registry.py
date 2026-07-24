@@ -11,7 +11,7 @@ import structlog
 from fastmcp import FastMCP
 
 from email_mcp.mailing_lists import load_mailing_list_entries
-from email_mcp.sanitize import sanitize_text, wrap_untrusted_dict, wrap_untrusted_list
+from email_mcp.sanitize import error_response, sanitize_text, wrap_untrusted_dict, wrap_untrusted_list
 from email_mcp.services.email_services import (
     APIEmailService,
     EmailServiceConfig,
@@ -39,7 +39,11 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
     - list_services: List available email services
     """
 
-    @mcp.tool()
+    _READ_ONLY = {"readonly": True}
+    _MUTATING = {}
+    _DESTRUCTIVE = {"destructive": True}
+
+    @mcp.tool(annotations=_MUTATING)
     async def send_email(
         to: str | list[str],
         subject: str,
@@ -144,7 +148,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return result
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def check_inbox(
         service: str = "default",
         folder: str = "INBOX",
@@ -240,7 +244,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return result
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def mailing_lists_catalog() -> dict[str, Any]:
         """MAILING_LISTS_CATALOG -- List named mailing-list presets from EMAIL_MCP_MAILING_LISTS (JSON).
 
@@ -261,7 +265,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             "message": f"{len(rows)} mailing list(s) configured",
         }
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def mailing_list_latest(
         list_id: str,
         limit: int | None = None,
@@ -321,7 +325,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             result["emails"] = wrap_untrusted_list(result.get("emails", []), source="mailing_list")
         return result
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def email_status(service: str | None = None) -> dict[str, Any]:
         """Get email service status and test connectivity.
 
@@ -435,7 +439,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             "message": f"Email MCP server v0.4.1 - {connected_count}/{len(service_statuses)} services connected",
         }
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def configure_service(
         name: str,
         type: str,
@@ -511,14 +515,9 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
                 "message": f"Successfully configured {type} service '{name}' - ready for use",
             }
         except Exception as e:
-            logger.error("Failed to configure service", service=name, error=str(e))
-            return {
-                "success": False,
-                "service": name,
-                "message": f"Configuration failed for service '{name}': {e!s}",
-            }
+            return error_response(str(e), "service_config", service=name)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def list_services() -> dict[str, Any]:
         """List all configured email services.
 
@@ -597,7 +596,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             "types": ["smtp", "api", "local", "webhook"],
         }
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def email_help() -> dict[str, Any]:
         """Get help and usage information for email MCP tools and services.
 
@@ -769,7 +768,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             ],
         }
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def fetch_email_detail(
         email_id: str,
         service: str = "default",
@@ -781,7 +780,11 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         and all headers. Requires IMAP access on the target service.
 
         ## Return Format
-        {success, id, subject, from, to, cc, date, text_body, html_body, headers, service}
+        {success, id, subject, from, to, cc, date, text_body, html_body, headers, service, message}
+
+        ## Examples
+        fetch_email_detail(email_id="abc123")
+        fetch_email_detail(email_id="def456", service="sendgrid", folder="INBOX")
         """
         if service not in server.services:
             return {"success": False, "error": f"Service {service!r} not available"}
@@ -793,7 +796,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             result["message"] = f"Failed to fetch email: {result.get('error')}"
         return result
 
-    @mcp.tool()
+    @mcp.tool(annotations=_DESTRUCTIVE)
     async def delete_email(
         email_id: str,
         service: str = "default",
@@ -803,12 +806,21 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         ## Return Format
         {success, service, email_id, message}
+
+        ## Examples
+        delete_email(email_id="abc123")
+        delete_email(email_id="def456", service="sendgrid")
         """
         if service not in server.services:
             return {"success": False, "error": f"Service {service!r} not available"}
-        return await server.services[service].delete_message(folder, email_id)
+        result = await server.services[service].delete_message(folder, email_id)
+        if result.get("success"):
+            result["message"] = f"Email {email_id[:20]}... deleted from {folder}"
+        else:
+            result["message"] = f"Failed to delete email: {result.get('error')}"
+        return result
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def move_email(
         email_id: str,
         to_folder: str,
@@ -824,7 +836,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             return {"success": False, "error": f"Service {service!r} not available"}
         return await server.services[service].move_message(folder, to_folder, email_id)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_DESTRUCTIVE)
     async def flag_spam(
         email_id: str,
         service: str = "default",
@@ -839,7 +851,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             return {"success": False, "error": f"Service {service!r} not available"}
         return await server.services[service].flag_spam(folder, email_id)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def mark_email_read(
         email_id: str,
         service: str = "default",
@@ -854,7 +866,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             return {"success": False, "error": f"Service {service!r} not available"}
         return await server.services[service].mark_read(folder, email_id)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def mark_email_unread(
         email_id: str,
         service: str = "default",
@@ -869,22 +881,32 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             return {"success": False, "error": f"Service {service!r} not available"}
         return await server.services[service].mark_unread(folder, email_id)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def list_folders(
         service: str = "default",
     ) -> dict[str, Any]:
         """List all IMAP folders/mailboxes for a service.
 
         ## Return Format
-        {success, folders: [{name, delimiter}], service}
+        {success, folders: [{name, delimiter}], service, count, message}
+
+        ## Examples
+        list_folders()
+        list_folders(service="sendgrid")
         """
         if service not in server.services:
             return {"success": False, "error": f"Service {service!r} not available"}
         svc = server.services[service]
         folders = await svc.list_folders(service)
-        return {"success": True, "folders": folders, "service": service, "count": len(folders)}
+        return {
+            "success": True,
+            "folders": folders,
+            "service": service,
+            "count": len(folders),
+            "message": f"Found {len(folders)} folders for {service}",
+        }
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def create_folder(
         folder: str,
         service: str = "default",
@@ -898,7 +920,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             return {"success": False, "error": f"Service {service!r} not available"}
         return await server.services[service].create_folder(folder)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def delete_folder(
         folder: str,
         service: str = "default",
@@ -912,7 +934,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             return {"success": False, "error": f"Service {service!r} not available"}
         return await server.services[service].delete_folder(folder)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def rename_folder(
         old_name: str,
         new_name: str,
@@ -927,7 +949,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             return {"success": False, "error": f"Service {service!r} not available"}
         return await server.services[service].rename_folder(old_name, new_name)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def search_emails(
         query: str,
         service: str = "default",
@@ -940,14 +962,17 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         then fetches headers for the most recent matches.
 
         ## Return Format
-        {success, emails: [{id, subject, from, date}], count, service, folder, query}
+        {success, emails: [{id, subject, from, date}], count, service, folder, query, message}
+
+        ## Examples
+        search_emails(query="meeting notes")
+        search_emails(query="invoice", folder="INBOX", limit=5)
         """
         if service not in server.services:
             return {"success": False, "error": f"Service {service!r} not available"}
 
         svc = server.services[service]
         if not isinstance(svc, SMTPEmailService) or not svc.imap_server:
-            # Fallback: use check_inbox with subject/filter
             return await svc.check_inbox(
                 folder=folder,
                 limit=limit,
@@ -963,7 +988,6 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
                 mail.login(svc.imap_user, svc.imap_password)
                 mail.select(folder)
 
-                # IMAP SEARCH: look in subject and body
                 search_key = f'(OR SUBJECT "{query}" BODY "{query}")'
                 _status, messages = mail.search(None, search_key)
                 email_ids_ = messages[0].split() if messages and messages[0] else []
@@ -1004,9 +1028,9 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
                 "message": f"Found {len(wrapped)} results for '{query}' in {folder}",
             }
         except Exception as e:
-            return {"success": False, "error": f"Search failed: {e!s}"}
+            return error_response(str(e), "imap_search")
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def remove_service(name: str) -> dict[str, Any]:
         """Remove a dynamically configured email service.
 
@@ -1021,7 +1045,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         logger.info("Service removed", service=name)
         return {"success": True, "service": name, "message": f"Service {name!r} removed"}
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def start_watcher(
         interval: int = 60,
         webhook_url: str = "",
@@ -1053,7 +1077,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return _sw(interval, webhook_url, svc_list, server.mcp)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def stop_watcher() -> dict[str, Any]:
         """Stop the background mail watcher.
 
@@ -1064,7 +1088,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return _sw()
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def watcher_status() -> dict[str, Any]:
         """Check if the mail watcher is running.
 
@@ -1075,7 +1099,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return _ws()
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def add_contact(
         name: str = "",
         email: str = "",
@@ -1092,7 +1116,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return _ac(name, email, phone, notes, group)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def search_contacts(query: str) -> dict[str, Any]:
         """Search contacts by name or email.
 
@@ -1103,7 +1127,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return {"contacts": _sc(query)}
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def run_workflow(
         workflow: str = "love-letter",
         recipient: str = "beloved",
@@ -1138,7 +1162,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         response = await _router.route_query(query)
         return {"success": True, "workflow": workflow, "response": response, "format": format}
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def add_auto_rule(
         name: str,
         match_pattern: str,
@@ -1167,7 +1191,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return _ar(name, match_field, match_pattern, reply_body, reply_subject, use_ai, auto_send, ai_prompt, service)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def list_auto_rules() -> dict[str, Any]:
         """List all auto-respond rules.
 
@@ -1178,7 +1202,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return {"rules": _lr()}
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def delete_auto_rule(rule_id: str) -> dict[str, Any]:
         """Delete an auto-respond rule by ID.
 
@@ -1189,7 +1213,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return _dr(rule_id)
 
-    @mcp.tool()
+    @mcp.tool(annotations=_READ_ONLY)
     async def list_pending_replies() -> dict[str, Any]:
         """List pending auto-replies awaiting human approval.
 
@@ -1200,7 +1224,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return {"pending": _lp()}
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def approve_reply(pending_id: str) -> dict[str, Any]:
         """Approve a pending auto-reply and send it immediately.
 
@@ -1227,7 +1251,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         result["send_message"] = "Reply sent" if send_result.get("success") else send_result.get("error", "Send failed")
         return result
 
-    @mcp.tool()
+    @mcp.tool(annotations=_MUTATING)
     async def auto_respond_now(
         email_id: str,
         service: str = "default",
@@ -1267,7 +1291,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             "reply_subject": reply_subject,
         }
 
-    @mcp.tool()
+    @mcp.tool(annotations=_DESTRUCTIVE)
     async def email_shutdown(confirm: bool = False) -> dict[str, Any]:
         """Gracefully shut down the Email MCP server.
 
@@ -1291,5 +1315,5 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
             os.kill(os.getpid(), signal.SIGTERM)
 
-        _shutdown_task = asyncio.create_task(_shutdown())
+        _shutdown_task = asyncio.create_task(_shutdown())  # noqa: RUF006
         return {"success": True, "message": "Server shutting down..."}

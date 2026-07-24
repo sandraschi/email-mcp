@@ -355,8 +355,9 @@ class EmailMCP:
     def _register_sampling_and_agentic_tools(self) -> None:
         """Register tools that use MCP sampling (FastMCP 3.1 / SEP-1577-style)."""
         mcp = self.mcp
+        _RO = {"readonly": True}
 
-        @mcp.tool()
+        @mcp.tool(annotations=_RO)
         async def suggest_email_subject(body: str, ctx: Context) -> str:
             """Suggest 1-3 concise email subject lines for the given body (uses MCP sampling when available)."""
             result = await ctx.sample(
@@ -371,7 +372,7 @@ class EmailMCP:
             )
             return getattr(result, "text", None) or str(result)
 
-        @mcp.tool()
+        @mcp.tool(annotations=_RO)
         async def email_agentic_assist(goal: str, ctx: Context) -> dict[str, Any]:
             """Plan a short multi-step email workflow using sampling (agentic assist).
 
@@ -425,8 +426,9 @@ class EmailMCP:
             return
 
         mcp = self.mcp
+        _RO = {"readonly": True}
 
-        @mcp.tool(app=True)
+        @mcp.tool(app=True, annotations=_RO)
         async def show_email_status_card() -> PrefabApp:
             """Show email service connectivity status as a rich Prefab card.
 
@@ -467,7 +469,7 @@ class EmailMCP:
 
             return PrefabApp(view=view, title="Email-MCP Service Status")
 
-        @mcp.tool(app=True)
+        @mcp.tool(app=True, annotations=_RO)
         async def show_inbox_card(service: str = "default", limit: int = 10, unread_only: bool = False) -> PrefabApp:
             """Show inbox as a rich Prefab card with subject, sender, and date.
 
@@ -498,7 +500,7 @@ class EmailMCP:
 
             return PrefabApp(view=view, title=f"Inbox -- {service}")
 
-        @mcp.tool(app=True)
+        @mcp.tool(app=True, annotations=_RO)
         async def show_services_card() -> PrefabApp:
             """Show all configured email services as a rich Prefab list card."""
             with Column(gap=3, css_class="p-4") as view:
@@ -523,7 +525,7 @@ class EmailMCP:
 
             return PrefabApp(view=view, title="Email Services")
 
-        @mcp.tool(app=True)
+        @mcp.tool(app=True, annotations=_RO)
         async def show_mailing_list_digest_card(
             limit: int = 15,
         ) -> PrefabApp:
