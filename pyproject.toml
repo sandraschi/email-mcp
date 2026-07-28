@@ -32,7 +32,7 @@ test = [
     "aiosmtpd>=1.4.0",
 ]
 dev = [
-    "ruff>=0.1.0",
+    "ruff>=0.16.0,<0.17",
     "mypy>=1.0.0",
     "build>=1.0.0",
     "pre-commit>=4.6.1",
