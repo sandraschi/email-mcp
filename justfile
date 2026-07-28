@@ -1,36 +1,11 @@
-set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
 import 'scripts/just/fleet.just'
 
 # -- Dashboard ------------------------------------------------------------------
 
 # Display SOTA Industrial Dashboard
 default:
-    @powershell -NoLogo -Command "
-        $lines = Get-Content '{{justfile()}}';
-        Write-Host ' [EMAIL-MCP] Multi-Service Email Platform v0.4.1' -ForegroundColor White -BackgroundColor Cyan;
-        Write-Host '';
-        $currentCategory = '';
-        foreach ($line in $lines) {
-            if ($line -match '^# -- ([^-]+) -') {
-                $currentCategory = $matches[1].Trim();
-                Write-Host \"`n  $currentCategory\" -ForegroundColor Cyan;
-                Write-Host '  ' + ('-' * 45) -ForegroundColor Gray;
-            } elseif ($line -match '^# ([^-].+)') {
-                $desc = $matches[1].Trim();
-                $idx = [array]::IndexOf($lines, $line);
-                if ($idx -lt $lines.Count - 1) {
-                    $nextLine = $lines[$idx + 1];
-                    if ($nextLine -match '^([a-z0-9-]+):') {
-                        $recipe = $matches[1];
-                        $pad = ' ' * [math]::Max(2, (18 - $recipe.Length));
-                        Write-Host \"    $recipe\" -ForegroundColor White -NoNewline;
-                        Write-Host \"$pad$desc\" -ForegroundColor Gray;
-                    }
-                }
-            }
-        }
-        Write-Host '';
-    "
+    @just --list
 
 # -- Quality -------------------------------------------------------------------
 
@@ -70,8 +45,13 @@ test:
 # -- Build -----------------------------------------------------------------------
 
 # Install all dependencies (SOTA mandatory)
-build bootstrap:
+bootstrap:
     uv sync --extra test --extra dev
+    uv run pre-commit install
+    Set-Location webapp; npm ci; if ($LASTEXITCODE -ne 0) { npm install }
+    Write-Host "Pre-commit hooks installed." -ForegroundColor Green
+
+build: bootstrap
 
 # Build MCPB package
 package:
@@ -81,7 +61,7 @@ package:
 # Build PyInstaller sidecar binary → native/binaries/
 build-sidecar:
     Set-Location '{{justfile_directory()}}'
-    pwsh -NoLogo -File '{{justfile_directory()}}\native\build-sidecar.ps1'
+    powershell.exe -NoProfile -File '{{justfile_directory()}}\native\build-sidecar.ps1'
 
 # Build Tauri desktop app — sidecar must exist first
 build-native:
@@ -133,11 +113,6 @@ serve dev:
     .\start.ps1
 
 # -- Housekeeping ---------------------------------------------------------------
-
-# Run CUA-NSIS smoke test against installed NSIS app
-cua-nsis-test:
-    Set-Location '{{justfile_directory()}}'
-    uv run python scripts/cua-smoke.py
 
 # Clean build artifacts and backups
 clean:
