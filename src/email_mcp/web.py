@@ -1301,9 +1301,17 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         }
 
     @app.post("/api/oauth/device")
-    async def oauth_device(_user: str = Depends(authenticate)):
-        """Start an OAuth2 device-code flow for Microsoft (Outlook/Hotmail)."""
-        return oauth.start_device_flow()
+    async def oauth_device(
+        payload: dict[str, Any] = Body(default={}),
+        _user: str = Depends(authenticate),
+    ):
+        """Start an OAuth2 device-code flow for Microsoft (Outlook/Hotmail).
+
+        payload.scope: 'exchange' (IMAP/SMTP, default) or 'graph' (Mail.Read/Send).
+        """
+        family = payload.get("scope", "exchange")
+        scopes = oauth.family_scope(family)
+        return oauth.start_device_flow(scopes=scopes)
 
     @app.post("/api/oauth/poll")
     async def oauth_poll(
@@ -1314,19 +1322,27 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         device_code = payload.get("device_code", "")
         if not device_code:
             return {"success": False, "status": "error", "error": "device_code required"}
-        return oauth.poll_device_flow(device_code)
+        family = payload.get("scope", "exchange")
+        return oauth.poll_device_flow(device_code, scopes=oauth.family_scope(family))
 
     @app.get("/api/oauth/status")
     async def oauth_status(_user: str = Depends(authenticate)):
-        """Whether an OAuth token exists for the default service user."""
+        """OAuth token state per scope family for the default service user."""
         account = os.getenv("IMAP_USER") or os.getenv("SMTP_USER") or ""
-        token = oauth.get_token(account) if account else None
+        families: dict[str, dict[str, Any]] = {}
+        for fam, scopes in oauth.SCOPE_FAMILIES.items():
+            token = oauth.get_token(account, scopes) if account else None
+            families[fam] = {
+                "authorized": token is not None,
+                "expires_at": token.expires_at if token else None,
+            }
         return {
             "status": "ok",
             "configured": oauth.client_id() is not None,
             "account": account,
-            "authorized": token is not None,
-            "expires_at": token.expires_at if token else None,
+            "families": families,
+            "authorized": families.get("exchange", {}).get("authorized", False),
+            "expires_at": families.get("exchange", {}).get("expires_at"),
         }
 
     @app.post("/api/llm/configure")

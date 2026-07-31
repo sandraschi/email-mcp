@@ -85,6 +85,12 @@ export function Settings() {
 	const [oauthConfigured, setOauthConfigured] = useState(false);
 	const [oauthAuthorized, setOauthAuthorized] = useState(false);
 	const [oauthAccount, setOauthAccount] = useState("");
+	const [oauthScope, setOauthScope] = useState<"exchange" | "graph">(
+		"exchange",
+	);
+	const [oauthFamilies, setOauthFamilies] = useState<
+		Record<string, { authorized: boolean }>
+	>({});
 	const [flow, setFlow] = useState<{
 		device_code: string;
 		user_code: string;
@@ -271,6 +277,7 @@ export function Settings() {
 			setOauthConfigured(data.configured === true);
 			setOauthAuthorized(data.authorized === true);
 			setOauthAccount(data.account || "");
+			setOauthFamilies(data.families || {});
 		} catch {
 			/* ignore */
 		}
@@ -282,7 +289,10 @@ export function Settings() {
 
 	const startOAuthFlow = async () => {
 		try {
-			const data = await fetchWithAuth("/api/oauth/device", { method: "POST" });
+			const data = await fetchWithAuth("/api/oauth/device", {
+				method: "POST",
+				body: JSON.stringify({ scope: oauthScope }),
+			});
 			if (!data.success) {
 				toast("error", data.error || "OAuth start failed");
 				return;
@@ -293,7 +303,10 @@ export function Settings() {
 				try {
 					const poll = await fetchWithAuth("/api/oauth/poll", {
 						method: "POST",
-						body: JSON.stringify({ device_code: data.device_code }),
+						body: JSON.stringify({
+							device_code: data.device_code,
+							scope: oauthScope,
+						}),
 					});
 					if (poll.status === "authorized") {
 						stopOAuthPolling();
@@ -753,20 +766,49 @@ export function Settings() {
 							in .env to enable (Azure app registration, personal accounts).
 						</p>
 					)}
+					{oauthConfigured && (
+						<div className="flex flex-wrap gap-2">
+							{Object.entries(oauthFamilies).map(([fam, st]) => (
+								<span
+									key={fam}
+									className={`text-xs px-2 py-1 rounded-full border ${
+										st.authorized
+											? "text-emerald-400 border-emerald-900 bg-emerald-950/30"
+											: "text-slate-500 border-slate-700 bg-slate-900/40"
+									}`}
+								>
+									{fam}: {st.authorized ? "authorized" : "not connected"}
+								</span>
+							))}
+						</div>
+					)}
 					{oauthConfigured && oauthAuthorized && (
 						<p className="text-sm text-emerald-400 flex items-center gap-2">
 							<CheckCircle2 className="h-4 w-4" /> Authorized as {oauthAccount}
 						</p>
 					)}
 					{!flow && oauthConfigured && (
-						<Button
-							size="sm"
-							data-testid="oauth-connect"
-							className="bg-blue-600 hover:bg-blue-700"
-							onClick={startOAuthFlow}
-						>
-							{oauthAuthorized ? "Reconnect Outlook" : "Connect Outlook"}
-						</Button>
+						<div className="flex gap-2">
+							<select
+								data-testid="oauth-scope"
+								className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1.5"
+								value={oauthScope}
+								onChange={(e) =>
+									setOauthScope(e.target.value as "exchange" | "graph")
+								}
+							>
+								<option value="exchange">Exchange (IMAP/SMTP)</option>
+								<option value="graph">Graph (Mail API)</option>
+							</select>
+							<Button
+								size="sm"
+								data-testid="oauth-connect"
+								className="bg-blue-600 hover:bg-blue-700"
+								onClick={startOAuthFlow}
+							>
+								{oauthAuthorized ? "Reconnect Outlook" : "Connect Outlook"}
+							</Button>
+						</div>
 					)}
 					{flow && (
 						<div className="space-y-2" data-testid="oauth-flow">

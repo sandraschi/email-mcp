@@ -972,6 +972,8 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             return {"success": False, "error": f"Service {service!r} not available"}
 
         svc = server.services[service]
+        if hasattr(svc, "search") and not isinstance(svc, SMTPEmailService):
+            return await svc.search(query=query, folder=folder, limit=limit)
         if not isinstance(svc, SMTPEmailService) or not svc.imap_server:
             return await svc.check_inbox(
                 folder=folder,

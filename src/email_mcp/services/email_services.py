@@ -1295,5 +1295,9 @@ class EmailServiceFactory:
             return LocalEmailService(config)
         elif service_type == "webhook":
             return WebhookEmailService(config)
+        elif service_type == "graph":
+            from email_mcp.services.graph_service import GraphEmailService
+
+            return GraphEmailService(config)
         else:
             raise ValueError(f"Unknown email service type: {service_type}")

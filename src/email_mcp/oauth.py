@@ -33,12 +33,31 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+
+class OAuthUnavailable(Exception):
+    """Raised when a token is missing, expired, or rejected by the provider."""
+
+
 AUTHORITY = "https://login.microsoftonline.com/common/oauth2/v2.0"
 DEVICE_CODE_URL = f"{AUTHORITY}/devicecode"
 TOKEN_URL = f"{AUTHORITY}/token"
 VERIFICATION_URI = "https://microsoft.com/devicelogin"
 
 DEFAULT_SCOPE = "https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access"
+GRAPH_SCOPE = "https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Send offline_access"
+
+SCOPE_FAMILIES = {"exchange": DEFAULT_SCOPE, "graph": GRAPH_SCOPE}
+
+
+def _family(scope: str) -> str:
+    """Tokens are keyed per resource family: exchange (IMAP/SMTP) vs graph."""
+    return "graph" if "graph.microsoft.com" in (scope or "") else "exchange"
+
+
+def family_scope(family: str) -> str:
+    """Resolve a scope family name ('exchange' | 'graph') to its scope string."""
+    return SCOPE_FAMILIES.get(family, DEFAULT_SCOPE)
+
 
 _lock = threading.RLock()
 
@@ -86,21 +105,28 @@ def _save_store(store: dict[str, dict[str, Any]]) -> None:
 
 
 def save_token(token: OAuthToken) -> None:
-    """Persist a token, keyed by account email."""
+    """Persist a token, keyed by account + resource family."""
     with _lock:
         store = _load_store()
-        store[token.account.lower()] = asdict(token)
+        key = _token_key(token.account, token.scope)
+        store[key] = asdict(token)
+        # drop legacy plain-account key so lookups stay unambiguous
+        store.pop(token.account.lower(), None)
         _save_store(store)
 
 
-def get_token(account: str) -> OAuthToken | None:
-    """Return a valid token for the account, refreshing when near expiry."""
+def _token_key(account: str, scope: str) -> str:
+    return f"{account.lower()}|{_family(scope)}"
+
+
+def get_token(account: str, scope: str = DEFAULT_SCOPE) -> OAuthToken | None:
+    """Return a valid token for the account+family, refreshing when near expiry."""
     if not account:
         return None
-    key = account.lower()
+    key = _token_key(account, scope)
     with _lock:
         store = _load_store()
-        raw = store.get(key)
+        raw = store.get(key) or store.get(account.lower())
     if not raw:
         return None
     try:
@@ -122,11 +148,12 @@ def get_token(account: str) -> OAuthToken | None:
     return refreshed
 
 
-def has_token(account: str) -> bool:
+def has_token(account: str, scope: str = DEFAULT_SCOPE) -> bool:
     if not account:
         return False
     with _lock:
-        return account.lower() in _load_store()
+        store = _load_store()
+        return _token_key(account, scope) in store or account.lower() in store
 
 
 def _post(url: str, data: dict[str, str], timeout: float = 60.0) -> dict[str, Any]:

@@ -64,3 +64,4 @@ indent-style = "space"
 "scripts/*.py" = ["S310"]
 "tests/conftest.py" = ["S105"]
 "tests/test_oauth.py" = ["S105"]
+"tests/test_graph_service.py" = ["S105"]

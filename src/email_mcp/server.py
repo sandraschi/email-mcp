@@ -327,6 +327,20 @@ class EmailMCP:
             )
             self.services["slack"] = EmailServiceFactory.create_service(slack_config)
 
+        # Microsoft Graph service (OAuth2 device-code flow, Mail.Read/Mail.Send)
+        if os.getenv("EMAIL_MCP_OAUTH_CLIENT_ID"):
+            graph_user = os.getenv("GRAPH_USER") or os.getenv("IMAP_USER") or os.getenv("SMTP_USER") or ""
+            self.services.setdefault(
+                "graph",
+                EmailServiceFactory.create_service(
+                    EmailServiceConfig(
+                        name="graph",
+                        type="graph",
+                        config={"user": graph_user},
+                    )
+                ),
+            )
+
     def _register_tools(self):
         """Register all MCP tools via external registries."""
         from email_mcp.tools.tool_registry import register_tools

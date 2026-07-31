@@ -194,3 +194,57 @@ def test_authenticate_imap_failure_falls_back(monkeypatch, tmp_path):
 @pytest.mark.parametrize("account", ["", None])
 def test_get_token_no_account(account):
     assert oauth.get_token(account) is None
+
+
+def test_family_derivation():
+    assert oauth._family(oauth.DEFAULT_SCOPE) == "exchange"
+    assert oauth._family(oauth.GRAPH_SCOPE) == "graph"
+    assert oauth._family("") == "exchange"
+    assert oauth.family_scope("graph") == oauth.GRAPH_SCOPE
+    assert oauth.family_scope("exchange") == oauth.DEFAULT_SCOPE
+
+
+def test_exchange_and_graph_tokens_coexist(tmp_path, monkeypatch):
+    monkeypatch.setenv("EMAIL_MCP_OAUTH_TOKEN_FILE", str(tmp_path / "tokens.json"))
+    exchange = oauth.OAuthToken(
+        account="a@example.com",
+        access_token="ex-tok",
+        refresh_token="ex-ref",
+        scope=oauth.DEFAULT_SCOPE,
+        expires_at=time.time() + 3600,
+    )
+    graph = oauth.OAuthToken(
+        account="a@example.com",
+        access_token="gr-tok",
+        refresh_token="gr-ref",
+        scope=oauth.GRAPH_SCOPE,
+        expires_at=time.time() + 3600,
+    )
+    oauth.save_token(exchange)
+    oauth.save_token(graph)
+    assert oauth.get_token("a@example.com", oauth.DEFAULT_SCOPE).access_token == "ex-tok"
+    assert oauth.get_token("a@example.com", oauth.GRAPH_SCOPE).access_token == "gr-tok"
+    assert oauth.has_token("a@example.com", oauth.GRAPH_SCOPE)
+    assert oauth.has_token("a@example.com", oauth.DEFAULT_SCOPE)
+
+
+def test_legacy_plain_key_still_read(tmp_path, monkeypatch):
+    monkeypatch.setenv("EMAIL_MCP_OAUTH_TOKEN_FILE", str(tmp_path / "tokens.json"))
+    path = oauth.token_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "a@example.com": {
+                    "account": "a@example.com",
+                    "access_token": "legacy",
+                    "refresh_token": "ref",
+                    "scope": oauth.DEFAULT_SCOPE,
+                    "expires_at": time.time() + 3600,
+                    "obtained_at": time.time(),
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert oauth.get_token("a@example.com", oauth.DEFAULT_SCOPE).access_token == "legacy"
