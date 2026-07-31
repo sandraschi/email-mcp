@@ -43,6 +43,7 @@ import httpx
 from fastapi import Body, Depends, FastAPI, HTTPException
 from fastmcp import FastMCP
 
+from . import oauth
 from .activity_log import ActivityLog, create_log_router
 from .ai import AIRouter
 from .auth import authenticate
@@ -102,7 +103,7 @@ def _load_drafts() -> dict[str, dict[str, Any]]:
 def _save_drafts() -> None:
     try:
         _DRAFTS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        _DRAFTS_FILE.write_text(json.dumps(_drafts, indent=2, default=str), encoding="utf-8")
+        _DRAFTS_FILE.write_text(json.dumps(_drafts, indent=2, default=str) + "\n", encoding="utf-8")
     except Exception:
         pass
 
@@ -1297,6 +1298,35 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             "status": "ok",
             "providers": result.get("providers", []),
             "gpu": result.get("gpu", {"detected": False}),
+        }
+
+    @app.post("/api/oauth/device")
+    async def oauth_device(_user: str = Depends(authenticate)):
+        """Start an OAuth2 device-code flow for Microsoft (Outlook/Hotmail)."""
+        return oauth.start_device_flow()
+
+    @app.post("/api/oauth/poll")
+    async def oauth_poll(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        """Poll a device-code flow until the user authenticates."""
+        device_code = payload.get("device_code", "")
+        if not device_code:
+            return {"success": False, "status": "error", "error": "device_code required"}
+        return oauth.poll_device_flow(device_code)
+
+    @app.get("/api/oauth/status")
+    async def oauth_status(_user: str = Depends(authenticate)):
+        """Whether an OAuth token exists for the default service user."""
+        account = os.getenv("IMAP_USER") or os.getenv("SMTP_USER") or ""
+        token = oauth.get_token(account) if account else None
+        return {
+            "status": "ok",
+            "configured": oauth.client_id() is not None,
+            "account": account,
+            "authorized": token is not None,
+            "expires_at": token.expires_at if token else None,
         }
 
     @app.post("/api/llm/configure")

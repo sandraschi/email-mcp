@@ -8,7 +8,7 @@ import {
 	Radio,
 	Server,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,6 +82,16 @@ export function Settings() {
 	const [serviceName, setServiceName] = useState("default");
 	const [serviceType, setServiceType] = useState("smtp");
 	const [_showEmailForm, _setShowEmailForm] = useState(true);
+	const [oauthConfigured, setOauthConfigured] = useState(false);
+	const [oauthAuthorized, setOauthAuthorized] = useState(false);
+	const [oauthAccount, setOauthAccount] = useState("");
+	const [flow, setFlow] = useState<{
+		device_code: string;
+		user_code: string;
+		verification_uri: string;
+		interval: number;
+	} | null>(null);
+	const oauthTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 	// ── Load AI providers ──
 	useEffect(() => {
@@ -240,6 +250,73 @@ export function Settings() {
 			toast("error", err instanceof Error ? err.message : "Save failed");
 		} finally {
 			setSavingEmail(false);
+		}
+	};
+
+	const stopOAuthPolling = () => {
+		if (oauthTimerRef.current) {
+			clearInterval(oauthTimerRef.current);
+			oauthTimerRef.current = null;
+		}
+	};
+
+	const cancelOAuthFlow = () => {
+		stopOAuthPolling();
+		setFlow(null);
+	};
+
+	const loadOAuthStatus = useCallback(async () => {
+		try {
+			const data = await fetchWithAuth("/api/oauth/status");
+			setOauthConfigured(data.configured === true);
+			setOauthAuthorized(data.authorized === true);
+			setOauthAccount(data.account || "");
+		} catch {
+			/* ignore */
+		}
+	}, []);
+
+	useEffect(() => {
+		loadOAuthStatus();
+	}, [loadOAuthStatus]);
+
+	const startOAuthFlow = async () => {
+		try {
+			const data = await fetchWithAuth("/api/oauth/device", { method: "POST" });
+			if (!data.success) {
+				toast("error", data.error || "OAuth start failed");
+				return;
+			}
+			setFlow(data);
+			const intervalMs = Math.max(Number(data.interval || 5) * 1000, 3000);
+			oauthTimerRef.current = setInterval(async () => {
+				try {
+					const poll = await fetchWithAuth("/api/oauth/poll", {
+						method: "POST",
+						body: JSON.stringify({ device_code: data.device_code }),
+					});
+					if (poll.status === "authorized") {
+						stopOAuthPolling();
+						setFlow(null);
+						setOauthAuthorized(true);
+						setOauthAccount(poll.account || "");
+						toast("success", `Outlook authorized as ${poll.account}`);
+						loadOAuthStatus();
+					} else if (
+						poll.status === "declined" ||
+						poll.status === "expired" ||
+						poll.status === "error"
+					) {
+						stopOAuthPolling();
+						setFlow(null);
+						toast("error", poll.error || "OAuth flow failed");
+					}
+				} catch {
+					/* keep polling */
+				}
+			}, intervalMs);
+		} catch {
+			toast("error", "OAuth start failed");
 		}
 	};
 
@@ -650,6 +727,80 @@ export function Settings() {
 								</Button>
 							</div>
 						</>
+					)}
+				</CardContent>
+			</Card>
+			{/* Outlook OAuth */}
+			<Card
+				className="border-slate-800 bg-slate-950/50"
+				data-testid="oauth-card"
+			>
+				<CardHeader className="pb-2">
+					<CardTitle className="text-white text-sm flex items-center gap-2">
+						<Key className="h-4 w-4 text-amber-400" /> Outlook OAuth (XOAUTH2)
+					</CardTitle>
+					<CardDescription className="text-slate-400">
+						Personal Outlook/Hotmail accounts require OAuth2 — Microsoft
+						disabled basic auth (app passwords). Device-code flow; tokens stored
+						locally.
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-3">
+					{!oauthConfigured && (
+						<p className="text-sm text-amber-400">
+							Set{" "}
+							<code className="text-slate-300">EMAIL_MCP_OAUTH_CLIENT_ID</code>{" "}
+							in .env to enable (Azure app registration, personal accounts).
+						</p>
+					)}
+					{oauthConfigured && oauthAuthorized && (
+						<p className="text-sm text-emerald-400 flex items-center gap-2">
+							<CheckCircle2 className="h-4 w-4" /> Authorized as {oauthAccount}
+						</p>
+					)}
+					{!flow && oauthConfigured && (
+						<Button
+							size="sm"
+							data-testid="oauth-connect"
+							className="bg-blue-600 hover:bg-blue-700"
+							onClick={startOAuthFlow}
+						>
+							{oauthAuthorized ? "Reconnect Outlook" : "Connect Outlook"}
+						</Button>
+					)}
+					{flow && (
+						<div className="space-y-2" data-testid="oauth-flow">
+							<p className="text-sm text-slate-300">
+								Open{" "}
+								<a
+									href={flow.verification_uri}
+									target="_blank"
+									rel="noreferrer"
+									className="text-blue-400 underline"
+								>
+									{flow.verification_uri}
+								</a>{" "}
+								and enter code{" "}
+								<span
+									className="font-mono text-white bg-slate-800 px-2 py-0.5 rounded"
+									data-testid="oauth-user-code"
+								>
+									{flow.user_code}
+								</span>
+							</p>
+							<p className="text-sm text-slate-400 flex items-center gap-2">
+								<Loader2 className="h-3.5 w-3.5 animate-spin" /> Waiting for
+								authorization...
+							</p>
+							<Button
+								size="sm"
+								variant="outline"
+								className="border-slate-700 text-slate-300"
+								onClick={cancelOAuthFlow}
+							>
+								Cancel
+							</Button>
+						</div>
 					)}
 				</CardContent>
 			</Card>

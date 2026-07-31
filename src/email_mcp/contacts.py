@@ -34,7 +34,7 @@ def _load() -> None:
 def _save() -> None:
     try:
         _CONTACTS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        _CONTACTS_FILE.write_text(json.dumps(_CONTACTS, indent=2, default=str), encoding="utf-8")
+        _CONTACTS_FILE.write_text(json.dumps(_CONTACTS, indent=2, default=str) + "\n", encoding="utf-8")
     except Exception:
         pass
 

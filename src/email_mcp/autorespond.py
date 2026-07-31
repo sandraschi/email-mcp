@@ -34,7 +34,7 @@ def _load_rules() -> None:
 def _save_rules() -> None:
     try:
         _RULES_FILE.parent.mkdir(parents=True, exist_ok=True)
-        _RULES_FILE.write_text(json.dumps(_RULES, indent=2, default=str), encoding="utf-8")
+        _RULES_FILE.write_text(json.dumps(_RULES, indent=2, default=str) + "\n", encoding="utf-8")
     except Exception:
         pass
 
@@ -51,7 +51,7 @@ def _load_pending() -> None:
 def _save_pending() -> None:
     try:
         _PENDING_FILE.parent.mkdir(parents=True, exist_ok=True)
-        _PENDING_FILE.write_text(json.dumps(_PENDING, indent=2, default=str), encoding="utf-8")
+        _PENDING_FILE.write_text(json.dumps(_PENDING, indent=2, default=str) + "\n", encoding="utf-8")
     except Exception:
         pass
 

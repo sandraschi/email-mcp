@@ -218,5 +218,25 @@
     "html": null,
     "service": "default",
     "updated_at": 1785532296
+  },
+  "77f5f865": {
+    "id": "77f5f865",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1785539774
+  },
+  "714b28e5": {
+    "id": "714b28e5",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1785539860
   }
 }

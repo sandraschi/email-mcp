@@ -2,20 +2,49 @@
 
 > **⚠️ Personal accounts (outlook.com / hotmail / live.com): Microsoft disabled
 > SMTP/IMAP basic authentication for personal accounts (Sept 2024+). App passwords
-> ARE basic auth, so they no longer work — expect `5.7.139 Authentication
-> unsuccessful, basic authentication is disabled` on SMTP and `AUTHENTICATE failed`
-> on IMAP. Email MCP only supports password auth (no OAuth2 yet), so personal
-> Outlook/Hotmail mailboxes **cannot be used** with this server. Options:
-> - Send with an API service instead: SendGrid / Mailgun / Resend (free tiers,
->   configure via `EMAIL_SERVICES`).
-> - Use a **Microsoft 365 business** mailbox where the admin enables SMTP AUTH
->   (steps below) — app passwords work there.
-> - OAuth2 client support is a roadmap item; until then no personal-account path
->   exists.
+> ARE basic auth, so they no longer work for **password** login — expect `5.7.139
+> Authentication unsuccessful, basic authentication is disabled` on SMTP and
+> `AUTHENTICATE failed` on IMAP. The supported path is **OAuth2 (XOAUTH2)** below,
+> which Email MCP supports since 0.5.0 via the device-code flow.
 
-Microsoft requires additional authorization steps on their site before SMTP/IMAP
-clients can connect. Plain account passwords do **not** work for SMTP AUTH on
-personal accounts since the "less secure apps" retirement.
+## OAuth2 setup (required for personal accounts)
+
+1. **Register an app** at https://portal.azure.com (sign in with any Microsoft
+   account):
+   - Microsoft Entra ID → **App registrations** → **New registration**
+   - Name: `email-mcp`; Supported account types: **Personal Microsoft accounts
+     only**; no redirect URI needed (device-code flow).
+   - Copy the **Application (client) ID**.
+2. **Enable public client flows**: App registration → **Authentication** →
+   **Advanced settings** → *Allow public client flows* → **Yes**.
+3. **Add permissions**: App registration → **API permissions** → **Add
+   permission** → *APIs my organization uses* → search **Office 365 Exchange
+   Online** → **Delegated** → tick `IMAP.AccessAsUser.All` and `SMTP.Send`.
+4. Set in `.env`:
+   ```bash
+   EMAIL_MCP_OAUTH_CLIENT_ID=<Application (client) ID>
+   ```
+5. **Connect**: open the webapp **Settings → Outlook OAuth** and click
+   *Connect Outlook*. You get a code — open https://microsoft.com/devicelogin,
+   enter it, approve the scopes. Tokens are stored locally
+   (`data/oauth_tokens.json`, gitignored) and refresh automatically.
+
+After connecting, `check_inbox` and `send_email` use XOAUTH2 for the default
+service automatically; the username is your full email address
+(`you@hotmail.com`), the IMAP/SMTP servers are:
+
+```bash
+export SMTP_SERVER="smtp-mail.outlook.com"
+export SMTP_PORT="587"
+export SMTP_USER="your-email@outlook.com"
+export IMAP_SERVER="outlook.office365.com"
+export IMAP_PORT="993"
+export IMAP_USER="your-email@outlook.com"
+```
+
+(`SMTP_PASSWORD` / `IMAP_PASSWORD` can stay empty when OAuth is connected —
+the token replaces them. The old app-password flow below still applies to
+Microsoft 365 business mailboxes with SMTP AUTH enabled.)
 
 ## Step 1: Enable two-step verification (required for app passwords)
 

@@ -29,7 +29,7 @@ def _load() -> None:
 def _save() -> None:
     try:
         _FILE.parent.mkdir(parents=True, exist_ok=True)
-        _FILE.write_text(json.dumps(_SCHEDULED, indent=2, default=str), encoding="utf-8")
+        _FILE.write_text(json.dumps(_SCHEDULED, indent=2, default=str) + "\n", encoding="utf-8")
     except Exception:
         pass
 

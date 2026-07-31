@@ -16,6 +16,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, Field
 
+from email_mcp import oauth
 from email_mcp.sanitize import sanitize_text
 
 logger = logging.getLogger(__name__)
@@ -240,6 +241,22 @@ class SMTPEmailService(EmailService):
         self.imap_user = config.config.get("imap_user", self.smtp_user)
         self.imap_password = config.config.get("imap_password", self.smtp_password)
 
+    def _smtp_ready(self) -> bool:
+        return bool(self.smtp_server and self.smtp_user and (self.smtp_password or oauth.has_token(self.smtp_user)))
+
+    def _imap_ready(self) -> bool:
+        return bool(self.imap_server and self.imap_user and (self.imap_password or oauth.has_token(self.imap_user)))
+
+    def _smtp_auth(self, server: smtplib.SMTP) -> None:
+        """XOAUTH2 when a token exists, else password login."""
+        if not oauth.authenticate_smtp(server, self.smtp_user):
+            server.login(self.smtp_user, self.smtp_password)
+
+    def _imap_auth(self, mail: imaplib.IMAP4) -> None:
+        """XOAUTH2 when a token exists, else password login."""
+        if not oauth.authenticate_imap(mail, self.imap_user):
+            mail.login(self.imap_user, self.imap_password)
+
     async def send_email(
         self,
         to: str | list[str],
@@ -251,7 +268,7 @@ class SMTPEmailService(EmailService):
         attachments: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Send email via SMTP."""
-        if not self.smtp_server or not self.smtp_user or not self.smtp_password:
+        if not self._smtp_ready():
             return {"success": False, "error": f"SMTP not configured for {self.name}"}
 
         try:
@@ -303,7 +320,7 @@ class SMTPEmailService(EmailService):
             def send_sync():
                 with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                     server.starttls()
-                    server.login(self.smtp_user, self.smtp_password)
+                    self._smtp_auth(server)
                     server.sendmail(self.smtp_from, recipients, msg.as_string())
 
             loop = asyncio.get_event_loop()
@@ -323,7 +340,7 @@ class SMTPEmailService(EmailService):
         subject_contains: str | None = None,
     ) -> dict[str, Any]:
         """Check inbox via IMAP."""
-        if not self.imap_server or not self.imap_user or not self.imap_password:
+        if not self._imap_ready():
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
 
         fc = (from_contains or "").strip() or None
@@ -334,7 +351,7 @@ class SMTPEmailService(EmailService):
 
             def check_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-                mail.login(self.imap_user, self.imap_password)
+                self._imap_auth(mail)
                 mail.select(folder)
 
                 search_criteria = "UNSEEN" if unread_only else "ALL"
@@ -414,13 +431,13 @@ class SMTPEmailService(EmailService):
         smtp_error = None
         imap_error = None
 
-        if self.smtp_server and self.smtp_user and self.smtp_password:
+        if self._smtp_ready():
             try:
 
                 def test_smtp():
                     with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=5) as server:
                         server.starttls()
-                        server.login(self.smtp_user, self.smtp_password)
+                        self._smtp_auth(server)
                         return True
 
                 loop = asyncio.get_event_loop()
@@ -428,12 +445,12 @@ class SMTPEmailService(EmailService):
             except Exception as e:
                 smtp_error = str(e)
 
-        if self.imap_server and self.imap_user and self.imap_password:
+        if self._imap_ready():
             try:
 
                 def test_imap():
                     mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=5)
-                    mail.login(self.imap_user, self.imap_password)
+                    self._imap_auth(mail)
                     mail.logout()
                     return True
 
@@ -456,14 +473,14 @@ class SMTPEmailService(EmailService):
         email_id: str,
     ) -> dict[str, Any]:
         """Fetch a single email by ID with full body text and HTML via IMAP."""
-        if not self.imap_server or not self.imap_user or not self.imap_password:
+        if not self._imap_ready():
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
 
         try:
 
             def fetch_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-                mail.login(self.imap_user, self.imap_password)
+                self._imap_auth(mail)
                 mail.select(folder)
 
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
@@ -571,14 +588,14 @@ class SMTPEmailService(EmailService):
         email_id: str,
     ) -> dict[str, Any]:
         """Delete a single email by ID via IMAP (moves to Trash)."""
-        if not self.imap_server or not self.imap_user or not self.imap_password:
+        if not self._imap_ready():
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
 
         try:
 
             def delete_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-                mail.login(self.imap_user, self.imap_password)
+                self._imap_auth(mail)
                 mail.select(folder)
 
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
@@ -602,13 +619,13 @@ class SMTPEmailService(EmailService):
         email_id: str,
     ) -> dict[str, Any]:
         """Move a single email between IMAP folders (COPY + DELETE)."""
-        if not self.imap_server or not self.imap_user or not self.imap_password:
+        if not self._imap_ready():
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
         try:
 
             def move_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-                mail.login(self.imap_user, self.imap_password)
+                self._imap_auth(mail)
                 mail.select(from_folder)
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
                 mail.copy(eid, to_folder)
@@ -635,13 +652,13 @@ class SMTPEmailService(EmailService):
         email_id: str,
     ) -> dict[str, Any]:
         """Flag a single email as spam and move to Spam folder."""
-        if not self.imap_server or not self.imap_user or not self.imap_password:
+        if not self._imap_ready():
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
         try:
 
             def spam_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-                mail.login(self.imap_user, self.imap_password)
+                self._imap_auth(mail)
                 mail.select(folder)
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
                 mail.store(eid, "+FLAGS", "\\Junk")
@@ -669,14 +686,14 @@ class SMTPEmailService(EmailService):
         email_id: str,
     ) -> dict[str, Any]:
         """Mark a single email as read (SEEN) via IMAP."""
-        if not self.imap_server or not self.imap_user or not self.imap_password:
+        if not self._imap_ready():
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
 
         try:
 
             def mark_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-                mail.login(self.imap_user, self.imap_password)
+                self._imap_auth(mail)
                 mail.select(folder)
 
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
@@ -703,14 +720,14 @@ class SMTPEmailService(EmailService):
         email_id: str,
     ) -> dict[str, Any]:
         """Mark a single email as unread (remove SEEN flag) via IMAP."""
-        if not self.imap_server or not self.imap_user or not self.imap_password:
+        if not self._imap_ready():
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
 
         try:
 
             def unmark_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-                mail.login(self.imap_user, self.imap_password)
+                self._imap_auth(mail)
                 mail.select(folder)
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
                 mail.store(eid, "-FLAGS", "\\Seen")
@@ -731,13 +748,13 @@ class SMTPEmailService(EmailService):
 
     async def list_folders(self, service: str = "default") -> list[dict[str, Any]]:
         """List all IMAP folders/mailboxes for this service."""
-        if not self.imap_server or not self.imap_user or not self.imap_password:
+        if not self._imap_ready():
             return []
         try:
 
             def list_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-                mail.login(self.imap_user, self.imap_password)
+                self._imap_auth(mail)
                 status, folders = mail.list()
                 mail.logout()
                 if status != "OK":
@@ -758,13 +775,13 @@ class SMTPEmailService(EmailService):
 
     async def create_folder(self, folder: str) -> dict[str, Any]:
         """Create a new IMAP folder."""
-        if not self.imap_server or not self.imap_user or not self.imap_password:
+        if not self._imap_ready():
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
         try:
 
             def create_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-                mail.login(self.imap_user, self.imap_password)
+                self._imap_auth(mail)
                 status, _ = mail.create(folder)
                 mail.logout()
                 return status == "OK"
@@ -781,13 +798,13 @@ class SMTPEmailService(EmailService):
 
     async def delete_folder(self, folder: str) -> dict[str, Any]:
         """Delete an IMAP folder."""
-        if not self.imap_server or not self.imap_user or not self.imap_password:
+        if not self._imap_ready():
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
         try:
 
             def delete_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-                mail.login(self.imap_user, self.imap_password)
+                self._imap_auth(mail)
                 status, _ = mail.delete(folder)
                 mail.logout()
                 return status == "OK"
@@ -804,13 +821,13 @@ class SMTPEmailService(EmailService):
 
     async def rename_folder(self, old_name: str, new_name: str) -> dict[str, Any]:
         """Rename an IMAP folder."""
-        if not self.imap_server or not self.imap_user or not self.imap_password:
+        if not self._imap_ready():
             return {"success": False, "error": f"IMAP not configured for {self.name}"}
         try:
 
             def rename_sync():
                 mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-                mail.login(self.imap_user, self.imap_password)
+                self._imap_auth(mail)
                 status, _ = mail.rename(old_name, new_name)
                 mail.logout()
                 return status == "OK"
