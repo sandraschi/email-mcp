@@ -182,6 +182,14 @@ export function Chat() {
 	const [executingWorkflow, setExecutingWorkflow] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const initialized = useRef(false);
+	const inputRef = useRef<HTMLTextAreaElement>(null);
+
+	const autoGrowInput = useCallback(() => {
+		const el = inputRef.current;
+		if (!el) return;
+		el.style.height = "auto";
+		el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+	}, []);
 
 	const {
 		providers,
@@ -280,6 +288,7 @@ export function Chat() {
 			const q = query || input;
 			if (!q.trim() || loading) return;
 			setInput("");
+			autoGrowInput();
 			addMessage("user", q);
 			setLoading(true);
 			try {
@@ -317,6 +326,7 @@ export function Chat() {
 			customPrompt,
 			personalityId,
 			addMessage,
+			autoGrowInput,
 		],
 	);
 
@@ -497,11 +507,11 @@ export function Chat() {
 				</div>
 			)}
 
-			<Card className="flex-1 border-slate-800 bg-slate-950/50 flex flex-col overflow-hidden">
+			<Card className="flex-1 min-h-0 border-slate-800 bg-slate-950/50 flex flex-col overflow-hidden">
 				<CardContent
 					ref={scrollRef}
 					data-testid="chat-messages"
-					className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth"
+					className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 scroll-smooth"
 				>
 					{messages.map((msg) => (
 						<div key={`${msg.ts}-${msg.role}`} className="flex gap-3">
@@ -746,12 +756,23 @@ export function Chat() {
 							handleSend();
 						}}
 					>
-						<input
+						<textarea
+							ref={inputRef}
 							data-testid="chat-input"
-							className="flex-1 bg-slate-950 border border-slate-800 rounded-md px-4 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none disabled:opacity-50"
+							rows={3}
+							className="flex-1 bg-slate-950 border border-slate-800 rounded-md px-4 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none overflow-y-auto disabled:opacity-50 min-h-[76px] max-h-[160px]"
 							placeholder="Ask me to search, draft, compose, or organize your emails..."
 							value={input}
-							onChange={(e) => setInput(e.target.value)}
+							onChange={(e) => {
+								setInput(e.target.value);
+								autoGrowInput();
+							}}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" && !e.shiftKey) {
+									e.preventDefault();
+									handleSend();
+								}
+							}}
 							disabled={loading}
 						/>
 						<Button

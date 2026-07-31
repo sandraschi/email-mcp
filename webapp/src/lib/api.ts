@@ -6,7 +6,7 @@
 const AUTH_USER = "sandra";
 const AUTH_PASS = "vienna2026";
 const AUTH_HEADER = `Basic ${btoa(`${AUTH_USER}:${AUTH_PASS}`)}`;
-const DEFAULT_TIMEOUT = 15_000; // 15 seconds
+const DEFAULT_TIMEOUT = 30_000; // 30 seconds
 
 // In Tauri production, the frontend is served from webview (origin: tauri.localhost)
 // but the backend runs on 127.0.0.1:10813. VITE_API_BASE bridges the gap.
