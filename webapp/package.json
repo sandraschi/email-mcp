@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "check": "tsc -b",
     "lint": "eslint .",
     "preview": "vite preview",
     "biome:ci": "biome ci .",

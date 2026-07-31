@@ -1,52 +1,84 @@
 # Outlook / Hotmail Integration
 
-## Prerequisites
-- Outlook.com, Hotmail, or Microsoft 365 account
-- App password (if 2FA enabled) or regular password
+Microsoft requires additional authorization steps on their site before SMTP/IMAP
+clients can connect. Plain account passwords do **not** work for SMTP AUTH on
+personal accounts since the "less secure apps" retirement.
 
-## Setup
+## Step 1: Enable two-step verification (required for app passwords)
 
-### Configuration via Environment
+1. Sign in at https://account.microsoft.com/security with the mailbox account.
+2. Under **Two-step verification**, select **Turn on** and follow the prompts.
+3. This is mandatory — app passwords can only be created when 2FA is enabled.
+
+## Step 2: Create an app password
+
+1. Go to **Advanced security options** (same page,
+   https://account.microsoft.com/security).
+2. Scroll to **App passwords** and select **Create a new app password**.
+3. Copy the generated password (shown once) and use it as `SMTP_PASSWORD` and
+   `IMAP_PASSWORD`. Never use the account's login password.
+
+## Step 3: Configure Email MCP
 
 ```bash
 export SMTP_SERVER="smtp-mail.outlook.com"
 export SMTP_PORT="587"
 export SMTP_USER="your-email@outlook.com"
-export SMTP_PASSWORD="your-password"
+export SMTP_PASSWORD="<app password>"
 export IMAP_SERVER="outlook.office365.com"
 export IMAP_PORT="993"
 export IMAP_USER="your-email@outlook.com"
-export IMAP_PASSWORD="your-password"
+export IMAP_PASSWORD="<app password>"
 ```
 
-### Configuration via Webapp
-Go to **Settings → Email Services** in the Email Hub dashboard and add an SMTP service.
+Or in the webapp: **Settings → Email Services → Add Service → SMTP** with the same
+values. Or via MCP tool:
 
-### Configuration via MCP Tool
 ```
 configure_service(name="outlook", type="smtp", config={
   "smtp_server": "smtp-mail.outlook.com",
   "smtp_port": 587,
   "smtp_user": "your-email@outlook.com",
-  "smtp_password": "your-password",
+  "smtp_password": "<app password>",
   "smtp_from": "your-email@outlook.com",
   "imap_server": "outlook.office365.com",
   "imap_port": 993,
   "imap_user": "your-email@outlook.com",
-  "imap_password": "your-password"
+  "imap_password": "<app password>"
 })
 ```
 
-## Microsoft 365 / Exchange Online
-For business/enterprise accounts, use the same endpoints. If your organization uses Conditional Access or Modern Auth, you may need an app password or OAuth2 token.
+## Microsoft 365 / Exchange Online (business accounts)
+
+1. **Enable SMTP AUTH for the mailbox** — Microsoft 365 blocks SMTP AUTH by
+   default. Ask the admin to enable it, either in the Exchange admin center
+   (Mail flow → Connectors / mailbox settings) or with PowerShell:
+
+   ```powershell
+   Set-CASMailbox -Identity "user@domain.com" -SmtpClientAuthenticationDisabled $false
+   ```
+
+2. **Security defaults / Conditional Access** — if the tenant enforces security
+   defaults, legacy authentication (SMTP AUTH with a password) is blocked. Options:
+   - Create an **app password** under the user's security info (works when MFA is
+     on), or
+   - Ask the admin for a Conditional Access exception for the SMTP/IMAP clients.
+3. OAuth2 is not yet supported by Email MCP — app passwords are the supported path.
 
 ## Supported Features
-- SMTP sending with STARTTLS
-- IMAP inbox checking
+
+- SMTP sending with STARTTLS (port 587)
+- IMAP inbox checking (outlook.office365.com:993, SSL)
 - Folder access (INBOX, Sent, Drafts, Trash, Junk)
 - HTML and plain text formats
 
-## Notes
-- Microsoft may block "less secure apps" -- enable SMTP/IMAP in account settings
-- For 365 accounts, check with your admin for SMTP/IMAP access policies
-- OAuth2 is recommended but not yet supported (use app passwords)
+## Troubleshooting
+
+| Symptom | Cause / fix |
+|---------|-------------|
+| `SMTP AUTH` rejected / 535 5.7.3 | App password not used, or 2FA not enabled — redo Step 1 + 2 |
+| `Client was not authenticated` | Same — plain passwords no longer work for personal accounts |
+| Send fails right after enabling | Microsoft can take up to 24h to propagate SMTP AUTH changes — retry later |
+| 365 account rejected | SMTP AUTH disabled on the mailbox — admin must run `Set-CASMailbox -SmtpClientAuthenticationDisabled $false` |
+| IMAP works, SMTP fails | SMTP AUTH is controlled separately from IMAP enablement — check both |
+| Security defaults block sign-in | Legacy auth blocked by tenant policy — app password or admin exception required |
