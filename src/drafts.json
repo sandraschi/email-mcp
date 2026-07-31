@@ -238,5 +238,15 @@
     "html": null,
     "service": "default",
     "updated_at": 1785539860
+  },
+  "fb8f2a2a": {
+    "id": "fb8f2a2a",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1785541228
   }
 }

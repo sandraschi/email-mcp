@@ -38,8 +38,18 @@ class AIRouter:
     def __init__(self, mcp_app: FastMCP):
         self.mcp = mcp_app
         self.provider = os.getenv("AI_PROVIDER", "ollama")
-        self.endpoint = os.getenv("AI_ENDPOINT", "http://localhost:11434/v1/chat/completions")
+        self.endpoint = self._resolve_endpoint(os.getenv("AI_ENDPOINT", ""))
         self.model = os.getenv("AI_MODEL", "")
+
+    @staticmethod
+    def _resolve_endpoint(endpoint: str) -> str:
+        """Accept a bare base URL (http://host:port) or a full OpenAI path."""
+        if not endpoint:
+            return "http://localhost:11434/v1/chat/completions"
+        clean = endpoint.rstrip("/")
+        if clean.endswith("/chat/completions"):
+            return clean
+        return f"{clean}/v1/chat/completions"
 
     _SYSTEM = (
         "You are the Email MCP AI Assistant. Help the user manage their email. "
@@ -67,7 +77,7 @@ class AIRouter:
         provider = self.provider
         sp = system_prompt or self._SYSTEM
 
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             if provider == "ollama":
                 # Use sensible default model for Ollama if none configured
                 if not self.model:

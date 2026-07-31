@@ -297,14 +297,18 @@ export function Chat() {
 					personality,
 					customPrompt,
 				);
-				const data = await fetchWithAuth("/api/chat", {
-					method: "POST",
-					body: JSON.stringify({
-						query: q,
-						system_prompt: system,
-						personality_id: personalityId,
-					}),
-				});
+				const data = await fetchWithAuth(
+					"/api/chat",
+					{
+						method: "POST",
+						body: JSON.stringify({
+							query: q,
+							system_prompt: system,
+							personality_id: personalityId,
+						}),
+					},
+					120_000,
+				);
 				addMessage(
 					"assistant",
 					(data as { response?: string }).response || "No response.",
