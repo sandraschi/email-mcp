@@ -511,7 +511,7 @@ export function Chat() {
 				<CardContent
 					ref={scrollRef}
 					data-testid="chat-messages"
-					className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 scroll-smooth"
+					className="flex-1 min-h-[320px] overflow-y-auto p-4 space-y-4 scroll-smooth"
 				>
 					{messages.map((msg) => (
 						<div key={`${msg.ts}-${msg.role}`} className="flex gap-3">
