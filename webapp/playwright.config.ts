@@ -9,12 +9,21 @@ export default defineConfig({
 		headless: true,
 		screenshot: "only-on-failure",
 	},
-	webServer: {
-		command:
-			"uv run uvicorn email_mcp.server:app --host 127.0.0.1 --port 10813 --log-level warning",
-		port: 10813,
-		cwd: "../",
-		timeout: 30000,
-		reuseExistingServer: false,
-	},
+	webServer: [
+		{
+			command:
+				"uv run uvicorn email_mcp.server:app --host 127.0.0.1 --port 10813 --log-level warning",
+			port: 10813,
+			cwd: "../",
+			timeout: 30000,
+			reuseExistingServer: false,
+		},
+		{
+			command: "npm run build && npx vite preview --port 10812 --strictPort",
+			port: 10812,
+			cwd: ".",
+			timeout: 120000,
+			reuseExistingServer: false,
+		},
+	],
 });
