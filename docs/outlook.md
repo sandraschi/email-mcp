@@ -1,5 +1,18 @@
 # Outlook / Hotmail Integration
 
+> **⚠️ Personal accounts (outlook.com / hotmail / live.com): Microsoft disabled
+> SMTP/IMAP basic authentication for personal accounts (Sept 2024+). App passwords
+> ARE basic auth, so they no longer work — expect `5.7.139 Authentication
+> unsuccessful, basic authentication is disabled` on SMTP and `AUTHENTICATE failed`
+> on IMAP. Email MCP only supports password auth (no OAuth2 yet), so personal
+> Outlook/Hotmail mailboxes **cannot be used** with this server. Options:
+> - Send with an API service instead: SendGrid / Mailgun / Resend (free tiers,
+>   configure via `EMAIL_SERVICES`).
+> - Use a **Microsoft 365 business** mailbox where the admin enables SMTP AUTH
+>   (steps below) — app passwords work there.
+> - OAuth2 client support is a roadmap item; until then no personal-account path
+>   exists.
+
 Microsoft requires additional authorization steps on their site before SMTP/IMAP
 clients can connect. Plain account passwords do **not** work for SMTP AUTH on
 personal accounts since the "less secure apps" retirement.
@@ -76,6 +89,8 @@ configure_service(name="outlook", type="smtp", config={
 
 | Symptom | Cause / fix |
 |---------|-------------|
+| `535 5.7.139 ... basic authentication is disabled` | **Personal account**: SMTP AUTH is permanently disabled for outlook.com/hotmail — no app password helps. Use an API service (SendGrid etc.) or an M365 business mailbox. For **M365 business**: admin must run `Set-CASMailbox -SmtpClientAuthenticationDisabled $false` (below) |
+| `AUTHENTICATE failed` (IMAP) | Same root cause on personal accounts. For M365: verify IMAP is enabled on the mailbox |
 | `SMTP AUTH` rejected / 535 5.7.3 | App password not used, or 2FA not enabled — redo Step 1 + 2 |
 | `Client was not authenticated` | Same — plain passwords no longer work for personal accounts |
 | Send fails right after enabling | Microsoft can take up to 24h to propagate SMTP AUTH changes — retry later |
