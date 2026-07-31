@@ -1,3 +1,7 @@
+# Inline CI (was: reusable sandraschi/fleet-ci@v1 — cross-repo workflow_call
+# could not execute on GitHub; inlined 2026-07-31, pattern matches arxiv-mcp).
+# Fleet pin: Python 3.12, Node 22, uv, ruff, pytest, biome, tsc
+
 name: CI
 
 on:
@@ -8,5 +12,169 @@ on:
   workflow_dispatch:
 
 jobs:
-  ci:
-    uses: sandraschi/fleet-ci/.github/workflows/hybrid.yml@v1
+  check:
+    name: Lint & Test (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Detect frontend directory
+        id: frontend
+        shell: pwsh
+        run: |
+          foreach ($d in @('webapp', 'web_sota', 'web-sota')) {
+            if (Test-Path "$d/package-lock.json") {
+              "dir=$d" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8NoBOM
+              exit 0
+            }
+          }
+          "dir=" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8NoBOM
+
+      - name: Set up Node
+        if: steps.frontend.outputs.dir != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ steps.frontend.outputs.dir }}/package-lock.json
+
+      - name: Install Python dependencies
+        shell: pwsh
+        run: |
+          $toml = Get-Content pyproject.toml -Raw -ErrorAction SilentlyContinue
+          $hasGroupDev = $false
+          $hasExtraDev = $false
+          if ($toml) {
+            $inGroups = $false
+            $inExtras = $false
+            foreach ($line in ($toml -split "`n")) {
+              $t = $line.Trim()
+              if ($t -match '^\[dependency-groups\]\s*$') { $inGroups = $true; $inExtras = $false; continue }
+              if ($t -match '^\[project\.optional-dependencies\]\s*$') { $inGroups = $false; $inExtras = $true; continue }
+              if ($t -match '^\[') { $inGroups = $false; $inExtras = $false; continue }
+              if ($inGroups -and $t -match '^dev\s*=') { $hasGroupDev = $true }
+              if ($inExtras -and $t -match '^dev\s*=') { $hasExtraDev = $true }
+            }
+          }
+          if ($hasGroupDev) {
+            Write-Host "Using uv sync --group dev (dependency-groups)"
+            uv sync --group dev
+          } elseif ($hasExtraDev) {
+            Write-Host "Using uv sync --extra dev (optional-dependencies)"
+            uv sync --extra dev
+          } else {
+            Write-Host "No dev deps detected, running uv sync without group/extra"
+            uv sync
+          }
+
+      - name: Verify Ruff
+        shell: pwsh
+        run: |
+          $versionLine = uv run ruff --version 2>&1
+          if ($LASTEXITCODE -ne 0) { throw "ruff not installed. Add ruff to [dependency-groups] dev in pyproject.toml" }
+          Write-Host "ruff: $versionLine"
+          $toml = Get-Content pyproject.toml -Raw -ErrorAction SilentlyContinue
+          if ($toml -and $toml -notmatch '(?ms)\[tool\.ruff\.lint\].*?\bselect\s*=') {
+            throw "pyproject.toml must define [tool.ruff.lint] select = [...]."
+          }
+
+      - name: Ruff check
+        shell: pwsh
+        run: |
+          $paths = @('src')
+          if (Test-Path 'tests') { $paths += 'tests' }
+          uv run ruff check @paths
+
+      - name: Ruff format check
+        shell: pwsh
+        run: |
+          $paths = @('src')
+          if (Test-Path 'tests') { $paths += 'tests' }
+          uv run ruff format --check @paths
+
+      - name: Pytest
+        if: hashFiles('tests/**') != ''
+        shell: pwsh
+        run: |
+          $toml = Get-Content pyproject.toml -Raw -ErrorAction SilentlyContinue
+          if ($toml -match 'pytest-cov') {
+            uv run python -m pytest tests/ -q --tb=short --no-cov
+          } else {
+            uv run python -m pytest tests/ -q --tb=short
+          }
+
+      - name: ty typecheck
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $toml = Get-Content pyproject.toml -Raw -ErrorAction SilentlyContinue
+          if (-not $toml) { Write-Host "skip: no pyproject.toml"; exit 0 }
+          if ($toml -notmatch '(?m)^\s*"?ty"?\s*[,\]]' -and $toml -notmatch 'ty>=') {
+            Write-Host "skip: ty not in dev dependencies"
+            exit 0
+          }
+          uv run ty check src
+
+      - name: Install web dependencies
+        if: steps.frontend.outputs.dir != ''
+        run: npm ci
+        working-directory: ${{ steps.frontend.outputs.dir }}
+
+      - name: Typecheck
+        if: steps.frontend.outputs.dir != ''
+        shell: pwsh
+        working-directory: ${{ steps.frontend.outputs.dir }}
+        run: |
+          $pkg = Get-Content package.json -Raw | ConvertFrom-Json
+          $scripts = $pkg.scripts | Get-Member -MemberType NoteProperty | ForEach-Object { $_.Name }
+          if ('check' -in $scripts) {
+            npm run check
+          } elseif ('typecheck' -in $scripts) {
+            npm run typecheck
+          } else {
+            Write-Host "no typecheck: no 'check' or 'typecheck' script in package.json"
+          }
+
+      - name: Biome check
+        if: steps.frontend.outputs.dir != ''
+        shell: pwsh
+        working-directory: ${{ steps.frontend.outputs.dir }}
+        run: |
+          $pkg = Get-Content package.json -Raw | ConvertFrom-Json
+          $scripts = $pkg.scripts | Get-Member -MemberType NoteProperty | ForEach-Object { $_.Name }
+          if ('biome:ci' -in $scripts) {
+            npm run biome:ci
+          } elseif ('lint' -in $scripts) {
+            npm run lint
+          } else {
+            Write-Host "no linter: no 'biome:ci' or 'lint' script in package.json"
+          }
+
+      - name: Install Playwright
+        if: steps.frontend.outputs.dir != ''
+        shell: pwsh
+        working-directory: ${{ steps.frontend.outputs.dir }}
+        run: |
+          if ((Test-Path playwright.config.ts) -or (Test-Path playwright.config.js)) {
+            npx playwright install chromium
+          }
+
+      - name: Run Playwright e2e
+        if: steps.frontend.outputs.dir != ''
+        shell: pwsh
+        working-directory: ${{ steps.frontend.outputs.dir }}
+        run: |
+          if ((Test-Path playwright.config.ts) -or (Test-Path playwright.config.js)) {
+            npx playwright test
+          }
