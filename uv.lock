@@ -472,6 +472,7 @@ anthropic = [
     { name = "fastmcp", extra = ["anthropic"] },
 ]
 dev = [
+    { name = "aiosmtpd" },
     { name = "build" },
     { name = "mypy" },
     { name = "pre-commit" },
@@ -489,6 +490,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiosmtpd", marker = "extra == 'dev'", specifier = ">=1.4.0" },
     { name = "aiosmtpd", marker = "extra == 'test'", specifier = ">=1.4.0" },
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
