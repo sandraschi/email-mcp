@@ -50,7 +50,7 @@ export function Skill() {
 	}, [selected]);
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="skill-page">
 			<div>
 				<h2 className="text-2xl font-bold tracking-tight text-white">
 					Skill (MCP client instructions)
@@ -84,7 +84,9 @@ export function Skill() {
 							<div className="flex gap-2 flex-wrap">
 								{skills.map((s) => (
 									<button
+										type="button"
 										key={s.name}
+										data-testid={`skill-select-${s.name}`}
 										onClick={() => setSelected(s.name)}
 										className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
 											selected === s.name

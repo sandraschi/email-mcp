@@ -9,11 +9,10 @@ Local services: MailHog, Mailpit, MailCatcher, Inbucket
 Webhook services: Slack, Discord, Telegram, GitHub
 """
 
-import asyncio
 import logging
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -31,10 +30,10 @@ async def main():
             subject="Test Email",
             body="This is a test email for development.",
             html="<h1>Test Email</h1><p>This is a test for the MailHog web UI.</p>",
-            service="mailhog"
+            service="mailhog",
         )
         logger.info(f"MailHog email sent: {result['success']}")
-        if result['success']:
+        if result["success"]:
             logger.info("Check http://localhost:8025 for the email in web UI")
     except Exception as e:
         logger.error(f"MailHog send failed: {e}")
@@ -44,7 +43,7 @@ async def main():
     try:
         result = await check_inbox(service="mailhog", limit=10)
         logger.info(f"Found {result['count']} emails in MailHog")
-        for email in result['emails'][:3]:  # Show first 3
+        for email in result["emails"][:3]:  # Show first 3
             logger.info(f"  - {email['subject']} - {email['from']} ({email['date']})")
     except Exception as e:
         logger.error(f"MailHog inbox check failed: {e}")
@@ -64,7 +63,7 @@ async def main():
                 <p style="margin: 8px 0; color: #666;">This is an automated alert from the monitoring system.</p>
             </div>
             """,
-            service="slack"
+            service="slack",
         )
         logger.info(f"Slack notification sent: {result['success']}")
     except Exception as e:
@@ -77,7 +76,7 @@ async def main():
             to="#alerts",
             subject="🔥 Database Backup Failed",
             body="Database backup job failed on server db-01.",
-            service="discord"
+            service="discord",
         )
         logger.info(f"Discord alert sent: {result['success']}")
     except Exception as e:
@@ -90,7 +89,7 @@ async def main():
             to="@mybot",
             subject="New User Registration",
             body="User john.doe@example.com just registered.",
-            service="telegram"
+            service="telegram",
         )
         logger.info(f"Telegram message sent: {result['success']}")
     except Exception as e:
@@ -106,11 +105,11 @@ async def main():
                 "api_key": "my-mailgun-api-key",
                 "api_url": "https://api.mailgun.net/v3/mydomain.com/messages",
                 "from_email": "noreply@mydomain.com",
-                "service_type": "mailgun"
-            }
+                "service_type": "mailgun",
+            },
         )
         logger.info(f"Service configured: {result['success']}")
-        if result['success']:
+        if result["success"]:
             logger.info("New service 'my-custom-mailgun' is now available")
     except Exception as e:
         logger.error(f"Service configuration failed: {e}")
@@ -122,8 +121,8 @@ async def main():
         logger.info(f"Total services: {services['count']}")
         logger.info(f"Enabled services: {services['enabled_count']}")
 
-        for name, info in services['services'].items():
-            status = "configured and enabled" if info['configured'] and info['enabled'] else "not fully configured"
+        for name, info in services["services"].items():
+            status = "configured and enabled" if info["configured"] and info["enabled"] else "not fully configured"
             logger.info(f"  - {name}: {info['description']} ({status})")
     except Exception as e:
         logger.error(f"Service listing failed: {e}")

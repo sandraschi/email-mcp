@@ -41,7 +41,7 @@ function useExponentialBackoff(fn: () => Promise<void>, maxRetries = 5) {
 			} catch {
 				retriesRef.current += 1;
 				if (retriesRef.current >= maxRetries) return;
-				const delay = Math.min(1000 * Math.pow(2, retriesRef.current - 1), 16000);
+				const delay = Math.min(1000 * 2 ** (retriesRef.current - 1), 16000);
 				await new Promise((r) => setTimeout(r, delay));
 			}
 		}
@@ -49,7 +49,9 @@ function useExponentialBackoff(fn: () => Promise<void>, maxRetries = 5) {
 
 	useEffect(() => {
 		poll();
-		return () => { mountedRef.current = false; };
+		return () => {
+			mountedRef.current = false;
+		};
 	}, [poll]);
 }
 
@@ -70,7 +72,9 @@ export function Dashboard() {
 
 	useEffect(() => {
 		if (!loading) return;
-		fetchStats().catch(() => {}).finally(() => setLoading(false));
+		fetchStats()
+			.catch(() => {})
+			.finally(() => setLoading(false));
 	}, [fetchStats, loading]);
 
 	// Auto-refresh every 60s
@@ -89,7 +93,7 @@ export function Dashboard() {
 		return (
 			<div className="flex flex-col items-center justify-center h-64 space-y-4">
 				<Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-				<p className="text-slate-400">Loading real-time email statistics...</p>
+				<p className="text-slate-300">Loading real-time email statistics...</p>
 			</div>
 		);
 	}
@@ -103,23 +107,35 @@ export function Dashboard() {
 					<h2 className="text-2xl font-bold tracking-tight text-white">
 						Email Hub Dashboard
 					</h2>
-					<p className="text-slate-400">
+					<p className="text-slate-300">
 						Real-time mail status and system health
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
-					<span data-testid="backend-dot" className={`h-2.5 w-2.5 rounded-full ${
-						backendOk === null ? "bg-gray-500" : backendOk ? "bg-green-500" : "bg-red-500"
-					}`} />
-					<span className="text-xs text-slate-500">
-						{backendOk === null ? "Connecting..." : backendOk ? "Connected" : "Offline"}
+					<span
+						data-testid="backend-dot"
+						className={`h-2.5 w-2.5 rounded-full ${
+							backendOk === null
+								? "bg-gray-500"
+								: backendOk
+									? "bg-green-500"
+									: "bg-red-500"
+						}`}
+					/>
+					<span className="text-sm text-slate-300">
+						{backendOk === null
+							? "Connecting..."
+							: backendOk
+								? "Connected"
+								: "Offline"}
 					</span>
 				</div>
 			</div>
 
 			{/* KPI Cards */}
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-				<Card data-testid="kpi-unread"
+				<Card
+					data-testid="kpi-unread"
 					className="border-slate-800 bg-slate-950/50 cursor-pointer hover:bg-slate-900/30 transition-colors"
 					onClick={() => navigate("/inbox")}
 				>
@@ -133,13 +149,14 @@ export function Dashboard() {
 						<div className="text-2xl font-bold text-white">
 							{stats?.unread_count ?? 0}
 						</div>
-						<p className="text-xs text-slate-400">
+						<p className="text-sm text-slate-300">
 							across {stats?.connected_services ?? 0} active services
 						</p>
 					</CardContent>
 				</Card>
 
-				<Card data-testid="kpi-services"
+				<Card
+					data-testid="kpi-services"
 					className="border-slate-800 bg-slate-950/50 cursor-pointer hover:bg-slate-900/30 transition-colors"
 					onClick={() => navigate("/services")}
 				>
@@ -153,14 +170,15 @@ export function Dashboard() {
 						<div className="text-2xl font-bold text-white">
 							{stats?.configured_services ?? 0}
 						</div>
-						<p className="text-xs text-slate-400">
+						<p className="text-sm text-slate-300">
 							{stats?.connected_services ?? 0} connected of{" "}
 							{stats?.total_services ?? 0} registered
 						</p>
 					</CardContent>
 				</Card>
 
-				<Card data-testid="kpi-drafts"
+				<Card
+					data-testid="kpi-drafts"
 					className="border-slate-800 bg-slate-950/50 cursor-pointer hover:bg-slate-900/30 transition-colors"
 					onClick={() => navigate("/compose")}
 				>
@@ -174,11 +192,14 @@ export function Dashboard() {
 						<div className="text-2xl font-bold text-white">
 							{stats?.drafts_count ?? 0}
 						</div>
-						<p className="text-xs text-slate-400">Saved locally</p>
+						<p className="text-sm text-slate-300">Saved locally</p>
 					</CardContent>
 				</Card>
 
-				<Card data-testid="kpi-bridge" className="border-slate-800 bg-slate-950/50">
+				<Card
+					data-testid="kpi-bridge"
+					className="border-slate-800 bg-slate-950/50"
+				>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium text-slate-200">
 							Bridge Status
@@ -189,7 +210,7 @@ export function Dashboard() {
 						<div className="text-2xl font-bold text-white">
 							{connected ? "Connected" : "Idle"}
 						</div>
-						<p className="text-xs text-slate-400">
+						<p className="text-sm text-slate-300">
 							SOTA v{stats?.mcp_version ?? "0.3.2"} • {stats?.tools_count ?? 0}{" "}
 							tools
 						</p>
@@ -205,14 +226,15 @@ export function Dashboard() {
 					<CardContent>
 						<div className="space-y-4">
 							{!stats?.recent_activity || stats.recent_activity.length === 0 ? (
-								<p className="text-slate-500 text-sm italic">
+								<p className="text-sm italic text-slate-400">
 									No recent unread messages found.
 								</p>
 							) : (
 								stats.recent_activity.map((email) => (
-									<div
+									<button
+										type="button"
 										key={email.id}
-										className="flex items-center justify-between border-b border-slate-800 pb-2 last:border-0 last:pb-0 cursor-pointer hover:bg-slate-900/30 px-2 rounded transition-colors"
+										className="flex w-full items-center justify-between border-b border-slate-800 pb-2 last:border-0 last:pb-0 cursor-pointer hover:bg-slate-900/30 px-2 rounded transition-colors text-left"
 										onClick={() =>
 											navigate(
 												`/email?id=${encodeURIComponent(email.id)}&service=${email._service || "default"}&folder=INBOX`,
@@ -227,12 +249,12 @@ export function Dashboard() {
 												<p className="text-sm font-medium text-slate-200 line-clamp-1">
 													{email.subject}
 												</p>
-												<p className="text-xs text-slate-500">
+												<p className="text-sm text-slate-300">
 													From: {email.from} • {email.date}
 												</p>
 											</div>
 										</div>
-									</div>
+									</button>
 								))
 							)}
 						</div>
@@ -255,7 +277,7 @@ export function Dashboard() {
 											<p className="text-sm font-medium leading-none text-white">
 												Services Online
 											</p>
-											<p className="text-xs text-slate-400">
+											<p className="text-sm text-slate-300">
 												{stats?.connected_services} of{" "}
 												{stats?.configured_services} services connected
 											</p>
@@ -263,13 +285,13 @@ export function Dashboard() {
 									</div>
 								</div>
 							) : (
-								<div className="flex items-center text-slate-500">
+								<div className="flex items-center text-slate-300">
 									<span className="h-2 w-2 mr-2 bg-slate-700 rounded-full"></span>
 									<div className="ml-2 space-y-1">
 										<p className="text-sm font-medium leading-none">
 											All Endpoints Idle
 										</p>
-										<p className="text-xs">
+										<p className="text-sm text-slate-300">
 											No active connections — configure services in Settings
 										</p>
 									</div>

@@ -65,7 +65,7 @@ async def _http_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
         line = (await reader.readline()).decode("utf-8", errors="replace").strip()
         if not line:
             break
-    method, path, _ = request_line.split(" ") if request_line else ("", "", "")
+    _method, path, _ = request_line.split(" ") if request_line else ("", "", "")
     if path == "/api/v2/messages":
         items = []
         for m in _captured_emails:

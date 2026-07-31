@@ -1,5 +1,5 @@
 # email-mcp — Full Documentation
-> Version 0.4.1 — FastMCP 3.2+ — 86 tests — 32+ MCP tools
+> Version 0.4.1 — FastMCP 3.4+ — 148 tests — 39 MCP tools
 
 ## Quick Start
 ```powershell
@@ -13,7 +13,7 @@ Requires Python 3.12+, uv. Opens web dashboard at http://localhost:10812.
 - **Local Testing**: MailHog, Mailpit, MailCatcher, Inbucket
 - **Webhooks**: Slack, Discord, Telegram
 
-## MCP Tools (32+)
+## MCP Tools (39)
 send_email, check_inbox, fetch_email_detail, search_emails, delete_email, mark_email_read, mark_email_unread, email_status, configure_service, remove_service, list_services, email_help, list_folders, create_folder, delete_folder, rename_folder, mailing_lists_catalog, mailing_list_latest, suggest_email_subject, email_agentic_assist, start_watcher, stop_watcher, watcher_status, add_contact, search_contacts, run_workflow, add_auto_rule, list_auto_rules, delete_auto_rule, list_pending_replies, approve_reply, auto_respond_now
 
 ## Architecture

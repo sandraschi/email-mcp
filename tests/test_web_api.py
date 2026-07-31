@@ -34,6 +34,7 @@ SVC_PAYLOAD = {
 # Health / Status / Capabilities
 # ---------------------------------------------------------------------------
 
+
 class TestHealth:
     async def test_status(self, client: httpx.AsyncClient):
         resp = await client.get("/api/status", headers=AUTH)
@@ -68,6 +69,7 @@ class TestHealth:
 # ---------------------------------------------------------------------------
 # Services CRUD
 # ---------------------------------------------------------------------------
+
 
 class TestServices:
     async def test_list_empty(self, client: httpx.AsyncClient):
@@ -135,6 +137,7 @@ class TestServices:
 # Inbox
 # ---------------------------------------------------------------------------
 
+
 class TestInbox:
     async def test_inbox_no_service(self, client: httpx.AsyncClient):
         resp = await client.get("/api/inbox", headers=AUTH)
@@ -168,6 +171,7 @@ class TestInbox:
 # Search
 # ---------------------------------------------------------------------------
 
+
 class TestSearch:
     async def test_search_requires_q(self, client: httpx.AsyncClient):
         resp = await client.get("/api/search", headers=AUTH)
@@ -182,13 +186,16 @@ class TestSearch:
 # Drafts
 # ---------------------------------------------------------------------------
 
+
 class TestDrafts:
     async def test_list_drafts(self, client: httpx.AsyncClient):
         resp = await client.get("/api/drafts", headers=AUTH)
         assert resp.status_code == 200
 
     async def test_save_draft(self, client: httpx.AsyncClient):
-        resp = await client.post("/api/drafts", json={"to": "a@b.com", "subject": "Test", "body": "Hello"}, headers=AUTH)
+        resp = await client.post(
+            "/api/drafts", json={"to": "a@b.com", "subject": "Test", "body": "Hello"}, headers=AUTH
+        )
         assert resp.status_code == 200
 
     async def test_update_draft(self, client: httpx.AsyncClient):
@@ -203,6 +210,7 @@ class TestDrafts:
 # ---------------------------------------------------------------------------
 # Contacts
 # ---------------------------------------------------------------------------
+
 
 class TestContacts:
     async def test_list_contacts(self, client: httpx.AsyncClient):
@@ -238,6 +246,7 @@ class TestContacts:
 # Curated lists
 # ---------------------------------------------------------------------------
 
+
 class TestCuratedLists:
     async def test_list_lists(self, client: httpx.AsyncClient):
         resp = await client.get("/api/curated-lists", headers=AUTH)
@@ -257,6 +266,7 @@ class TestCuratedLists:
 # Templates
 # ---------------------------------------------------------------------------
 
+
 class TestTemplates:
     async def test_list_templates(self, client: httpx.AsyncClient):
         resp = await client.get("/api/templates", headers=AUTH)
@@ -274,6 +284,7 @@ class TestTemplates:
 # ---------------------------------------------------------------------------
 # Signatures
 # ---------------------------------------------------------------------------
+
 
 class TestSignatures:
     async def test_get_signature(self, client: httpx.AsyncClient):
@@ -293,6 +304,7 @@ class TestSignatures:
 # Scheduler
 # ---------------------------------------------------------------------------
 
+
 class TestScheduler:
     async def test_list_scheduled(self, client: httpx.AsyncClient):
         resp = await client.get("/api/schedule", headers=AUTH)
@@ -306,6 +318,7 @@ class TestScheduler:
 # ---------------------------------------------------------------------------
 # Skills
 # ---------------------------------------------------------------------------
+
 
 class TestSkills:
     async def test_list_skills(self, client: httpx.AsyncClient):
@@ -323,6 +336,7 @@ class TestSkills:
 # Service types
 # ---------------------------------------------------------------------------
 
+
 class TestServiceTypes:
     async def test_service_types(self, client: httpx.AsyncClient):
         resp = await client.get("/api/service-types", headers=AUTH)
@@ -333,6 +347,7 @@ class TestServiceTypes:
 # Send
 # ---------------------------------------------------------------------------
 
+
 class TestSend:
     async def test_send_missing_fields(self, client: httpx.AsyncClient):
         resp = await client.post("/api/send", json={"to": "a@b.com"}, headers=AUTH)
@@ -342,6 +357,7 @@ class TestSend:
 # ---------------------------------------------------------------------------
 # LLM
 # ---------------------------------------------------------------------------
+
 
 class TestLLM:
     async def test_llm_models(self, client: httpx.AsyncClient):
@@ -365,6 +381,7 @@ class TestLLM:
 # Auto-respond
 # ---------------------------------------------------------------------------
 
+
 class TestAutoRespond:
     async def test_list_rules(self, client: httpx.AsyncClient):
         resp = await client.get("/api/auto-rules", headers=AUTH)
@@ -383,6 +400,7 @@ class TestAutoRespond:
 # Watcher
 # ---------------------------------------------------------------------------
 
+
 class TestWatcher:
     async def test_watcher_status(self, client: httpx.AsyncClient):
         resp = await client.get("/api/watcher/status", headers=AUTH)
@@ -392,6 +410,7 @@ class TestWatcher:
 # ---------------------------------------------------------------------------
 # Folders
 # ---------------------------------------------------------------------------
+
 
 class TestFolders:
     async def test_list_folders_no_service(self, client: httpx.AsyncClient):
@@ -407,6 +426,7 @@ class TestFolders:
 # ---------------------------------------------------------------------------
 # Auth guard -- all endpoints should reject without auth
 # ---------------------------------------------------------------------------
+
 
 class TestAuthGuard:
     ENDPOINTS = [

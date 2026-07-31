@@ -8,11 +8,10 @@ with the Email MCP server.
 Supported services: SendGrid, Mailgun, Resend, Amazon SES, Postmark
 """
 
-import asyncio
 import logging
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -40,7 +39,7 @@ async def main():
                 <a href="#" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Get Started</a>
             </div>
             """,
-            service="sendgrid"
+            service="sendgrid",
         )
         logger.info(f"SendGrid email sent: {result['success']}")
     except Exception as e:
@@ -54,7 +53,7 @@ async def main():
             subject="Monthly Newsletter",
             body="Check out our latest updates!",
             html="<h1>Monthly Newsletter</h1><p>Check out our latest updates...</p>",
-            service="mailgun"
+            service="mailgun",
         )
         logger.info(f"Mailgun bulk email sent: {result['success']}")
     except Exception as e:
@@ -75,7 +74,7 @@ async def main():
                 <p>This link expires in 24 hours.</p>
             </div>
             """,
-            service="resend"
+            service="resend",
         )
         logger.info(f"Resend transactional email sent: {result['success']}")
     except Exception as e:
@@ -88,9 +87,9 @@ async def main():
         logger.info(f"Services configured: {status['configured_services']}")
         logger.info(f"Services connected: {status['connected_services']}")
 
-        for svc_name, svc_status in status['services'].items():
-            if svc_status['configured']:
-                status_text = "connected" if svc_status['connected'] else "disconnected"
+        for svc_name, svc_status in status["services"].items():
+            if svc_status["configured"]:
+                status_text = "connected" if svc_status["connected"] else "disconnected"
                 logger.info(f"  - {svc_name}: {status_text}")
     except Exception as e:
         logger.error(f"Status check failed: {e}")

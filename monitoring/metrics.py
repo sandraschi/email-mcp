@@ -6,10 +6,11 @@ Collects and exposes performance metrics for the Email MCP server.
 """
 
 import time
-import psutil
-from typing import Dict, Any, List
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
+
+import psutil
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -18,6 +19,7 @@ logger = structlog.get_logger(__name__)
 @dataclass
 class EmailMetrics:
     """Email operation metrics."""
+
     operation: str
     service: str
     success: bool
@@ -31,14 +33,21 @@ class MetricsCollector:
     """Collects and aggregates metrics for the Email MCP server."""
 
     def __init__(self):
-        self.email_metrics: List[EmailMetrics] = []
+        self.email_metrics: list[EmailMetrics] = []
         self.start_time = time.time()
-        self.operation_counts: Dict[str, int] = {}
-        self.error_counts: Dict[str, int] = {}
-        self.service_usage: Dict[str, int] = {}
+        self.operation_counts: dict[str, int] = {}
+        self.error_counts: dict[str, int] = {}
+        self.service_usage: dict[str, int] = {}
 
-    def record_email_operation(self, operation: str, service: str, success: bool,
-                             response_time: float, error_type: str = "", bytes_transferred: int = 0) -> None:
+    def record_email_operation(
+        self,
+        operation: str,
+        service: str,
+        success: bool,
+        response_time: float,
+        error_type: str = "",
+        bytes_transferred: int = 0,
+    ) -> None:
         """Record an email operation metric."""
         metric = EmailMetrics(
             operation=operation,
@@ -47,7 +56,7 @@ class MetricsCollector:
             response_time=response_time,
             timestamp=datetime.now(),
             error_type=error_type,
-            bytes_transferred=bytes_transferred
+            bytes_transferred=bytes_transferred,
         )
 
         self.email_metrics.append(metric)
@@ -66,7 +75,7 @@ class MetricsCollector:
 
         logger.debug("Recorded email metric", operation=operation, service=service, success=success)
 
-    def get_operation_stats(self) -> Dict[str, Any]:
+    def get_operation_stats(self) -> dict[str, Any]:
         """Get operation statistics."""
         if not self.email_metrics:
             return {}
@@ -85,12 +94,12 @@ class MetricsCollector:
                 "average_response_time": sum(response_times) / len(response_times),
                 "min_response_time": min(response_times),
                 "max_response_time": max(response_times),
-                "total_bytes": sum(m.bytes_transferred for m in op_metrics)
+                "total_bytes": sum(m.bytes_transferred for m in op_metrics),
             }
 
         return stats
 
-    def get_service_stats(self) -> Dict[str, Any]:
+    def get_service_stats(self) -> dict[str, Any]:
         """Get service usage statistics."""
         stats = {}
 
@@ -103,16 +112,16 @@ class MetricsCollector:
                 stats[service] = {
                     "usage_count": self.service_usage[service],
                     "success_rate": success_count / len(service_metrics),
-                    "average_response_time": sum(response_times) / len(response_times)
+                    "average_response_time": sum(response_times) / len(response_times),
                 }
 
         return stats
 
-    def get_error_stats(self) -> Dict[str, Any]:
+    def get_error_stats(self) -> dict[str, Any]:
         """Get error statistics."""
         return dict(self.error_counts)
 
-    def get_system_metrics(self) -> Dict[str, Any]:
+    def get_system_metrics(self) -> dict[str, Any]:
         """Get system resource metrics."""
         process = psutil.Process()
         memory_info = process.memory_info()
@@ -126,10 +135,10 @@ class MetricsCollector:
             "cpu_system_time": cpu_times.system,
             "cpu_total_time": cpu_times.user + cpu_times.system,
             "thread_count": process.num_threads(),
-            "open_files": len(process.open_files())
+            "open_files": len(process.open_files()),
         }
 
-    def get_recent_metrics(self, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_recent_metrics(self, limit: int = 50) -> list[dict[str, Any]]:
         """Get recent metrics."""
         recent = self.email_metrics[-limit:]
         return [
@@ -140,7 +149,7 @@ class MetricsCollector:
                 "response_time": m.response_time,
                 "timestamp": m.timestamp.isoformat(),
                 "error_type": m.error_type,
-                "bytes_transferred": m.bytes_transferred
+                "bytes_transferred": m.bytes_transferred,
             }
             for m in recent
         ]

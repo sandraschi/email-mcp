@@ -1251,9 +1251,17 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 )
 
         for cloud in [
-            {"id": "anthropic", "name": "Anthropic (Claude)", "models": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-5-20251001"]},
+            {
+                "id": "anthropic",
+                "name": "Anthropic (Claude)",
+                "models": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-5-20251001"],
+            },
             {"id": "openai", "name": "OpenAI", "models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]},
-            {"id": "google", "name": "Google Gemini", "models": ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite"]},
+            {
+                "id": "google",
+                "name": "Google Gemini",
+                "models": ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite"],
+            },
         ]:
             providers.append({**cloud, "endpoint": None, "available": None})
 
@@ -1261,7 +1269,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         try:
             result = subprocess.run(
                 ["nvidia-smi", "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if result.returncode == 0 and result.stdout.strip():
                 parts = result.stdout.strip().split(", ")

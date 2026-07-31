@@ -134,12 +134,7 @@ These examples show how the functions would be called through the MCP protocol. 
 
 ```python
 # Direct email sending
-send_email(
-    to="user@example.com",
-    subject="Hello",
-    body="Message content",
-    service="sendgrid"
-)
+send_email(to="user@example.com", subject="Hello", body="Message content", service="sendgrid")
 
 # Inbox checking
 check_inbox(service="default", limit=10, unread_only=True)
@@ -201,9 +196,11 @@ Example Name - Brief Description
 Detailed description of what this example demonstrates.
 """
 
+
 async def main():
     """Main example function."""
     # Implementation here
+
 
 if __name__ == "__main__":
     # Usage instructions when run directly

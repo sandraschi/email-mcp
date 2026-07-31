@@ -8,4 +8,3 @@ sys.path.insert(0, ".")
 from email_mcp.server import main
 
 main()
-

@@ -68,6 +68,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 					</Link>
 				)}
 				<button
+					type="button"
 					onClick={onToggle}
 					className="p-1.5 rounded-md text-slate-500 hover:bg-slate-800 hover:text-white transition-colors"
 					title={collapsed ? "Expand sidebar" : "Collapse sidebar"}

@@ -39,7 +39,6 @@ type Provider = {
 	available: boolean | null;
 	models: string[];
 };
-type ImproveParams = { style: string; length: string; mood: string };
 
 const STYLES = [
 	{ value: "professional", label: "Professional" },
@@ -112,17 +111,28 @@ export function Compose() {
 	const [bulkResult, setBulkResult] = useState<{
 		ok: boolean;
 		msg: string;
-		results?: any[];
+		results?: Array<{ success: boolean; to?: string; error?: string }>;
 	} | null>(null);
 	const [showBulk, setShowBulk] = useState(false);
 
 	// ── Templates state ──
-	const [templates, setTemplates] = useState<any[]>([]);
+	const [templates, setTemplates] = useState<
+		Array<{
+			id?: string;
+			name: string;
+			subject?: string;
+			body?: string;
+			html?: string;
+			category?: string;
+		}>
+	>([]);
 	const [showTemplates, setShowTemplates] = useState(false);
 	const [signature, setSignature] = useState("");
 	const [scheduleAt, setScheduleAt] = useState("");
 	const [showSchedule, setShowSchedule] = useState(false);
-	const [contactSuggestions, setContactSuggestions] = useState<any[]>([]);
+	const [contactSuggestions, setContactSuggestions] = useState<
+		Array<{ id?: string; name?: string; email: string }>
+	>([]);
 	const [showContactSuggestions, setShowContactSuggestions] = useState(false);
 	const toRef = useRef<HTMLInputElement>(null);
 
@@ -155,20 +165,6 @@ export function Compose() {
 		}
 	}, [to]);
 
-	useEffect(() => {
-		fetchWithAuth("/api/services")
-			.then((data) => {
-				const svcMap = data.services || {};
-				const list = Object.entries(svcMap).map(
-					([name, info]: [string, any]) => ({ name, type: info.type }),
-				);
-				setServices(list);
-			})
-			.catch(() => {});
-		loadDrafts();
-		loadProviders();
-	}, [loadProviders, loadDrafts]);
-
 	const loadProviders = async () => {
 		setLoadingProviders(true);
 		try {
@@ -189,6 +185,22 @@ export function Compose() {
 			/* ignore */
 		}
 	};
+
+	useEffect(() => {
+		fetchWithAuth("/api/services")
+			.then((data) => {
+				const svcMap = data.services || {};
+				const list = Object.entries(svcMap).map(([name, info]) => ({
+					name,
+					type: (info as { type?: string } | undefined)?.type ?? "",
+				}));
+				setServices(list);
+			})
+			.catch(() => {});
+		loadDrafts();
+		loadProviders();
+		// biome-ignore lint/correctness/useExhaustiveDependencies: module-level fetchWithAuth and zustand setters are stable
+	}, [loadProviders, loadDrafts]);
 
 	const loadDraft = (draft: Draft) => {
 		setTo(draft.to || "");
@@ -459,7 +471,12 @@ export function Compose() {
 		.map((s) => s.trim())
 		.filter(Boolean).length;
 
-	const handleTemplateSelect = (tmpl: any) => {
+	const handleTemplateSelect = (tmpl: {
+		name?: string;
+		subject?: string;
+		body?: string;
+		html?: string;
+	}) => {
 		setSubject(tmpl.subject || subject);
 		setBody(tmpl.body || body);
 		if (tmpl.html) {
@@ -502,7 +519,7 @@ export function Compose() {
 		}
 	};
 
-	const handleSelectContact = (contact: any) => {
+	const handleSelectContact = (contact: { email: string }) => {
 		const parts = to.split(/[,;]/);
 		parts[parts.length - 1] = contact.email;
 		setTo(parts.join(", "));
@@ -513,7 +530,7 @@ export function Compose() {
 		services.length > 0 ? services.find((s) => s.name === "default") : null;
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4" data-testid="compose-page">
 			<div className="flex items-center justify-between">
 				<div>
 					<h2 className="text-2xl font-bold tracking-tight text-white">
@@ -559,6 +576,7 @@ export function Compose() {
 										className="flex items-center justify-between py-2 px-3 rounded hover:bg-slate-900/50 transition-colors"
 									>
 										<button
+											type="button"
 											className="flex-1 text-left text-sm text-slate-300 hover:text-white truncate"
 											onClick={() => loadDraft(d)}
 										>
@@ -601,9 +619,10 @@ export function Compose() {
 						) : (
 							<div className="space-y-1">
 								{templates.map((t) => (
-									<div
-										key={t.id}
-										className="flex items-center justify-between py-2 px-3 rounded hover:bg-slate-900/50 transition-colors cursor-pointer"
+									<button
+										type="button"
+										key={t.id ?? t.name}
+										className="flex w-full items-center justify-between py-2 px-3 rounded hover:bg-slate-900/50 transition-colors cursor-pointer text-left"
 										onClick={() => handleTemplateSelect(t)}
 									>
 										<div className="flex-1 min-w-0">
@@ -616,7 +635,7 @@ export function Compose() {
 											</p>
 										</div>
 										<BookTemplate className="h-4 w-4 text-indigo-400 shrink-0 ml-2" />
-									</div>
+									</button>
 								))}
 							</div>
 						)}
@@ -654,6 +673,7 @@ export function Compose() {
 						<Label className="text-slate-300 w-16 shrink-0">To</Label>
 						<Input
 							className="bg-slate-900 border-slate-700 text-white flex-1"
+							data-testid="compose-to"
 							placeholder="recipient@example.com"
 							value={to}
 							onChange={(e) => setTo(e.target.value)}
@@ -667,10 +687,11 @@ export function Compose() {
 						/>
 						{showContactSuggestions && (
 							<div className="absolute left-16 top-full mt-1 w-64 bg-slate-900 border border-slate-700 rounded-md shadow-xl z-50 max-h-[200px] overflow-y-auto">
-								{contactSuggestions.map((c: any) => (
-									<div
-										key={c.id}
-										className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 cursor-pointer"
+								{contactSuggestions.map((c) => (
+									<button
+										type="button"
+										key={c.id ?? c.email}
+										className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 cursor-pointer text-left"
 										onClick={() => handleSelectContact(c)}
 										onMouseDown={(e) => e.preventDefault()}
 									>
@@ -679,7 +700,7 @@ export function Compose() {
 										<span className="text-xs text-slate-500 ml-auto">
 											{c.email}
 										</span>
-									</div>
+									</button>
 								))}
 							</div>
 						)}
@@ -707,6 +728,7 @@ export function Compose() {
 						<div className="flex flex-1 gap-2">
 							<Input
 								className="bg-slate-900 border-slate-700 text-white flex-1"
+								data-testid="compose-subject"
 								placeholder="Subject line"
 								value={subject}
 								onChange={(e) => setSubject(e.target.value)}
@@ -948,6 +970,7 @@ export function Compose() {
 					{/* Bulk Send Toggle */}
 					<div className="flex justify-end">
 						<button
+							type="button"
 							className={`text-xs px-2.5 py-1 rounded border transition-colors ${showBulk ? "border-red-800 text-red-300 bg-red-950/20" : "border-slate-700 text-slate-400 hover:text-slate-200"}`}
 							onClick={() => setShowBulk(!showBulk)}
 						>
@@ -1128,6 +1151,7 @@ export function Compose() {
 						</Button>
 						<Button
 							className="bg-blue-600 hover:bg-blue-700"
+							data-testid="compose-send"
 							onClick={handleSend}
 							disabled={
 								sending || !to.trim() || !subject.trim() || !body.trim()

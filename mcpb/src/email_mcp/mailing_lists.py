@@ -56,10 +56,7 @@ def load_mailing_list_entries() -> tuple[list[MailingListEntry], str | None]:
     else:
         raw = os.getenv("EMAIL_MCP_MAILING_LISTS", "").strip()
         if not raw:
-            return [], (
-                "No mailing lists configured. Set EMAIL_MCP_MAILING_LISTS (JSON array) "
-                "or EMAIL_MCP_MAILING_LISTS_FILE (path to JSON). See README."
-            )
+            return [], ("No mailing lists configured. Set EMAIL_MCP_MAILING_LISTS (JSON array) or EMAIL_MCP_MAILING_LISTS_FILE (path to JSON). See README.")
 
     try:
         data = json.loads(raw)

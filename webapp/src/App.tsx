@@ -5,9 +5,9 @@ import {
 	BrowserRouter as Router,
 	Routes,
 } from "react-router-dom";
+import { useZoom } from "@/common/use-zoom";
 import { AppLayout } from "@/components/layout/app-layout";
 import { ToastProvider } from "@/components/toast";
-import { useZoom } from "@/common/use-zoom";
 import { ApiDocs } from "@/pages/api-docs";
 import { AutoRespond } from "@/pages/auto-respond";
 import { Chat } from "@/pages/chat";

@@ -46,7 +46,9 @@ export function Contacts() {
 	const [googleImporting, setGoogleImporting] = useState(false);
 	const [msftToken, setMsftToken] = useState("");
 	const [msftImporting, setMsftImporting] = useState(false);
-	const [curatedLists, setCuratedLists] = useState<any[]>([]);
+	const [curatedLists, setCuratedLists] = useState<
+		Array<{ id: string; title: string; count: number; description: string }>
+	>([]);
 	const [importingCurated, setImportingCurated] = useState<string | null>(null);
 	const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -69,7 +71,16 @@ export function Contacts() {
 
 	useEffect(() => {
 		fetchWithAuth("/api/curated-lists")
-			.then((d) => setCuratedLists(d.lists || []))
+			.then((d) =>
+				setCuratedLists(
+					(d.lists || []) as Array<{
+						id: string;
+						title: string;
+						count: number;
+						description: string;
+					}>,
+				),
+			)
 			.catch(() => {});
 	}, []);
 
@@ -227,7 +238,7 @@ export function Contacts() {
 	const groups = [...new Set(contacts.map((c) => c.group).filter(Boolean))];
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="contacts-page">
 			<div className="flex items-center justify-between">
 				<div>
 					<h2 className="text-2xl font-bold tracking-tight text-white">
@@ -241,6 +252,7 @@ export function Contacts() {
 					<Button
 						variant="outline"
 						size="sm"
+						data-testid="contacts-import"
 						className="border-slate-700 text-slate-300 hover:bg-slate-800"
 						onClick={() => setShowImport(!showImport)}
 					>
@@ -248,6 +260,7 @@ export function Contacts() {
 					</Button>
 					<Button
 						size="sm"
+						data-testid="contacts-add"
 						className="bg-blue-600 hover:bg-blue-700"
 						onClick={() => setShowAdd(!showAdd)}
 					>
@@ -526,6 +539,7 @@ export function Contacts() {
 			{groups.length > 0 && (
 				<div className="flex gap-2 flex-wrap">
 					<button
+						type="button"
 						className="text-xs px-2.5 py-1 rounded-md border border-slate-700 text-slate-300 hover:bg-slate-800"
 						onClick={() => setSearch("")}
 					>
@@ -533,6 +547,7 @@ export function Contacts() {
 					</button>
 					{groups.map((g) => (
 						<button
+							type="button"
 							key={g}
 							className="text-xs px-2.5 py-1 rounded-md border border-slate-700 text-slate-300 hover:bg-slate-800"
 							onClick={() => setSearch(g)}

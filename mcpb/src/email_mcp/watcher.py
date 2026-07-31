@@ -30,7 +30,12 @@ def _make_service_key(service: str, folder: str) -> str:
 async def _poll_loop(interval_s: int, webhook_url: str, services: list[dict], mcp_app) -> None:
     """Background loop: poll services, POST new email IDs to webhook."""
     known_ids: dict[str, set[str]] = {}
-    logger.info("Mail watcher started (interval=%ss, webhook=%s, services=%s)", interval_s, webhook_url, [s["name"] for s in services])
+    logger.info(
+        "Mail watcher started (interval=%ss, webhook=%s, services=%s)",
+        interval_s,
+        webhook_url,
+        [s["name"] for s in services],
+    )
 
     while True:
         try:
@@ -102,12 +107,20 @@ def start_watcher(interval_s: int, webhook_url: str, services: list[dict], mcp_a
     global _watcher_task, _watcher_config
 
     if _watcher_task is not None and not _watcher_task.done():
-        return {"running": True, "message": "Watcher already running", "services": [s["name"] for s in _watcher_config.get("services", [])]}
+        return {
+            "running": True,
+            "message": "Watcher already running",
+            "services": [s["name"] for s in _watcher_config.get("services", [])],
+        }
 
     _watcher_config = {"interval": interval_s, "webhook_url": webhook_url, "services": services}
     loop = asyncio.get_event_loop()
     _watcher_task = loop.create_task(_poll_loop(interval_s, webhook_url, services, mcp_app))
-    return {"running": True, "message": f"Watcher started (interval={interval_s}s)", "services": [s["name"] for s in services]}
+    return {
+        "running": True,
+        "message": f"Watcher started (interval={interval_s}s)",
+        "services": [s["name"] for s in services],
+    }
 
 
 def stop_watcher() -> dict[str, Any]:

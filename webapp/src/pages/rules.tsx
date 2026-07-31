@@ -111,7 +111,7 @@ export function Rules() {
 	};
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="rules-page">
 			<div className="flex items-center justify-between">
 				<div>
 					<h2 className="text-2xl font-bold tracking-tight text-white">
@@ -123,6 +123,7 @@ export function Rules() {
 				</div>
 				<Button
 					size="sm"
+					data-testid="rules-add"
 					className="bg-blue-600 hover:bg-blue-700"
 					onClick={() => setShowAdd(!showAdd)}
 				>

@@ -10,11 +10,10 @@ Provides comprehensive health monitoring for the Email MCP server including:
 """
 
 import asyncio
-import logging
 import time
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
+from typing import Any
 
 import structlog
 
@@ -24,19 +23,21 @@ logger = structlog.get_logger(__name__)
 @dataclass
 class HealthStatus:
     """Health status for a service."""
+
     service_name: str
     status: str  # "healthy", "degraded", "unhealthy"
     response_time: float
     last_check: datetime
-    error_message: Optional[str] = None
-    metrics: Dict[str, Any] = None
+    error_message: str | None = None
+    metrics: dict[str, Any] = None
 
 
 @dataclass
 class SystemHealth:
     """Overall system health status."""
+
     overall_status: str
-    services: Dict[str, HealthStatus]
+    services: dict[str, HealthStatus]
     uptime_seconds: float
     total_checks: int
     failed_checks: int
@@ -48,11 +49,11 @@ class EmailHealthMonitor:
 
     def __init__(self):
         self.start_time = time.time()
-        self.check_history: List[Dict[str, Any]] = []
-        self.service_configs: Dict[str, Dict[str, Any]] = {}
+        self.check_history: list[dict[str, Any]] = []
+        self.service_configs: dict[str, dict[str, Any]] = {}
         self.logger = structlog.get_logger(__name__)
 
-    def register_service(self, name: str, config: Dict[str, Any]) -> None:
+    def register_service(self, name: str, config: dict[str, Any]) -> None:
         """Register a service for health monitoring."""
         self.service_configs[name] = config
         self.logger.info("Registered service for health monitoring", service=name)
@@ -77,7 +78,7 @@ class EmailHealthMonitor:
                     status="unknown",
                     response_time=time.time() - start_time,
                     last_check=datetime.now(),
-                    error_message="Unknown service type"
+                    error_message="Unknown service type",
                 )
         except Exception as e:
             response_time = time.time() - start_time
@@ -87,10 +88,10 @@ class EmailHealthMonitor:
                 status="unhealthy",
                 response_time=response_time,
                 last_check=datetime.now(),
-                error_message=str(e)
+                error_message=str(e),
             )
 
-    async def _check_smtp_health(self, service_name: str, config: Dict[str, Any]) -> HealthStatus:
+    async def _check_smtp_health(self, service_name: str, config: dict[str, Any]) -> HealthStatus:
         """Check SMTP service health."""
         import smtplib
 
@@ -118,7 +119,7 @@ class EmailHealthMonitor:
                 status="healthy",
                 response_time=time.time() - start_time,
                 last_check=datetime.now(),
-                metrics={"connection_established": True}
+                metrics={"connection_established": True},
             )
         except Exception as e:
             return HealthStatus(
@@ -126,10 +127,10 @@ class EmailHealthMonitor:
                 status="unhealthy",
                 response_time=time.time() - start_time,
                 last_check=datetime.now(),
-                error_message=str(e)
+                error_message=str(e),
             )
 
-    async def _check_api_health(self, service_name: str, config: Dict[str, Any]) -> HealthStatus:
+    async def _check_api_health(self, service_name: str, config: dict[str, Any]) -> HealthStatus:
         """Check API service health."""
         import httpx
 
@@ -142,7 +143,7 @@ class EmailHealthMonitor:
                 url = "https://api.sendgrid.com/v3/user/account"
                 headers = {"Authorization": f"Bearer {api_key}"}
             elif service_type == "mailgun":
-                url = f"https://api.mailgun.net/v3/domains"
+                url = "https://api.mailgun.net/v3/domains"
                 auth = httpx.BasicAuth("api", api_key)
                 headers = {}
             elif service_type == "resend":
@@ -152,7 +153,7 @@ class EmailHealthMonitor:
                 raise ValueError(f"Unsupported API service: {service_type}")
 
             async with httpx.AsyncClient(timeout=10.0) as client:
-                if 'auth' in locals():
+                if "auth" in locals():
                     response = await client.get(url, auth=auth)
                 else:
                     response = await client.get(url, headers=headers)
@@ -163,7 +164,7 @@ class EmailHealthMonitor:
                         status="healthy",
                         response_time=time.time() - start_time,
                         last_check=datetime.now(),
-                        metrics={"status_code": response.status_code}
+                        metrics={"status_code": response.status_code},
                     )
                 else:
                     return HealthStatus(
@@ -171,7 +172,7 @@ class EmailHealthMonitor:
                         status="degraded",
                         response_time=time.time() - start_time,
                         last_check=datetime.now(),
-                        error_message=f"HTTP {response.status_code}"
+                        error_message=f"HTTP {response.status_code}",
                     )
         except Exception as e:
             return HealthStatus(
@@ -179,10 +180,10 @@ class EmailHealthMonitor:
                 status="unhealthy",
                 response_time=time.time() - start_time,
                 last_check=datetime.now(),
-                error_message=str(e)
+                error_message=str(e),
             )
 
-    async def _check_webhook_health(self, service_name: str, config: Dict[str, Any]) -> HealthStatus:
+    async def _check_webhook_health(self, service_name: str, config: dict[str, Any]) -> HealthStatus:
         """Check webhook service health."""
         start_time = time.time()
         webhook_url = config.get("webhook_url", "")
@@ -193,7 +194,7 @@ class EmailHealthMonitor:
                 status="unhealthy",
                 response_time=time.time() - start_time,
                 last_check=datetime.now(),
-                error_message="No webhook URL configured"
+                error_message="No webhook URL configured",
             )
 
         # Webhook health is determined by URL validity and basic connectivity
@@ -203,10 +204,10 @@ class EmailHealthMonitor:
             status="healthy",
             response_time=time.time() - start_time,
             last_check=datetime.now(),
-            metrics={"url_configured": True}
+            metrics={"url_configured": True},
         )
 
-    async def _check_local_health(self, service_name: str, config: Dict[str, Any]) -> HealthStatus:
+    async def _check_local_health(self, service_name: str, config: dict[str, Any]) -> HealthStatus:
         """Check local service health."""
         import socket
 
@@ -226,7 +227,7 @@ class EmailHealthMonitor:
                     status="healthy",
                     response_time=time.time() - start_time,
                     last_check=datetime.now(),
-                    metrics={"connection_established": True}
+                    metrics={"connection_established": True},
                 )
             else:
                 return HealthStatus(
@@ -234,7 +235,7 @@ class EmailHealthMonitor:
                     status="unhealthy",
                     response_time=time.time() - start_time,
                     last_check=datetime.now(),
-                    error_message="Connection refused"
+                    error_message="Connection refused",
                 )
         except Exception as e:
             return HealthStatus(
@@ -242,12 +243,11 @@ class EmailHealthMonitor:
                 status="unhealthy",
                 response_time=time.time() - start_time,
                 last_check=datetime.now(),
-                error_message=str(e)
+                error_message=str(e),
             )
 
     async def check_all_services(self) -> SystemHealth:
         """Check health of all registered services."""
-        start_time = time.time()
         service_results = {}
 
         tasks = []
@@ -264,7 +264,7 @@ class EmailHealthMonitor:
                     status="error",
                     response_time=0.0,
                     last_check=datetime.now(),
-                    error_message=str(result)
+                    error_message=str(result),
                 )
             else:
                 service_results[service_name] = result
@@ -291,11 +291,10 @@ class EmailHealthMonitor:
             "overall_status": overall_status,
             "services_checked": total_checks,
             "failed_services": failed_checks,
-            "service_results": {name: {
-                "status": status.status,
-                "response_time": status.response_time,
-                "error": status.error_message
-            } for name, status in service_results.items()}
+            "service_results": {
+                name: {"status": status.status, "response_time": status.response_time, "error": status.error_message}
+                for name, status in service_results.items()
+            },
         }
 
         self.check_history.append(check_record)
@@ -309,29 +308,24 @@ class EmailHealthMonitor:
             uptime_seconds=uptime_seconds,
             total_checks=total_checks,
             failed_checks=failed_checks,
-            last_full_check=datetime.now()
+            last_full_check=datetime.now(),
         )
 
-    def get_health_history(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_health_history(self, limit: int = 10) -> list[dict[str, Any]]:
         """Get recent health check history."""
         return self.check_history[-limit:]
 
-    def get_service_stats(self) -> Dict[str, Any]:
+    def get_service_stats(self) -> dict[str, Any]:
         """Get service statistics."""
         if not self.check_history:
             return {}
 
-        total_checks = len(self.check_history)
         service_stats = {}
 
         for check in self.check_history:
             for service_name, service_result in check["service_results"].items():
                 if service_name not in service_stats:
-                    service_stats[service_name] = {
-                        "total_checks": 0,
-                        "healthy_checks": 0,
-                        "response_times": []
-                    }
+                    service_stats[service_name] = {"total_checks": 0, "healthy_checks": 0, "response_times": []}
 
                 service_stats[service_name]["total_checks"] += 1
                 if service_result["status"] == "healthy":
@@ -339,7 +333,7 @@ class EmailHealthMonitor:
                 service_stats[service_name]["response_times"].append(service_result["response_time"])
 
         # Calculate averages
-        for service_name, stats in service_stats.items():
+        for _, stats in service_stats.items():
             response_times = stats["response_times"]
             stats["average_response_time"] = sum(response_times) / len(response_times) if response_times else 0
             stats["uptime_percentage"] = (stats["healthy_checks"] / stats["total_checks"]) * 100

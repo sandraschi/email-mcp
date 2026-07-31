@@ -166,7 +166,11 @@ async def import_google(token: str) -> dict[str, Any]:
                 headers={"Authorization": f"Bearer {token}"},
             )
             if r.status_code != 200:
-                return {"success": False, "imported": 0, "errors": [f"Google API error {r.status_code}: {r.text[:200]}"]}
+                return {
+                    "success": False,
+                    "imported": 0,
+                    "errors": [f"Google API error {r.status_code}: {r.text[:200]}"],
+                }
             data = r.json()
             for person in data.get("connections", []):
                 names = person.get("names", [])
@@ -202,7 +206,11 @@ async def import_microsoft(token: str) -> dict[str, Any]:
                 headers={"Authorization": f"Bearer {token}"},
             )
             if r.status_code != 200:
-                return {"success": False, "imported": 0, "errors": [f"Microsoft API error {r.status_code}: {r.text[:200]}"]}
+                return {
+                    "success": False,
+                    "imported": 0,
+                    "errors": [f"Microsoft API error {r.status_code}: {r.text[:200]}"],
+                }
             data = r.json()
             for contact in data.get("value", []):
                 name = contact.get("displayName", "") or ""

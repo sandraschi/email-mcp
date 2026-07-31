@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import time
@@ -102,7 +103,23 @@ def update_rule(rule_id: str, updates: dict[str, Any]) -> dict[str, Any]:
     _load_rules()
     for r in _RULES:
         if r["id"] == rule_id:
-            keys = ("name", "match_field", "match_pattern", "reply_body", "reply_subject", "use_ai", "auto_send", "ai_prompt", "service", "response_mode", "spoof_tone", "spam_action", "filter_action", "filter_target", "enabled")
+            keys = (
+                "name",
+                "match_field",
+                "match_pattern",
+                "reply_body",
+                "reply_subject",
+                "use_ai",
+                "auto_send",
+                "ai_prompt",
+                "service",
+                "response_mode",
+                "spoof_tone",
+                "spam_action",
+                "filter_action",
+                "filter_target",
+                "enabled",
+            )
             for key in keys:
                 if key in updates:
                     r[key] = updates[key]
@@ -230,7 +247,7 @@ def add_pending(email: dict[str, Any], reply_body: str, reply_subject: str, rule
     return entry
 
 
-def approve_pending(pending_id: str, mcp_app=None) -> dict[str, Any]:
+def approve_pending(pending_id: str) -> dict[str, Any]:
     _load_pending()
     for p in _PENDING:
         if p["id"] == pending_id:
@@ -265,8 +282,6 @@ def delete_pending(pending_id: str) -> dict[str, Any]:
 
 async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> dict[str, Any]:
     """Auto-respond to a new email. Called by the watcher when mail arrives."""
-    import logging
-
     logger = logging.getLogger(__name__)
 
     rule = match_rule(email)
@@ -317,13 +332,25 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
                 except Exception as e:
                     logger.warning("Filter spam flag failed: %s", e)
             elif filter_action == "notify":
-                logger.info("Filter: NOTIFY -- matched email subject=%s from=%s", email.get("subject", ""), email.get("from", ""))
+                logger.info(
+                    "Filter: NOTIFY -- matched email subject=%s from=%s",
+                    email.get("subject", ""),
+                    email.get("from", ""),
+                )
             elif filter_action == "forward":
                 target = rule.get("filter_target", "")
                 if target and email_id:
                     result = await mcp_app.call_tool("fetch_email_detail", {"email_id": email_id, "service": svc, "folder": folder})
                     if isinstance(result, dict) and result.get("success"):
-                        await mcp_app.call_tool("send_email", {"to": target, "subject": f"Fwd: {email.get('subject', '')}", "body": f"Forwarded from {email.get('from', '')}:\n\n{result.get('text_body', '')}", "service": svc})
+                        await mcp_app.call_tool(
+                            "send_email",
+                            {
+                                "to": target,
+                                "subject": f"Fwd: {email.get('subject', '')}",
+                                "body": f"Forwarded from {email.get('from', '')}:\n\n{result.get('text_body', '')}",
+                                "service": svc,
+                            },
+                        )
                         logger.info("Filter: forwarded %s to %s", email_id, target)
         except Exception as e:
             logger.warning("Filter action failed: %s", e)

@@ -11,7 +11,10 @@
     "entry_point": "src/email_mcp/server.py",
     "mcp_config": {
       "command": "python",
-      "args": ["-m", "email_mcp.server"],
+      "args": [
+        "-m",
+        "email_mcp.server"
+      ],
       "env": {
         "PYTHONPATH": "${PWD}/src",
         "PYTHONUNBUFFERED": "1"
@@ -69,37 +72,161 @@
     }
   },
   "tools": [
-    {"name": "send_email", "description": "Send emails via multiple service types (SMTP, API, webhook)"},
-    {"name": "check_inbox", "description": "Check inbox via IMAP or service-specific APIs"},
-    {"name": "fetch_email_detail", "description": "Fetch a single email by ID with full text and HTML body"},
-    {"name": "search_emails", "description": "Full-text IMAP search across subject and body"},
-    {"name": "delete_email", "description": "Delete/move-to-trash a single email via IMAP"},
-    {"name": "mark_email_read", "description": "Mark a single email as read (SEEN flag)"},
-    {"name": "mark_email_unread", "description": "Mark a single email as unread (remove SEEN flag)"},
-    {"name": "email_status", "description": "Get server configuration and connectivity status"},
-    {"name": "configure_service", "description": "Configure different email services dynamically at runtime"},
-    {"name": "remove_service", "description": "Remove a dynamically configured email service"},
-    {"name": "list_services", "description": "List available and configured email services"},
-    {"name": "email_help", "description": "Get help and documentation for email operations"},
-    {"name": "mailing_lists_catalog", "description": "List named mailing-list presets from EMAIL_MCP_MAILING_LISTS"},
-    {"name": "mailing_list_latest", "description": "Fetch newest messages for a named mailing-list preset"},
-    {"name": "suggest_email_subject", "description": "Suggest 1-3 email subject lines via MCP sampling"},
-    {"name": "email_agentic_assist", "description": "Plan a short multi-step email workflow via sampling"},
-    {"name": "list_folders", "description": "List all IMAP folders/mailboxes for a service"},
-    {"name": "create_folder", "description": "Create a new IMAP folder"},
-    {"name": "delete_folder", "description": "Delete an IMAP folder"},
-    {"name": "rename_folder", "description": "Rename an IMAP folder"},
-    {"name": "start_watcher", "description": "Start background IMAP polling for new emails"},
-    {"name": "stop_watcher", "description": "Stop the background mail watcher"},
-    {"name": "watcher_status", "description": "Check if the mail watcher is running"},
-    {"name": "add_contact", "description": "Add a contact to the address book"},
-    {"name": "search_contacts", "description": "Search contacts by name or email"},
-    {"name": "run_workflow", "description": "Generate a creative email using a preset workflow"},
-    {"name": "add_auto_rule", "description": "Add an auto-respond rule"},
-    {"name": "list_auto_rules", "description": "List all auto-respond rules"},
-    {"name": "delete_auto_rule", "description": "Delete an auto-respond rule by ID"},
-    {"name": "list_pending_replies", "description": "List pending auto-replies awaiting human approval"},
-    {"name": "approve_reply", "description": "Approve a pending auto-reply and queue it for sending"},
-    {"name": "auto_respond_now", "description": "Manually trigger AI auto-respond on a specific email"}
+    {
+      "name": "add_auto_rule",
+      "description": "Add an auto-respond rule.\n\nWhen incoming mail matches the pattern, the rule fires.\nuse_ai=true generates a reply via LLM. auto_send sends it immediately\nwithout human approval. Otherwise the reply goe"
+    },
+    {
+      "name": "add_contact",
+      "description": "Add a contact to the address book.\n\n## Return Format\n{success, contact: {id, name, email, phone, notes, group}}"
+    },
+    {
+      "name": "approve_reply",
+      "description": "Approve a pending auto-reply and send it immediately.\n\n## Return Format\n{success, message, sent}"
+    },
+    {
+      "name": "auto_respond_now",
+      "description": "Manually trigger AI auto-respond on a specific email.\n\nFetches the email, generates an AI reply, and adds it to the\npending queue for approval.\n\n## Return Format\n{success, matched, rule?: name, queued"
+    },
+    {
+      "name": "check_inbox",
+      "description": "Check inbox via specified email service.\n\nRetrieves emails from the specified service and folder. Supports IMAP-based services,\nlocal testing services with web APIs, and service-specific inbox checkin"
+    },
+    {
+      "name": "configure_service",
+      "description": "Configure a new email service dynamically.\n\nAdds a new email service configuration at runtime. The service will be\navailable for sending emails and inbox checking immediately."
+    },
+    {
+      "name": "create_folder",
+      "description": "Create a new IMAP folder.\n\n## Return Format\n{success, folder, message}"
+    },
+    {
+      "name": "delete_auto_rule",
+      "description": "Delete an auto-respond rule by ID.\n\n## Return Format\n{success, message}"
+    },
+    {
+      "name": "delete_email",
+      "description": "Delete a single email by ID (moves to Trash via IMAP).\n\n## Return Format\n{success, service, email_id, message}\n\n## Examples\ndelete_email(email_id=\"abc123\")\ndelete_email(email_id=\"def456\", service=\"sen"
+    },
+    {
+      "name": "delete_folder",
+      "description": "Delete an IMAP folder.\n\n## Return Format\n{success, folder, message}"
+    },
+    {
+      "name": "email_agentic_assist",
+      "description": "Plan a short multi-step email workflow using sampling (agentic assist).\n\nUses the host LLM via sampling when available; optional Anthropic fallback if configured."
+    },
+    {
+      "name": "email_help",
+      "description": "Get help and usage information for email MCP tools and services.\n\nReturns comprehensive help information including available tools, supported services,\nusage examples, configuration requirements, and "
+    },
+    {
+      "name": "email_shutdown",
+      "description": "Gracefully shut down the Email MCP server.\n\nRequires confirm=True to prevent accidental termination.\n\n## Return Format\n{\"success\": bool, \"message\": str}\n\n## Examples\nemail_shutdown(confirm=True)"
+    },
+    {
+      "name": "email_status",
+      "description": "Get email service status and test connectivity.\n\nTests connectivity for specified service or all configured services.\nVerifies that credentials are correct and services are reachable."
+    },
+    {
+      "name": "fetch_email_detail",
+      "description": "Fetch a single email by ID with full body (text + HTML).\n\nReturns the complete email including decoded text body, HTML body,\nand all headers. Requires IMAP access on the target service.\n\n## Return For"
+    },
+    {
+      "name": "flag_spam",
+      "description": "Flag an email as spam (Junk flag + move to Spam folder).\n\n## Return Format\n{success, service, email_id, message}"
+    },
+    {
+      "name": "list_auto_rules",
+      "description": "List all auto-respond rules.\n\n## Return Format\n{rules: [{id, name, match_pattern, reply_body, use_ai, auto_send, enabled}]}"
+    },
+    {
+      "name": "list_folders",
+      "description": "List all IMAP folders/mailboxes for a service.\n\n## Return Format\n{success, folders: [{name, delimiter}], service, count, message}\n\n## Examples\nlist_folders()\nlist_folders(service=\"sendgrid\")"
+    },
+    {
+      "name": "list_pending_replies",
+      "description": "List pending auto-replies awaiting human approval.\n\n## Return Format\n{pending: [{id, email_subject, email_from, reply_body, status}]}"
+    },
+    {
+      "name": "list_services",
+      "description": "List all configured email services.\n\nReturns information about all available email services, their types,\nand configuration status.\n\nReturns:\n    Dictionary with service information:\n    {\n        \"se"
+    },
+    {
+      "name": "mailing_list_latest",
+      "description": "MAILING_LIST_LATEST -- Fetch newest messages for a preset id (see mailing_lists_catalog).\n\nLoads folder/service/filters from EMAIL_MCP_MAILING_LISTS. Typical use: newsletter drops in a\ndedicated IMAP "
+    },
+    {
+      "name": "mailing_lists_catalog",
+      "description": "MAILING_LISTS_CATALOG -- List named mailing-list presets from EMAIL_MCP_MAILING_LISTS (JSON).\n\nConfigure labels/folders once (e.g. Gmail filter -> IMAP folder), then use mailing_list_latest(id).\n\nRetu"
+    },
+    {
+      "name": "mark_email_read",
+      "description": "Mark a single email as read (SEEN flag) via IMAP.\n\n## Return Format\n{success, service, email_id, message}"
+    },
+    {
+      "name": "mark_email_unread",
+      "description": "Mark a single email as unread (remove SEEN flag) via IMAP.\n\n## Return Format\n{success, service, email_id, message}"
+    },
+    {
+      "name": "move_email",
+      "description": "Move an email between IMAP folders (COPY + DELETE).\n\n## Return Format\n{success, service, email_id, message}"
+    },
+    {
+      "name": "remove_service",
+      "description": "Remove a dynamically configured email service.\n\n## Return Format\n{success, service, message}"
+    },
+    {
+      "name": "rename_folder",
+      "description": "Rename an IMAP folder.\n\n## Return Format\n{success, old_name, new_name, message}"
+    },
+    {
+      "name": "run_workflow",
+      "description": "Generate a creative email using a preset workflow.\n\nSupported workflows: love-letter, breakup, thank-you, complaint,\napology, fan-mail, hate-mail. Recipients can be anything: person,\npet, object, or c"
+    },
+    {
+      "name": "search_contacts",
+      "description": "Search contacts by name or email.\n\n## Return Format\n{contacts: [{id, name, email, phone, group}]}"
+    },
+    {
+      "name": "search_emails",
+      "description": "Search emails via IMAP SEARCH command (subject/from/body keywords).\n\nUses IMAP SEARCH to find messages matching the query string,\nthen fetches headers for the most recent matches.\n\n## Return Format\n{s"
+    },
+    {
+      "name": "send_email",
+      "description": "Send an email via specified email service.\n\nSends an email using the specified email service. Supports SMTP, API-based services,\nlocal testing services, and webhook integrations. Automatically detects"
+    },
+    {
+      "name": "show_email_status_card",
+      "description": "Show email service connectivity status as a rich Prefab card.\n\nDisplays a live grid of all configured email services with connection\nstate, type, and error info -- no need to parse JSON in chat."
+    },
+    {
+      "name": "show_inbox_card",
+      "description": "Show inbox as a rich Prefab card with subject, sender, and date."
+    },
+    {
+      "name": "show_mailing_list_digest_card",
+      "description": "Show latest emails from configured mailing lists as a rich digest card.\n\nFetches recent unread emails from mailing list presets (configured\nvia EMAIL_MCP_MAILING_LISTS env var). Displays sender, subje"
+    },
+    {
+      "name": "show_services_card",
+      "description": "Show all configured email services as a rich Prefab list card."
+    },
+    {
+      "name": "start_watcher",
+      "description": "Start background IMAP polling for new emails.\n\nPolls configured services at intervals. When new unread emails arrive,\nPOSTs a JSON payload to the webhook URL. Designed for integration with\nrobofang (T"
+    },
+    {
+      "name": "stop_watcher",
+      "description": "Stop the background mail watcher.\n\n## Return Format\n{running, message}"
+    },
+    {
+      "name": "suggest_email_subject",
+      "description": "Suggest 1-3 concise email subject lines for the given body (uses MCP sampling when available)."
+    },
+    {
+      "name": "watcher_status",
+      "description": "Check if the mail watcher is running.\n\n## Return Format\n{running, config: {interval, webhook_url, services}}"
+    }
   ]
 }

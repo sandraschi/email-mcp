@@ -3,13 +3,20 @@
   "name": "email-mcp",
   "version": "0.4.1",
   "description": "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations (FastMCP 3.2, Prefab UI)",
-  "author": { "name": "sandraschi" },
+  "author": {
+    "name": "sandraschi"
+  },
   "server": {
     "type": "python",
     "entry_point": "run_server.py",
     "mcp_config": {
       "command": "uv",
-      "args": ["run","--directory","${PWD}","run_server.py"],
+      "args": [
+        "run",
+        "--directory",
+        "${PWD}",
+        "run_server.py"
+      ],
       "env": {
         "PYTHONPATH": "${PWD}/src",
         "PYTHONUNBUFFERED": "1"
@@ -17,98 +24,161 @@
     }
   },
   "tools": [
-    { "name": "get_logs", "description": "get_logs" },
-    { "name": "clear_logs", "description": "clear_logs" },
-    { "name": "export_logs", "description": "export_logs" },
-    { "name": "suggest_email_subject", "description": "suggest_email_subject" },
-    { "name": "email_agentic_assist", "description": "email_agentic_assist" },
-    { "name": "show_email_status_card", "description": "show_email_status_card" },
-    { "name": "show_inbox_card", "description": "show_inbox_card" },
-    { "name": "show_services_card", "description": "show_services_card" },
-    { "name": "health", "description": "health" },
-    { "name": "main_stdio", "description": "main(stdio)" },
-    { "name": "main_http", "description": "main(http)" },
-    { "name": "main_sse", "description": "main(sse)" },
-    { "name": "get_status", "description": "get_status" },
-    { "name": "get_capabilities", "description": "get_capabilities" },
-    { "name": "list_tools", "description": "list_tools" },
-    { "name": "list_services", "description": "list_services" },
-    { "name": "get_service", "description": "get_service" },
-    { "name": "add_service", "description": "add_service" },
-    { "name": "update_service", "description": "update_service" },
-    { "name": "delete_service", "description": "delete_service" },
-    { "name": "test_service", "description": "test_service" },
-    { "name": "quick_setup", "description": "quick_setup" },
-    { "name": "check_proton_bridge", "description": "check_proton_bridge" },
-    { "name": "get_stats", "description": "get_stats" },
-    { "name": "get_inbox", "description": "get_inbox" },
-    { "name": "get_email_detail", "description": "get_email_detail" },
-    { "name": "mark_email_as_read", "description": "mark_email_as_read" },
-    { "name": "mark_email_as_unread", "description": "mark_email_as_unread" },
-    { "name": "delete_email", "description": "delete_email" },
-    { "name": "search_emails", "description": "search_emails" },
-    { "name": "list_folders", "description": "list_folders" },
-    { "name": "create_folder", "description": "create_folder" },
-    { "name": "delete_folder", "description": "delete_folder" },
-    { "name": "rename_folder", "description": "rename_folder" },
-    { "name": "get_attachment", "description": "get_attachment" },
-    { "name": "get_unified_inbox", "description": "get_unified_inbox" },
-    { "name": "send_email", "description": "send_email" },
-    { "name": "send_bulk", "description": "send_bulk" },
-    { "name": "list_drafts", "description": "list_drafts" },
-    { "name": "save_draft", "description": "save_draft" },
-    { "name": "update_draft", "description": "update_draft" },
-    { "name": "delete_draft", "description": "delete_draft" },
-    { "name": "list_contacts", "description": "list_contacts" },
-    { "name": "add_contact", "description": "add_contact" },
-    { "name": "update_contact", "description": "update_contact" },
-    { "name": "delete_contact", "description": "delete_contact" },
-    { "name": "import_contacts", "description": "import_contacts" },
-    { "name": "import_google_contacts", "description": "import_google_contacts" },
-    { "name": "import_microsoft_contacts", "description": "import_microsoft_contacts" },
-    { "name": "list_groups", "description": "list_groups" },
-    { "name": "curated_list_lists", "description": "curated_list_lists" },
-    { "name": "curated_list_detail", "description": "curated_list_detail" },
-    { "name": "curated_list_import", "description": "curated_list_import" },
-    { "name": "template_list", "description": "template_list" },
-    { "name": "template_add", "description": "template_add" },
-    { "name": "template_delete", "description": "template_delete" },
-    { "name": "signature_get", "description": "signature_get" },
-    { "name": "signature_set", "description": "signature_set" },
-    { "name": "signature_delete", "description": "signature_delete" },
-    { "name": "schedule_create", "description": "schedule_create" },
-    { "name": "schedule_list", "description": "schedule_list" },
-    { "name": "schedule_cancel", "description": "schedule_cancel" },
-    { "name": "list_skills", "description": "list_skills" },
-    { "name": "get_skill_content", "description": "get_skill_content" },
-    { "name": "get_llm_models", "description": "get_llm_models" },
-    { "name": "configure_llm", "description": "configure_llm" },
-    { "name": "chat", "description": "chat" },
-    { "name": "parse_config", "description": "parse_config" },
-    { "name": "improve_text", "description": "improve_text" },
-    { "name": "expand_text", "description": "expand_text" },
-    { "name": "get_service_types", "description": "get_service_types" },
-    { "name": "lab_start", "description": "lab_start" },
-    { "name": "lab_stop", "description": "lab_stop" },
-    { "name": "lab_status", "description": "lab_status" },
-    { "name": "lab_list_emails", "description": "lab_list_emails" },
-    { "name": "lab_get_email", "description": "lab_get_email" },
-    { "name": "lab_clear_emails", "description": "lab_clear_emails" },
-    { "name": "lab_inject_email", "description": "lab_inject_email" },
-    { "name": "lab_generate_emails", "description": "lab_generate_emails" },
-    { "name": "lab_forward_email", "description": "lab_forward_email" },
-    { "name": "run_workflow", "description": "run_workflow" },
-    { "name": "watcher_start", "description": "watcher_start" },
-    { "name": "watcher_stop", "description": "watcher_stop" },
-    { "name": "watcher_status", "description": "watcher_status" },
-    { "name": "check_spam", "description": "check_spam" },
-    { "name": "auto_list_rules", "description": "auto_list_rules" },
-    { "name": "auto_add_rule", "description": "auto_add_rule" },
-    { "name": "auto_update_rule", "description": "auto_update_rule" },
-    { "name": "auto_delete_rule", "description": "auto_delete_rule" },
-    { "name": "auto_list_pending", "description": "auto_list_pending" },
-    { "name": "auto_approve_pending", "description": "auto_approve_pending" },
-    { "name": "auto_reject_pending", "description": "auto_reject_pending" },
-    { "name": "auto_respond_now", "description": "auto_respond_now" }
+    {
+      "name": "add_auto_rule",
+      "description": "Add an auto-respond rule.\n\nWhen incoming mail matches the pattern, the rule fires.\nuse_ai=true generates a reply via LLM. auto_send sends it immediately\nwithout human approval. Otherwise the reply goe"
+    },
+    {
+      "name": "add_contact",
+      "description": "Add a contact to the address book.\n\n## Return Format\n{success, contact: {id, name, email, phone, notes, group}}"
+    },
+    {
+      "name": "approve_reply",
+      "description": "Approve a pending auto-reply and send it immediately.\n\n## Return Format\n{success, message, sent}"
+    },
+    {
+      "name": "auto_respond_now",
+      "description": "Manually trigger AI auto-respond on a specific email.\n\nFetches the email, generates an AI reply, and adds it to the\npending queue for approval.\n\n## Return Format\n{success, matched, rule?: name, queued"
+    },
+    {
+      "name": "check_inbox",
+      "description": "Check inbox via specified email service.\n\nRetrieves emails from the specified service and folder. Supports IMAP-based services,\nlocal testing services with web APIs, and service-specific inbox checkin"
+    },
+    {
+      "name": "configure_service",
+      "description": "Configure a new email service dynamically.\n\nAdds a new email service configuration at runtime. The service will be\navailable for sending emails and inbox checking immediately."
+    },
+    {
+      "name": "create_folder",
+      "description": "Create a new IMAP folder.\n\n## Return Format\n{success, folder, message}"
+    },
+    {
+      "name": "delete_auto_rule",
+      "description": "Delete an auto-respond rule by ID.\n\n## Return Format\n{success, message}"
+    },
+    {
+      "name": "delete_email",
+      "description": "Delete a single email by ID (moves to Trash via IMAP).\n\n## Return Format\n{success, service, email_id, message}\n\n## Examples\ndelete_email(email_id=\"abc123\")\ndelete_email(email_id=\"def456\", service=\"sen"
+    },
+    {
+      "name": "delete_folder",
+      "description": "Delete an IMAP folder.\n\n## Return Format\n{success, folder, message}"
+    },
+    {
+      "name": "email_agentic_assist",
+      "description": "Plan a short multi-step email workflow using sampling (agentic assist).\n\nUses the host LLM via sampling when available; optional Anthropic fallback if configured."
+    },
+    {
+      "name": "email_help",
+      "description": "Get help and usage information for email MCP tools and services.\n\nReturns comprehensive help information including available tools, supported services,\nusage examples, configuration requirements, and "
+    },
+    {
+      "name": "email_shutdown",
+      "description": "Gracefully shut down the Email MCP server.\n\nRequires confirm=True to prevent accidental termination.\n\n## Return Format\n{\"success\": bool, \"message\": str}\n\n## Examples\nemail_shutdown(confirm=True)"
+    },
+    {
+      "name": "email_status",
+      "description": "Get email service status and test connectivity.\n\nTests connectivity for specified service or all configured services.\nVerifies that credentials are correct and services are reachable."
+    },
+    {
+      "name": "fetch_email_detail",
+      "description": "Fetch a single email by ID with full body (text + HTML).\n\nReturns the complete email including decoded text body, HTML body,\nand all headers. Requires IMAP access on the target service.\n\n## Return For"
+    },
+    {
+      "name": "flag_spam",
+      "description": "Flag an email as spam (Junk flag + move to Spam folder).\n\n## Return Format\n{success, service, email_id, message}"
+    },
+    {
+      "name": "list_auto_rules",
+      "description": "List all auto-respond rules.\n\n## Return Format\n{rules: [{id, name, match_pattern, reply_body, use_ai, auto_send, enabled}]}"
+    },
+    {
+      "name": "list_folders",
+      "description": "List all IMAP folders/mailboxes for a service.\n\n## Return Format\n{success, folders: [{name, delimiter}], service, count, message}\n\n## Examples\nlist_folders()\nlist_folders(service=\"sendgrid\")"
+    },
+    {
+      "name": "list_pending_replies",
+      "description": "List pending auto-replies awaiting human approval.\n\n## Return Format\n{pending: [{id, email_subject, email_from, reply_body, status}]}"
+    },
+    {
+      "name": "list_services",
+      "description": "List all configured email services.\n\nReturns information about all available email services, their types,\nand configuration status.\n\nReturns:\n    Dictionary with service information:\n    {\n        \"se"
+    },
+    {
+      "name": "mailing_list_latest",
+      "description": "MAILING_LIST_LATEST -- Fetch newest messages for a preset id (see mailing_lists_catalog).\n\nLoads folder/service/filters from EMAIL_MCP_MAILING_LISTS. Typical use: newsletter drops in a\ndedicated IMAP "
+    },
+    {
+      "name": "mailing_lists_catalog",
+      "description": "MAILING_LISTS_CATALOG -- List named mailing-list presets from EMAIL_MCP_MAILING_LISTS (JSON).\n\nConfigure labels/folders once (e.g. Gmail filter -> IMAP folder), then use mailing_list_latest(id).\n\nRetu"
+    },
+    {
+      "name": "mark_email_read",
+      "description": "Mark a single email as read (SEEN flag) via IMAP.\n\n## Return Format\n{success, service, email_id, message}"
+    },
+    {
+      "name": "mark_email_unread",
+      "description": "Mark a single email as unread (remove SEEN flag) via IMAP.\n\n## Return Format\n{success, service, email_id, message}"
+    },
+    {
+      "name": "move_email",
+      "description": "Move an email between IMAP folders (COPY + DELETE).\n\n## Return Format\n{success, service, email_id, message}"
+    },
+    {
+      "name": "remove_service",
+      "description": "Remove a dynamically configured email service.\n\n## Return Format\n{success, service, message}"
+    },
+    {
+      "name": "rename_folder",
+      "description": "Rename an IMAP folder.\n\n## Return Format\n{success, old_name, new_name, message}"
+    },
+    {
+      "name": "run_workflow",
+      "description": "Generate a creative email using a preset workflow.\n\nSupported workflows: love-letter, breakup, thank-you, complaint,\napology, fan-mail, hate-mail. Recipients can be anything: person,\npet, object, or c"
+    },
+    {
+      "name": "search_contacts",
+      "description": "Search contacts by name or email.\n\n## Return Format\n{contacts: [{id, name, email, phone, group}]}"
+    },
+    {
+      "name": "search_emails",
+      "description": "Search emails via IMAP SEARCH command (subject/from/body keywords).\n\nUses IMAP SEARCH to find messages matching the query string,\nthen fetches headers for the most recent matches.\n\n## Return Format\n{s"
+    },
+    {
+      "name": "send_email",
+      "description": "Send an email via specified email service.\n\nSends an email using the specified email service. Supports SMTP, API-based services,\nlocal testing services, and webhook integrations. Automatically detects"
+    },
+    {
+      "name": "show_email_status_card",
+      "description": "Show email service connectivity status as a rich Prefab card.\n\nDisplays a live grid of all configured email services with connection\nstate, type, and error info -- no need to parse JSON in chat."
+    },
+    {
+      "name": "show_inbox_card",
+      "description": "Show inbox as a rich Prefab card with subject, sender, and date."
+    },
+    {
+      "name": "show_mailing_list_digest_card",
+      "description": "Show latest emails from configured mailing lists as a rich digest card.\n\nFetches recent unread emails from mailing list presets (configured\nvia EMAIL_MCP_MAILING_LISTS env var). Displays sender, subje"
+    },
+    {
+      "name": "show_services_card",
+      "description": "Show all configured email services as a rich Prefab list card."
+    },
+    {
+      "name": "start_watcher",
+      "description": "Start background IMAP polling for new emails.\n\nPolls configured services at intervals. When new unread emails arrive,\nPOSTs a JSON payload to the webhook URL. Designed for integration with\nrobofang (T"
+    },
+    {
+      "name": "stop_watcher",
+      "description": "Stop the background mail watcher.\n\n## Return Format\n{running, message}"
+    },
+    {
+      "name": "suggest_email_subject",
+      "description": "Suggest 1-3 concise email subject lines for the given body (uses MCP sampling when available)."
+    },
+    {
+      "name": "watcher_status",
+      "description": "Check if the mail watcher is running.\n\n## Return Format\n{running, config: {interval, webhook_url, services}}"
+    }
   ]
 }

@@ -3,7 +3,9 @@
 node_modules/
 __pycache__/
 .ruff_cache/
+.mypy_cache/
 .pytest_cache/
+.coverage
 tests/
 
 # Discovery & Fleet Metadata
@@ -22,4 +24,20 @@ build/
 # Non-MCP components (webapp, native, scripts)
 native/
 web_sota/
+webapp/
 scripts/
+mcpb/
+monitoring/
+logs/
+reports/
+cua-reports/
+data/
+examples/
+
+# Build Artifacts
+dist/
+build/
+target/
+*.mcpb
+*.bak
+*.bak.*

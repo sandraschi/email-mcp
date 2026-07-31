@@ -119,7 +119,11 @@ def start_server(port: int = 0) -> dict[str, Any]:
     _captured.clear()
     _server = Controller(_CaptureHandler(), hostname="127.0.0.1", port=port)
     _server.start()
-    _server_port = _server.server.server_address[1]  # actual port assigned
+    try:
+        svr = getattr(_server, "server", None)
+        _server_port = svr.sockets[0].getsockname()[1] if svr and hasattr(svr, "sockets") and svr.sockets else port
+    except Exception:
+        _server_port = port or 1025
     return {
         "running": True,
         "port": _server_port,
@@ -183,9 +187,7 @@ def clear_emails() -> dict[str, Any]:
 # ── Inject a pre-built email (for AI generation) ────────────────────────────
 
 
-def inject_email(
-    from_addr: str, to: list[str], subject: str, text_body: str, html_body: str | None = None
-) -> dict[str, Any]:
+def inject_email(from_addr: str, to: list[str], subject: str, text_body: str, html_body: str | None = None) -> dict[str, Any]:
     """Inject a synthetic email into the captured store as if received via SMTP.
 
     Used by the AI generator to populate the throwaway inbox without needing

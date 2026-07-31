@@ -36,7 +36,16 @@ def _save() -> None:
 
 def schedule_send(to: str, subject: str, body: str, send_at: float, service: str = "default") -> dict[str, Any]:
     _load()
-    entry = {"id": str(__import__("uuid").uuid4())[:12], "to": to, "subject": subject, "body": body, "service": service, "send_at": send_at, "status": "scheduled", "created_at": time.time()}
+    entry = {
+        "id": str(__import__("uuid").uuid4())[:12],
+        "to": to,
+        "subject": subject,
+        "body": body,
+        "service": service,
+        "send_at": send_at,
+        "status": "scheduled",
+        "created_at": time.time(),
+    }
     _SCHEDULED.append(entry)
     _save()
     return {"success": True, "scheduled": entry}
@@ -66,7 +75,15 @@ async def _process_queue(mcp_app) -> None:
             due = [e for e in _SCHEDULED if e["status"] == "scheduled" and e["send_at"] <= now]
             for entry in due:
                 try:
-                    await mcp_app.call_tool("send_email", {"to": entry["to"], "subject": entry["subject"], "body": entry["body"], "service": entry["service"]})
+                    await mcp_app.call_tool(
+                        "send_email",
+                        {
+                            "to": entry["to"],
+                            "subject": entry["subject"],
+                            "body": entry["body"],
+                            "service": entry["service"],
+                        },
+                    )
                     entry["status"] = "sent"
                     entry["sent_at"] = time.time()
                     logger.info("Scheduled send delivered: %s", entry["subject"])

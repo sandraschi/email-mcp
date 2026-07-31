@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { SanitizedHtml } from "@/components/sanitized-html";
 import { useToast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,11 +130,12 @@ export function EmailDetail() {
 	const _displayBody = email.html_body || email.text_body || "";
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4" data-testid="email-detail-page">
 			<div className="flex items-center justify-between">
 				<Button
 					variant="outline"
 					size="sm"
+					data-testid="email-detail-back"
 					className="border-slate-700 text-slate-300 hover:bg-slate-800"
 					onClick={() => navigate(-1)}
 				>
@@ -151,6 +153,7 @@ export function EmailDetail() {
 					<Button
 						variant="outline"
 						size="sm"
+						data-testid="email-detail-reply"
 						className="border-slate-700 text-slate-300 hover:bg-slate-800"
 						onClick={handleReply}
 					>
@@ -203,9 +206,9 @@ export function EmailDetail() {
 				</CardHeader>
 				<CardContent>
 					{email.html_body ? (
-						<div
+						<SanitizedHtml
+							html={email.html_body}
 							className="prose prose-invert prose-slate max-w-none text-sm text-slate-300 [&_a]:text-blue-400 [&_img]:max-w-full"
-							dangerouslySetInnerHTML={{ __html: email.html_body }}
 						/>
 					) : (
 						<pre className="text-sm text-slate-300 whitespace-pre-wrap font-sans">

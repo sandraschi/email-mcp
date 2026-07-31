@@ -13,6 +13,12 @@ import { Input } from "@/components/ui/input";
 import { fetchWithAuth } from "@/lib/api";
 
 type ToolInfo = { name: string; description: string };
+type ToolResponse = {
+	success?: boolean;
+	message?: string;
+	error?: string;
+	tools?: unknown[];
+};
 
 export function Tools() {
 	const [tools, setTools] = useState<ToolInfo[]>([]);
@@ -43,18 +49,20 @@ export function Tools() {
 			[toolName]: { ok: false, msg: "..." },
 		}));
 		try {
-			let result;
+			let result: ToolResponse = {};
 			switch (toolName) {
 				case "email_status":
-					result = await fetchWithAuth("/api/services");
+					result = (await fetchWithAuth("/api/services")) as ToolResponse;
 					break;
 				case "list_services":
-					result = await fetchWithAuth("/api/services");
+					result = (await fetchWithAuth("/api/services")) as ToolResponse;
 					// Re-format for list_services
 					result = { success: true, ...result };
 					break;
 				case "check_inbox":
-					result = await fetchWithAuth(`/api/inbox?service=default&limit=5`);
+					result = (await fetchWithAuth(
+						`/api/inbox?service=default&limit=5`,
+					)) as ToolResponse;
 					break;
 				case "send_email":
 					if (!testEmail.trim()) {
@@ -69,7 +77,7 @@ export function Tools() {
 						});
 						return;
 					}
-					result = await fetchWithAuth("/api/send", {
+					result = (await fetchWithAuth("/api/send", {
 						method: "POST",
 						body: JSON.stringify({
 							to: testEmail,
@@ -77,10 +85,10 @@ export function Tools() {
 							body: "This is a test email.",
 							service: "default",
 						}),
-					});
+					})) as ToolResponse;
 					break;
 				case "mailing_lists_catalog":
-					result = await fetchWithAuth("/api/tools");
+					result = (await fetchWithAuth("/api/tools")) as ToolResponse;
 					result = result.tools
 						? {
 								success: false,
@@ -90,7 +98,7 @@ export function Tools() {
 						: { success: false, message: "Call via MCP directly" };
 					break;
 				default:
-					result = await fetchWithAuth("/api/tools");
+					result = (await fetchWithAuth("/api/tools")) as ToolResponse;
 					result = {
 						success: true,
 						message: `Tool ${toolName} is registered. Use via MCP client for full execution.`,
@@ -133,7 +141,7 @@ export function Tools() {
 	}
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="tools-page">
 			<div>
 				<h2 className="text-2xl font-bold tracking-tight text-white">
 					Email Integration Tools
@@ -150,6 +158,7 @@ export function Tools() {
 					return (
 						<Card
 							key={tool.name}
+							data-testid={`tool-card-${tool.name}`}
 							className="border-slate-800 bg-slate-950/50 hover:bg-slate-900/30 transition-colors"
 						>
 							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

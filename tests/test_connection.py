@@ -32,7 +32,7 @@ async def test_smtp():
                 return True
 
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, test)
+        await loop.run_in_executor(None, test)
         print("✅ SMTP connection successful!")
         return True
     except Exception as e:
@@ -52,7 +52,7 @@ async def test_imap():
             return True
 
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, test)
+        await loop.run_in_executor(None, test)
         print("✅ IMAP connection successful!")
         return True
     except Exception as e:

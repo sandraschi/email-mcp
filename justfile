@@ -124,3 +124,5 @@ clean:
 
 # CI pipeline: build → check → test
 ci: build check test
+
+# Bootstrap: install dev deps + pre-commit hook

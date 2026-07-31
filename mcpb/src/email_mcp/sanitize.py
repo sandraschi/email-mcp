@@ -26,8 +26,11 @@ Layer 2 (primary adversarial defense): Safety boundary wrapping.
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _ZERO_WIDTH_CHARS: dict[str, str] = {
     "\u200b": "",  # Zero-width space
@@ -109,9 +112,7 @@ def wrap_untrusted(text: str, source_label: str = "email") -> str:
     """Layer 2: wrap untrusted text with adversarial safety boundary."""
     if not text:
         return text
-    return (
-        _SAFETY_PREFIX.format(source=source_label.upper()) + text + _SAFETY_SUFFIX.format(source=source_label.upper())
-    )
+    return _SAFETY_PREFIX.format(source=source_label.upper()) + text + _SAFETY_SUFFIX.format(source=source_label.upper())
 
 
 def wrap_untrusted_dict(d: dict[str, Any], source: str = "email") -> dict[str, Any]:
@@ -125,3 +126,20 @@ def wrap_untrusted_dict(d: dict[str, Any], source: str = "email") -> dict[str, A
 def wrap_untrusted_list(items: list[dict[str, Any]], source: str = "email") -> list[dict[str, Any]]:
     """Wrap text fields in every dict of a list."""
     return [wrap_untrusted_dict(item, source) for item in items]
+
+
+def error_response(error: str, error_type: str = "general", **kwargs: Any) -> dict[str, Any]:
+    """Standard error response with auto-logging — ALWAYS use inside except blocks.
+
+    Automatically logs the full traceback via logger.exception(), so no caller
+    ever loses a traceback again. Add extra context via kwargs.
+
+    ## Return Format
+    {"success": False, "error": str, "error_type": str, ...kwargs}
+
+    ## Examples
+    except Exception as e:
+        return error_response(str(e), "validation", field=field_name)
+    """
+    logger.exception("%s [%s]", error, error_type)
+    return {"success": False, "error": error, "error_type": error_type, **kwargs}

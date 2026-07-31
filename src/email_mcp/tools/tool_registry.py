@@ -248,7 +248,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
     async def mailing_lists_catalog() -> dict[str, Any]:
         """MAILING_LISTS_CATALOG -- List named mailing-list presets from EMAIL_MCP_MAILING_LISTS (JSON).
 
-        Configure labels/folders once (e.g. Gmail filter â†’ IMAP folder), then use mailing_list_latest(id).
+        Configure labels/folders once (e.g. Gmail filter -> IMAP folder), then use mailing_list_latest(id).
 
         Returns:
             success, entries[] with id, service, folder, limit, unread_only, from_contains, subject_contains;

@@ -4,7 +4,6 @@ import {
 	Bot,
 	ChevronDown,
 	ChevronUp,
-	Cpu,
 	Download,
 	Eraser,
 	Frown,
@@ -17,20 +16,20 @@ import {
 	Star,
 	ThumbsUp,
 	User,
+	Volume2,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { fetchWithAuth } from "@/lib/api";
-import { useLlmStore } from "@/store/llm-store";
+import { speakText } from "@/lib/speech";
+import { type Provider, useLlmStore } from "@/store/llm-store";
 
 const STORAGE_KEY = "email-mcp-chat-history";
 const PERSONALITY_KEY = "email-mcp-chat-personality";
 const CUSTOM_PROMPT_KEY = "email-mcp-chat-custom-prompt";
 const MAX_MESSAGES = 100;
-
-const CHAT_ROLE = "email-mcp-chat-role";
 
 type Message = {
 	role: "user" | "assistant";
@@ -184,9 +183,18 @@ export function Chat() {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const initialized = useRef(false);
 
-	const { providers, selectedProvider, selectedModel, setProviders, setSelectedProvider, setSelectedModel, setLoading: setStoreLoading } = useLlmStore();
+	const {
+		providers,
+		selectedProvider,
+		selectedModel,
+		setProviders,
+		setSelectedProvider,
+		setSelectedModel,
+		setLoading: setStoreLoading,
+	} = useLlmStore();
 	const currentProvider = providers.find((p) => p.id === selectedProvider);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: init-once effect; zustand setters are stable (eslint parity)
 	useEffect(() => {
 		if (initialized.current) return;
 		initialized.current = true;
@@ -196,35 +204,30 @@ export function Chat() {
 				const skill = await fetchWithAuth("/api/skills/email-mcp");
 				skillText =
 					typeof skill === "object" && skill !== null
-						? (skill as any).content || ""
+						? (skill as { content?: string }).content || ""
 						: String(skill);
 				setSkillLoaded(true);
 				setSkillContent(skillText);
 			} catch {
 				/* no skill */
 			}
-			let provider = "local";
 			try {
 				const data = await fetchWithAuth("/api/llm/models");
-				const list = (data as any).providers || [];
-				const gpuInfo = (data as any).gpu || { detected: false };
+				const list = (data as { providers?: Provider[] }).providers || [];
+				const gpuInfo = (data as { gpu?: { detected: boolean } }).gpu || {
+					detected: false,
+				};
 				setProviders(list, gpuInfo);
 				setStoreLoading(false);
-				const firstAvail = list.find((p: any) => p.available === true);
+				const firstAvail = list.find((p) => p.available === true);
 				const storedProv = localStorage.getItem("llm_provider");
 				const storedModel = localStorage.getItem("llm_model");
-				if (storedProv && list.some((p: any) => p.id === storedProv)) {
+				if (storedProv && list.some((p) => p.id === storedProv)) {
 					setSelectedProvider(storedProv);
 					if (storedModel) setSelectedModel(storedModel);
 				} else if (firstAvail) {
 					setSelectedProvider(firstAvail.id);
 					setSelectedModel(firstAvail.models?.[0] || "");
-				}
-				if (firstAvail)
-					provider = `${firstAvail.name} (${firstAvail.models?.[0] || "default"})`;
-				else {
-					const first = list[0];
-					if (first) provider = first.name;
 				}
 			} catch {
 				/* ignore */
@@ -245,6 +248,7 @@ export function Chat() {
 		init();
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: scroll-to-bottom on message change; scrollRef is a stable ref
 	useEffect(() => {
 		scrollRef.current?.scrollTo({
 			top: scrollRef.current.scrollHeight,
@@ -292,7 +296,10 @@ export function Chat() {
 						personality_id: personalityId,
 					}),
 				});
-				addMessage("assistant", (data as any).response || "No response.");
+				addMessage(
+					"assistant",
+					(data as { response?: string }).response || "No response.",
+				);
 			} catch (err: unknown) {
 				addMessage(
 					"assistant",
@@ -357,7 +364,11 @@ export function Chat() {
 					format: workflowFormat,
 				}),
 			});
-			const d = data as any;
+			const d = data as {
+				success?: boolean;
+				response?: string;
+				error?: string;
+			};
 			if (d.success)
 				addMessage(
 					"assistant",
@@ -426,7 +437,11 @@ export function Chat() {
 					>
 						{providers.map((p) => (
 							<option key={p.id} value={p.id}>
-								{p.available === true ? "● " : p.available === false ? "○ " : "☁ "}
+								{p.available === true
+									? "● "
+									: p.available === false
+										? "○ "
+										: "☁ "}
 								{p.name}
 							</option>
 						))}
@@ -438,11 +453,14 @@ export function Chat() {
 							onChange={(e) => setSelectedModel(e.target.value)}
 						>
 							{currentProvider.models.map((m) => (
-								<option key={m} value={m}>{m}</option>
+								<option key={m} value={m}>
+									{m}
+								</option>
 							))}
 						</select>
 					)}
 					<button
+						type="button"
 						data-testid="chat-export"
 						className="p-1.5 rounded text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
 						title="Export chat"
@@ -452,6 +470,7 @@ export function Chat() {
 						<Download className="h-3.5 w-3.5" />
 					</button>
 					<button
+						type="button"
 						data-testid="chat-clear"
 						className="p-1.5 rounded text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
 						title="Clear conversation"
@@ -484,8 +503,8 @@ export function Chat() {
 					data-testid="chat-messages"
 					className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth"
 				>
-					{messages.map((msg, i) => (
-						<div key={i} className="flex gap-3">
+					{messages.map((msg) => (
+						<div key={`${msg.ts}-${msg.role}`} className="flex gap-3">
 							<div
 								className={`h-8 w-8 rounded-full flex items-center justify-center border shrink-0 ${msg.role === "user" ? "bg-slate-800 border-slate-700" : "bg-blue-900/20 border-blue-800"}`}
 							>
@@ -510,6 +529,18 @@ export function Chat() {
 												})
 											: ""}
 									</span>
+									{msg.role === "assistant" && (
+										<button
+											type="button"
+											title="Read aloud"
+											className="text-slate-500 hover:text-blue-300"
+											onClick={() =>
+												speakText(msg.content).catch((e) => console.error(e))
+											}
+										>
+											<Volume2 className="h-3.5 w-3.5" />
+										</button>
+									)}
 								</div>
 								<div
 									className={`text-sm text-slate-300 p-3 rounded-md border inline-block max-w-[90%] break-words ${msg.role === "user" ? "bg-slate-900/50 border-slate-800" : "bg-blue-950/10 border-blue-900/30"}`}
@@ -534,6 +565,7 @@ export function Chat() {
 				{/* Workflow presets */}
 				<div className="border-t border-slate-800 bg-slate-900/30">
 					<button
+						type="button"
 						className="w-full flex items-center justify-between px-4 py-1.5 text-xs text-slate-500 hover:text-slate-300"
 						onClick={() => setShowWorkflows(!showWorkflows)}
 					>
@@ -554,6 +586,7 @@ export function Chat() {
 									const Icon = wf.icon;
 									return (
 										<button
+											type="button"
 											key={wf.id}
 											className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border transition-colors ${isActive ? "bg-purple-950/30 border-purple-700 text-purple-200" : "border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200"}`}
 											onClick={() =>
@@ -568,10 +601,14 @@ export function Chat() {
 							{selectedWorkflow && (
 								<div className="flex gap-2 items-end flex-wrap pt-1">
 									<div className="min-w-[160px]">
-										<label className="text-xs text-slate-500 block mb-0.5">
+										<label
+											htmlFor="wf-recipient"
+											className="text-xs text-slate-500 block mb-0.5"
+										>
 											Recipient
 										</label>
 										<select
+											id="wf-recipient"
 											className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5 w-full"
 											value={workflowRecipient}
 											onChange={(e) => setWorkflowRecipient(e.target.value)}
@@ -582,10 +619,14 @@ export function Chat() {
 										</select>
 									</div>
 									<div className="min-w-[120px]">
-										<label className="text-xs text-slate-500 block mb-0.5">
+										<label
+											htmlFor="wf-tone"
+											className="text-xs text-slate-500 block mb-0.5"
+										>
 											Tone
 										</label>
 										<select
+											id="wf-tone"
 											className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5 w-full"
 											value={workflowTone}
 											onChange={(e) => setWorkflowTone(e.target.value)}
@@ -605,10 +646,14 @@ export function Chat() {
 										</select>
 									</div>
 									<div className="min-w-[120px]">
-										<label className="text-xs text-slate-500 block mb-0.5">
+										<label
+											htmlFor="wf-mood"
+											className="text-xs text-slate-500 block mb-0.5"
+										>
 											Mood
 										</label>
 										<select
+											id="wf-mood"
 											className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5 w-full"
 											value={workflowMood}
 											onChange={(e) => setWorkflowMood(e.target.value)}
@@ -628,10 +673,14 @@ export function Chat() {
 										</select>
 									</div>
 									<div className="min-w-[100px]">
-										<label className="text-xs text-slate-500 block mb-0.5">
+										<label
+											htmlFor="wf-format"
+											className="text-xs text-slate-500 block mb-0.5"
+										>
 											Format
 										</label>
 										<select
+											id="wf-format"
 											className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1.5 w-full"
 											value={workflowFormat}
 											onChange={(e) => setWorkflowFormat(e.target.value)}
@@ -644,11 +693,12 @@ export function Chat() {
 									<Button
 										size="sm"
 										className="bg-purple-600 hover:bg-purple-700 h-7 text-xs"
-										onClick={() =>
-											handleWorkflow(
-												WORKFLOWS.find((w) => w.id === selectedWorkflow)!,
-											)
-										}
+										onClick={() => {
+											const wf = WORKFLOWS.find(
+												(w) => w.id === selectedWorkflow,
+											);
+											if (wf) handleWorkflow(wf);
+										}}
 										disabled={executingWorkflow}
 									>
 										{executingWorkflow ? (
@@ -674,6 +724,7 @@ export function Chat() {
 							.slice(0, 6)
 							.map((p) => (
 								<button
+									type="button"
 									key={p}
 									className="text-xs px-2 py-1 rounded-full border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-colors"
 									onClick={() => {

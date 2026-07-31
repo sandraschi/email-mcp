@@ -37,7 +37,15 @@ def list_templates() -> list[dict[str, Any]]:
 
 def add_template(name: str, subject: str = "", body: str = "", html: str = "", category: str = "") -> dict[str, Any]:
     _load()
-    tmpl = {"id": str(uuid.uuid4())[:12], "name": name.strip(), "subject": subject.strip(), "body": body.strip(), "html": html.strip(), "category": category.strip(), "created_at": int(time.time())}
+    tmpl = {
+        "id": str(uuid.uuid4())[:12],
+        "name": name.strip(),
+        "subject": subject.strip(),
+        "body": body.strip(),
+        "html": html.strip(),
+        "category": category.strip(),
+        "created_at": int(time.time()),
+    }
     _TEMPLATES.append(tmpl)
     _save()
     return {"success": True, "template": tmpl}

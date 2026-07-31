@@ -1,7 +1,19 @@
 
 ## [Unreleased] -- 2026-06-14
 
-### Fixed (2026-07-24 — assfix)
+### Fixed (2026-07-31 - assfix)
+- Packaging: rebuilt `mcpb/src` staging as `mcpb/src/email_mcp/` (was flattened bare modules — bundle could not import itself); purged `.pyc` dross
+- Packaging: MCPB prompts brought to 3-4-100 bar (system.md 3000 words, user.md 4000 words, examples.json 104 entries)
+- Packaging: `.mcpbignore` now excludes webapp/, mcpb/, logs/, monitoring/, reports/, data/, examples/, *.bak (previous pack was 46 MB of bloat)
+- Manifest: root + mcpb manifest.json tool lists regenerated to the actual 39 registered tools
+- Docs: added docs/DEVELOPMENT.md, docs/TOOLS.md, docs/TROUBLESHOOTING.md
+- Webapp: data-testid sweep across 13 pages (page container + key controls)
+- Webapp: fixed production build (tsc -b) type errors in chat.tsx, compose.tsx, inbox.tsx, settings.tsx, tools.tsx, contacts.tsx
+- Webapp: dashboard font/contrast fixes (status labels to text-sm text-slate-300)
+- Tests: pytest.ini enforces coverage floor (--cov=email_mcp --cov-fail-under=30, current 39.8%)
+- Hygiene: removed stale .bak files; glama.json tool count corrected 32 -> 39
+
+### Fixed (2026-07-24 - assfix)
 - CORS: replaced `allow_origins=["*"]` with fleet-standard explicit origins + `allow_origin_regex` for Tailscale/LAN
 - CORS: replaced `run_http_async()` in transport.py with `uvicorn.Server` on `mcp.http_app()` with CORS middleware
 - Imports: added missing `imaplib`, `email`, `asyncio` imports in tool_registry.py (search_emails was broken)
@@ -120,11 +132,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`native/package.json`**: pins `@tauri-apps/cli` ^2 so `npx` resolves locally
 - **justfile**: new targets for Tauri build, debug, dev mode
 - **`mailing_list_latest` tool**: now correctly handles invalid IDs and missing service configs
-  - uild-sidecar: run PyInstaller, copy binary to 
+  - uild-sidecar: run PyInstaller, copy binary to
 ative/binaries/
   - uild-all: uild-sidecar then uild-native in one step
   - 	auri-dev: hot-reload dev mode (backend must be running separately)
-  - uild-native / uild-native-debug: run 
+  - uild-native / uild-native-debug: run
 pm install before Tauri CLI
 
 ### Fixed
@@ -240,5 +252,3 @@ ative/main.rs**: uvicorn readiness detection now checks both CommandEvent::Stdou
 - Basic service configuration
 - Core email sending and receiving functionality
 - Async operations support
-
-

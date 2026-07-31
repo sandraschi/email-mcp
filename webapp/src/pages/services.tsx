@@ -289,6 +289,7 @@ export function Services() {
 
 	useEffect(() => {
 		loadServices();
+		// biome-ignore lint/correctness/useExhaustiveDependencies: loadServices is a stable useCallback; internal fetch deps live in its own deps array
 	}, [loadServices]);
 
 	const resetForm = () => {
@@ -602,7 +603,7 @@ export function Services() {
 	const fields = FIELD_DEFS[newType] || [];
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="services-page">
 			<div className="flex items-center justify-between">
 				<div>
 					<h2 className="text-2xl font-bold tracking-tight text-white">
@@ -612,6 +613,7 @@ export function Services() {
 				</div>
 				<Button
 					className="bg-blue-600 hover:bg-blue-700"
+					data-testid="services-add"
 					onClick={() => setShowAdd(!showAdd)}
 				>
 					<Plus className="h-4 w-4 mr-1" /> {showAdd ? "Cancel" : "Add Service"}
@@ -675,9 +677,10 @@ export function Services() {
 							},
 						].map((p) => (
 							<button
+								type="button"
 								key={p.id}
 								className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${quickProvider === p.id ? `${p.color} bg-slate-800/50` : "border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500"}`}
-								onClick={() => setQuickProvider(p.id as any)}
+								onClick={() => setQuickProvider(p.id)}
 							>
 								{p.label}
 							</button>
@@ -826,6 +829,7 @@ export function Services() {
 							<div className="flex gap-2 flex-wrap">
 								{PRESETS.map((p) => (
 									<button
+										type="button"
 										key={p.label}
 										className="text-xs px-2.5 py-1 rounded-md border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
 										onClick={() => {

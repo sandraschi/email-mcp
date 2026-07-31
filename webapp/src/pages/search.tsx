@@ -49,7 +49,7 @@ export function SearchPage() {
 	};
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4" data-testid="search-page">
 			<div className="flex items-center gap-4">
 				<Button
 					variant="outline"
@@ -71,10 +71,15 @@ export function SearchPage() {
 				<CardContent className="pt-4 pb-4">
 					<div className="flex gap-3 flex-wrap items-end">
 						<div className="flex-1 min-w-[200px]">
-							<label className="text-xs text-slate-400 block mb-1">
+							<label
+								htmlFor="search-query"
+								className="text-xs text-slate-400 block mb-1"
+							>
 								Search
 							</label>
 							<Input
+								id="search-query"
+								data-testid="search-input"
 								className="bg-slate-900 border-slate-700 text-white"
 								placeholder="Keywords in subject or body..."
 								value={query}
@@ -83,10 +88,15 @@ export function SearchPage() {
 							/>
 						</div>
 						<div>
-							<label className="text-xs text-slate-400 block mb-1">
+							<label
+								htmlFor="search-service"
+								className="text-xs text-slate-400 block mb-1"
+							>
 								Service
 							</label>
 							<select
+								id="search-service"
+								data-testid="search-service"
 								className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1.5"
 								value={service}
 								onChange={(e) => setService(e.target.value)}
@@ -95,10 +105,14 @@ export function SearchPage() {
 							</select>
 						</div>
 						<div>
-							<label className="text-xs text-slate-400 block mb-1">
+							<label
+								htmlFor="search-folder"
+								className="text-xs text-slate-400 block mb-1"
+							>
 								Folder
 							</label>
 							<select
+								id="search-folder"
 								className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1.5"
 								value={folder}
 								onChange={(e) => setFolder(e.target.value)}
@@ -146,9 +160,10 @@ export function SearchPage() {
 							</p>
 						)}
 						{results.map((email, i) => (
-							<div
+							<button
+								type="button"
 								key={email.id || i}
-								className="flex items-start gap-3 py-3 border-b border-slate-800 last:border-0 hover:bg-slate-900/30 px-2 rounded transition-colors cursor-pointer"
+								className="flex w-full items-start gap-3 py-3 border-b border-slate-800 last:border-0 hover:bg-slate-900/30 px-2 rounded transition-colors cursor-pointer text-left"
 								onClick={() =>
 									navigate(
 										`/email?id=${encodeURIComponent(email.id)}&service=${service}&folder=${folder}`,
@@ -166,7 +181,7 @@ export function SearchPage() {
 										{email.from} &nbsp;·&nbsp; {email.date}
 									</p>
 								</div>
-							</div>
+							</button>
 						))}
 					</CardContent>
 				</Card>

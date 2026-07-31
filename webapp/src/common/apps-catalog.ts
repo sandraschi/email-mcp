@@ -1,10 +1,10 @@
-import { Archive, Bot, Github } from "lucide-react";
+import { Archive, Bot, Github, type LucideIcon } from "lucide-react";
 
 export interface AppEntry {
 	id: string;
 	label: string;
 	description: string;
-	icon: any;
+	icon: LucideIcon;
 	url: string; // Absolute URL for cross-app navigation
 	port: number;
 	tags: string[];

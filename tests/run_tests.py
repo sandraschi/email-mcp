@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Test runner for minimail-mcp."""
 
+import os
 import subprocess
 import sys
-import os
 from pathlib import Path
+
 
 def run_tests():
     """Run the test suite."""
@@ -18,9 +19,6 @@ def run_tests():
 
     return result.returncode
 
+
 if __name__ == "__main__":
     sys.exit(run_tests())
-
-
-
-

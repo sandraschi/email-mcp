@@ -14,6 +14,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SanitizedHtml } from "@/components/sanitized-html";
 import { useToast } from "@/components/toast";
 import { fetchWithAuth } from "@/lib/api";
 
@@ -117,6 +118,8 @@ function MailRow({
 	starred?: boolean;
 }) {
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: list row with inner star/archive buttons - nesting buttons is invalid HTML
+		// biome-ignore lint/a11y/useKeyWithClickEvents: row opens email via onClick; inner controls handle their own keys
 		<div
 			className={`group flex items-start gap-2.5 px-3 py-2.5 cursor-pointer border-b border-slate-800/50 transition-colors ${selectedEmail?.id === email.id ? "bg-blue-950/20" : "hover:bg-slate-900/30"} ${!email.read ? "bg-slate-900/20" : ""} ${indent ? "pl-8" : ""}`}
 			onClick={() => onSelect(email)}
@@ -144,6 +147,7 @@ function MailRow({
 			</div>
 			{onStar && (
 				<button
+					type="button"
 					onClick={(e) => {
 						e.stopPropagation();
 						onStar(e, email.id);
@@ -155,6 +159,7 @@ function MailRow({
 			)}
 			{onArchive && (
 				<button
+					type="button"
 					onClick={(e) => {
 						e.stopPropagation();
 						onArchive(e, email.id);
@@ -166,6 +171,7 @@ function MailRow({
 				</button>
 			)}
 			<button
+				type="button"
 				onClick={(e) => {
 					e.stopPropagation();
 					onSnooze(email.id);
@@ -176,6 +182,7 @@ function MailRow({
 				<Clock className="h-3 w-3" />
 			</button>
 			<button
+				type="button"
 				onClick={(e) => onDelete(e, email.id)}
 				className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0"
 			>
@@ -350,7 +357,7 @@ export function MailReader() {
 				`/api/services/${encodeURIComponent(selectedService)}/folders`,
 			)
 				.then((d) => {
-					const names = (d.folders || []).map((f: any) => f.name);
+					const names = (d.folders || []).map((f: { name: string }) => f.name);
 					if (names.length) setFolders(names);
 				})
 				.catch(() => {});
@@ -432,10 +439,14 @@ export function MailReader() {
 	}, []);
 
 	return (
-		<div className="flex flex-col h-[calc(100vh-8rem)]">
+		<div
+			className="flex flex-col h-[calc(100vh-8rem)]"
+			data-testid="mail-reader-page"
+		>
 			{/* Top bar */}
 			<div className="flex items-center gap-2 pb-2 flex-wrap">
 				<select
+					data-testid="mail-reader-service"
 					className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1"
 					value={selectedService}
 					onChange={(e) => setSelectedService(e.target.value)}
@@ -464,6 +475,7 @@ export function MailReader() {
 				<div className="relative flex-1 max-w-xs">
 					<Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
 					<input
+						data-testid="mail-reader-search"
 						className="w-full bg-slate-900 border border-slate-700 rounded-md pl-7 pr-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
 						placeholder={
 							selectedService === "unified"
@@ -484,6 +496,7 @@ export function MailReader() {
 					Unread
 				</label>
 				<button
+					type="button"
 					className={`p-1.5 rounded text-xs ${notifyEnabled ? "text-blue-400" : "text-slate-500 hover:text-white"}`}
 					onClick={() => setNotifyEnabled(!notifyEnabled)}
 					title={notifyEnabled ? "Notifications on" : "Notifications off"}
@@ -495,6 +508,7 @@ export function MailReader() {
 					)}
 				</button>
 				<button
+					type="button"
 					className={`p-1.5 rounded text-xs ${threaded ? "text-indigo-400" : "text-slate-500 hover:text-white"}`}
 					onClick={() => {
 						setThreaded(!threaded);
@@ -502,7 +516,14 @@ export function MailReader() {
 					}}
 					title={threaded ? "Threaded view" : "Flat view"}
 				>
-					<svg className="h-4 w-4" viewBox="0 0 16 16" fill="none">
+					<svg
+						className="h-4 w-4"
+						viewBox="0 0 16 16"
+						fill="none"
+						role="img"
+						aria-label="Toggle thread view"
+					>
+						<title>Toggle thread view</title>
 						<path
 							d="M2 4h12M2 8h8M2 12h6"
 							stroke="currentColor"
@@ -512,6 +533,7 @@ export function MailReader() {
 					</svg>
 				</button>
 				<button
+					type="button"
 					className="p-1.5 text-slate-500 hover:text-white rounded"
 					onClick={fetchEmails}
 				>
@@ -551,13 +573,16 @@ export function MailReader() {
 							))
 						) : (
 							threadKeys.map((key) => {
-								const thread = threads.get(key)!;
+								const threadGroup = threads.get(key);
+								if (!threadGroup) return null;
+								const thread = threadGroup;
 								const latest = thread[0];
 								const expanded = expandedThreads.has(key);
 								return (
 									<div key={key}>
-										<div
-											className="group flex items-start gap-2.5 px-3 py-2.5 cursor-pointer border-b border-slate-800/50 transition-colors hover:bg-slate-900/30 bg-slate-900/10"
+										<button
+											type="button"
+											className="group flex w-full items-start gap-2.5 px-3 py-2.5 cursor-pointer border-b border-slate-800/50 transition-colors hover:bg-slate-900/30 bg-slate-900/10 text-left"
 											onClick={() =>
 												setExpandedThreads((prev) => {
 													const n = new Set(prev);
@@ -586,7 +611,7 @@ export function MailReader() {
 													{thread.length > 3 ? ` +${thread.length - 3}` : ""}
 												</p>
 											</div>
-										</div>
+										</button>
 										{expanded &&
 											thread.map((email) => (
 												<MailRow
@@ -647,7 +672,8 @@ export function MailReader() {
 								selectedEmail.attachments.length > 0 && (
 									<div className="flex gap-2 flex-wrap">
 										{selectedEmail.attachments.map((att) => (
-											<div
+											<button
+												type="button"
 												key={att.part_index}
 												className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-slate-700 bg-slate-900/50 text-xs cursor-pointer hover:bg-slate-800 transition-colors"
 												onClick={() => handleDownload(selectedEmail.id, att)}
@@ -661,15 +687,15 @@ export function MailReader() {
 													({formatSize(att.size)})
 												</span>
 												<Download className="h-3 w-3 text-slate-500 ml-1" />
-											</div>
+											</button>
 										))}
 									</div>
 								)}
 							<div className="h-px bg-slate-800" />
 							{selectedEmail.html_body ? (
-								<div
+								<SanitizedHtml
+									html={selectedEmail.html_body}
 									className="prose prose-invert prose-slate max-w-none text-sm [&_a]:text-blue-400 [&_img]:max-w-full"
-									dangerouslySetInnerHTML={{ __html: selectedEmail.html_body }}
 								/>
 							) : (
 								<pre className="text-sm text-slate-300 whitespace-pre-wrap font-sans leading-relaxed">

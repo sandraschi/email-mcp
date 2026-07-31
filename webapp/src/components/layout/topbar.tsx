@@ -76,7 +76,10 @@ export function Topbar() {
 
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger asChild>
-						<button className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/50 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-700">
+						<button
+							type="button"
+							className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/50 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-700"
+						>
 							<LayoutGrid className="h-4 w-4" />
 							Apps
 						</button>
@@ -111,6 +114,7 @@ export function Topbar() {
 				</DropdownMenu.Root>
 
 				<button
+					type="button"
 					className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-800 bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
 					onClick={() => window.open("https://opencode.ai", "_blank")}
 				>

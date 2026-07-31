@@ -160,7 +160,7 @@ export function AutoRespond() {
 	const pendingCount = pending.filter((p) => p.status === "pending").length;
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="auto-respond-page">
 			<div className="flex items-center justify-between">
 				<div>
 					<h2 className="text-2xl font-bold tracking-tight text-white">
@@ -174,6 +174,7 @@ export function AutoRespond() {
 					<Button
 						size="sm"
 						variant="outline"
+						data-testid="auto-respond-refresh"
 						className="border-slate-700 text-slate-300 hover:bg-slate-800"
 						onClick={loadData}
 					>
@@ -185,6 +186,7 @@ export function AutoRespond() {
 			{/* Tabs */}
 			<div className="flex gap-2 border-b border-slate-800 pb-2">
 				<button
+					type="button"
 					className={`text-sm px-3 py-1.5 rounded-t ${tab === "rules" ? "text-white border-b-2 border-blue-500" : "text-slate-500 hover:text-slate-300"}`}
 					onClick={() => setTab("rules")}
 				>
@@ -194,6 +196,7 @@ export function AutoRespond() {
 					)}
 				</button>
 				<button
+					type="button"
 					className={`text-sm px-3 py-1.5 rounded-t ${tab === "pending" ? "text-white border-b-2 border-amber-500" : "text-slate-500 hover:text-slate-300"}`}
 					onClick={() => setTab("pending")}
 				>

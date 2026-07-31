@@ -8,11 +8,10 @@ with the Email MCP server.
 Supported providers: Gmail, Outlook, Yahoo, iCloud, ProtonMail, etc.
 """
 
-import asyncio
 import logging
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -26,9 +25,7 @@ async def main():
     logger.info("1. Sending basic email via SMTP...")
     try:
         result = await send_email(
-            to="recipient@example.com",
-            subject="Test Email",
-            body="Hello from Email MCP SMTP service!"
+            to="recipient@example.com", subject="Test Email", body="Hello from Email MCP SMTP service!"
         )
         logger.info(f"Email sent: {result['success']}")
     except Exception as e:
@@ -50,7 +47,7 @@ async def main():
                 <li>Feature 3</li>
             </ul>
             """,
-            cc=["manager@example.com"]
+            cc=["manager@example.com"],
         )
         logger.info(f"HTML email sent: {result['success']}")
     except Exception as e:
@@ -61,7 +58,7 @@ async def main():
     try:
         result = await check_inbox(limit=5, unread_only=True)
         logger.info(f"Found {result['count']} unread emails")
-        for email in result['emails'][:3]:  # Show first 3
+        for email in result["emails"][:3]:  # Show first 3
             logger.info(f"  - {email['subject']} - {email['from']}")
     except Exception as e:
         logger.error(f"IMAP check failed: {e}")

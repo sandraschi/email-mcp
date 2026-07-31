@@ -5,13 +5,14 @@ Email MCP Monitoring Configuration
 Configuration for health monitoring, metrics collection, and alerting.
 """
 
-from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
 class HealthCheckConfig:
     """Configuration for health checks."""
+
     enabled: bool = True
     interval_seconds: int = 300  # 5 minutes
     timeout_seconds: int = 10
@@ -24,6 +25,7 @@ class HealthCheckConfig:
 @dataclass
 class MetricsConfig:
     """Configuration for metrics collection."""
+
     enabled: bool = True
     retention_days: int = 7
     max_metrics_history: int = 10000
@@ -34,10 +36,11 @@ class MetricsConfig:
 @dataclass
 class AlertConfig:
     """Configuration for alerting."""
+
     enabled: bool = False
     email_alerts: bool = False
-    alert_email_recipients: List[str] = None
-    slack_webhook_url: Optional[str] = None
+    alert_email_recipients: list[str] = None
+    slack_webhook_url: str | None = None
     alert_on_service_down: bool = True
     alert_on_high_error_rate: bool = True
     error_rate_threshold: float = 0.1  # 10%
@@ -47,6 +50,7 @@ class AlertConfig:
 @dataclass
 class MonitoringConfig:
     """Overall monitoring configuration."""
+
     health_checks: HealthCheckConfig
     metrics: MetricsConfig
     alerts: AlertConfig
@@ -56,14 +60,10 @@ class MonitoringConfig:
 
 
 # Default monitoring configuration
-default_config = MonitoringConfig(
-    health_checks=HealthCheckConfig(),
-    metrics=MetricsConfig(),
-    alerts=AlertConfig()
-)
+default_config = MonitoringConfig(health_checks=HealthCheckConfig(), metrics=MetricsConfig(), alerts=AlertConfig())
 
 
-def load_monitoring_config(config_dict: Optional[Dict[str, Any]] = None) -> MonitoringConfig:
+def load_monitoring_config(config_dict: dict[str, Any] | None = None) -> MonitoringConfig:
     """Load monitoring configuration from dictionary."""
     if config_dict is None:
         return default_config
@@ -77,7 +77,7 @@ def load_monitoring_config(config_dict: Optional[Dict[str, Any]] = None) -> Moni
         retry_attempts=health_config.get("retry_attempts", 3),
         retry_delay_seconds=health_config.get("retry_delay_seconds", 5),
         alert_on_failure=health_config.get("alert_on_failure", True),
-        alert_threshold_consecutive_failures=health_config.get("alert_threshold_consecutive_failures", 3)
+        alert_threshold_consecutive_failures=health_config.get("alert_threshold_consecutive_failures", 3),
     )
 
     # Parse metrics config
@@ -87,7 +87,7 @@ def load_monitoring_config(config_dict: Optional[Dict[str, Any]] = None) -> Moni
         retention_days=metrics_config.get("retention_days", 7),
         max_metrics_history=metrics_config.get("max_metrics_history", 10000),
         export_interval_seconds=metrics_config.get("export_interval_seconds", 3600),
-        export_format=metrics_config.get("export_format", "json")
+        export_format=metrics_config.get("export_format", "json"),
     )
 
     # Parse alerts config
@@ -100,7 +100,7 @@ def load_monitoring_config(config_dict: Optional[Dict[str, Any]] = None) -> Moni
         alert_on_service_down=alerts_config.get("alert_on_service_down", True),
         alert_on_high_error_rate=alerts_config.get("alert_on_high_error_rate", True),
         error_rate_threshold=alerts_config.get("error_rate_threshold", 0.1),
-        alert_cooldown_minutes=alerts_config.get("alert_cooldown_minutes", 60)
+        alert_cooldown_minutes=alerts_config.get("alert_cooldown_minutes", 60),
     )
 
     return MonitoringConfig(
@@ -109,5 +109,5 @@ def load_monitoring_config(config_dict: Optional[Dict[str, Any]] = None) -> Moni
         alerts=alerts,
         log_level=config_dict.get("log_level", "INFO"),
         enable_prometheus_metrics=config_dict.get("enable_prometheus_metrics", False),
-        prometheus_port=config_dict.get("prometheus_port", 9090)
+        prometheus_port=config_dict.get("prometheus_port", 9090),
     )

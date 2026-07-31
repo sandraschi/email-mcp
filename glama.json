@@ -13,7 +13,7 @@
   "framework": "fastmcp",
   "type": "mcp_server",
   "transport": ["stdio"],
-  "tools": 32,
+  "tools": 39,
   "keywords": [
     "email",
     "smtp",
@@ -146,7 +146,7 @@
       "prompts",
       "sampling"
     ],
-    "tool_count": 32,
+    "tool_count": 39,
     "features": [
       "multi_service_email",
       "smtp_imap_support",

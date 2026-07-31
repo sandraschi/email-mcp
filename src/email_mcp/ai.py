@@ -9,6 +9,29 @@ import httpx
 from fastmcp import FastMCP
 
 
+def _fmt_provider_error(exc: Exception, endpoint: str = "") -> str:
+    """Human-readable provider error. httpx exceptions can have an empty str(),
+    which would otherwise surface as a useless bare "Provider error: "."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        resp = exc.response
+        status = resp.status_code if resp is not None else "?"
+        body = ""
+        if resp is not None:
+            try:
+                body = resp.text[:200]
+            except Exception:
+                body = ""
+        detail = f" ({status}: {body})" if body else f" ({status})"
+        return f"{exc}{detail}"
+    if isinstance(exc, httpx.ConnectError):
+        return f"Provider not reachable at {endpoint}. Check it is running."
+    if isinstance(exc, httpx.TimeoutException):
+        return f"Provider timed out at {endpoint}."
+    if isinstance(exc, httpx.HTTPError):
+        return f"Provider HTTP error: {exc!r}"
+    return f"{type(exc).__name__}: {exc}"
+
+
 class AIRouter:
     """Routes natural language chat queries to email tools via local or cloud LLM."""
 
@@ -104,11 +127,11 @@ class AIRouter:
             )
             if r.status_code == 200:
                 return r.json()["choices"][0]["message"]["content"]
-            return f"Provider error {r.status_code}: {r.text[:200]}"
+            return f"Provider error {r.status_code} (model '{model}'): {r.text[:200]}"
         except httpx.ConnectError:
             return f"Provider not reachable at {endpoint}. Configure a different provider in Settings."
         except Exception as exc:
-            return f"Provider error: {exc}"
+            return f"Provider error: {_fmt_provider_error(exc, endpoint)}"
 
     async def _anthropic(self, client: httpx.AsyncClient, query: str, system_prompt: str | None = None) -> str:
         sp = system_prompt or self._SYSTEM
@@ -133,9 +156,9 @@ class AIRouter:
             )
             if r.status_code == 200:
                 return r.json()["content"][0]["text"]
-            return f"Anthropic error {r.status_code}: {r.text[:200]}"
+            return f"Anthropic error {r.status_code} (model '{model}'): {r.text[:200]}"
         except Exception as exc:
-            return f"Anthropic error: {exc}"
+            return f"Anthropic error: {_fmt_provider_error(exc, 'https://api.anthropic.com')}"
 
     async def get_tools_list(self) -> list[dict[str, Any]]:
         """Return list of {name, description} dicts for all registered MCP tools."""

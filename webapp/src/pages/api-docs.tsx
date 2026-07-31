@@ -45,7 +45,7 @@ export function ApiDocs() {
 	const [view, setView] = useState<"swagger" | "redoc">("swagger");
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4" data-testid="api-docs-page">
 			<div className="flex items-center justify-between">
 				<div>
 					<h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
@@ -60,6 +60,7 @@ export function ApiDocs() {
 					<Button
 						variant={view === "swagger" ? "default" : "outline"}
 						size="sm"
+						data-testid="api-docs-swagger"
 						className={
 							view === "swagger"
 								? "bg-blue-600 hover:bg-blue-700"
@@ -72,6 +73,7 @@ export function ApiDocs() {
 					<Button
 						variant={view === "redoc" ? "default" : "outline"}
 						size="sm"
+						data-testid="api-docs-redoc"
 						className={
 							view === "redoc"
 								? "bg-blue-600 hover:bg-blue-700"

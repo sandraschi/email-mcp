@@ -246,8 +246,11 @@ export function Settings() {
 	const handleTestEmailService = async () => {
 		try {
 			const data = await fetchWithAuth("/api/services");
-			const svcs = data.services || {};
-			const connected = Object.values(svcs).some((s: any) => s.connected);
+			const svcs = (data.services || {}) as Record<
+				string,
+				{ connected?: boolean }
+			>;
+			const connected = Object.values(svcs).some((s) => s.connected === true);
 			if (connected) {
 				toast("success", "At least one service is connected");
 			} else {
@@ -261,7 +264,7 @@ export function Settings() {
 	const currentService = emailServices[serviceName];
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="settings-page">
 			<div>
 				<h2 className="text-2xl font-bold tracking-tight text-white">
 					Settings
@@ -463,7 +466,10 @@ export function Settings() {
 						</div>
 					) : (
 						<>
-							<div className="grid grid-cols-2 md:grid-cols-3 gap-3" data-testid="llm-provider-select">
+							<div
+								className="grid grid-cols-2 md:grid-cols-3 gap-3"
+								data-testid="llm-provider-select"
+							>
 								{providers.map((p) => {
 									const isSelected = selectedProvider === p.id;
 									const statusDot =
@@ -474,6 +480,7 @@ export function Settings() {
 												: "bg-slate-600";
 									return (
 										<button
+											type="button"
 											key={p.id}
 											onClick={() => handleProviderChange(p.id)}
 											className={`text-left p-3 rounded-lg border transition-colors ${
@@ -515,7 +522,8 @@ export function Settings() {
 									</p>
 									<p className="text-xs text-amber-400/70 mt-1">
 										No local LLM running. Install <strong>Ollama</strong> or{" "}
-										<strong>LM Studio</strong> to run AI features locally for free.
+										<strong>LM Studio</strong> to run AI features locally for
+										free.
 									</p>
 								</div>
 							)}
@@ -525,7 +533,8 @@ export function Settings() {
 									<div className="grid gap-2">
 										<Label className="text-slate-300">Model</Label>
 										{chatModels.length > 0 ? (
-											<select data-testid="llm-model-select"
+											<select
+												data-testid="llm-model-select"
 												className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-3 py-1.5"
 												value={selectedModel}
 												onChange={(e) => setSelectedModel(e.target.value)}
@@ -535,7 +544,8 @@ export function Settings() {
 												))}
 											</select>
 										) : currentProvider.models.length > 0 ? (
-											<select data-testid="llm-model-select"
+											<select
+												data-testid="llm-model-select"
 												className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-3 py-1.5"
 												value={selectedModel}
 												onChange={(e) => setSelectedModel(e.target.value)}

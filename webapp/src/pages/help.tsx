@@ -23,6 +23,7 @@ function Section({
 }) {
 	return (
 		<div className="space-y-3 text-sm text-slate-300 leading-relaxed">
+			<h3 className="text-base font-semibold text-white">{title}</h3>
 			{children}
 		</div>
 	);
@@ -435,7 +436,7 @@ export function Help() {
 	];
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4" data-testid="help-page">
 			<div>
 				<h2 className="text-2xl font-bold tracking-tight text-white">
 					Documentation
@@ -451,6 +452,7 @@ export function Help() {
 						<TabsTrigger
 							key={tab.value}
 							value={tab.value}
+							data-testid={`help-tab-${tab.value}`}
 							className={TAB_CLASS}
 						>
 							<tab.icon className="h-4 w-4 mr-1.5" />

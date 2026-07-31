@@ -80,12 +80,10 @@ export function Inbox() {
 		fetchWithAuth("/api/services")
 			.then((data) => {
 				const svcMap = data.services || {};
-				const list: Service[] = Object.entries(svcMap).map(
-					([name, info]: [string, any]) => ({
-						name,
-						type: info.type,
-					}),
-				);
+				const list: Service[] = Object.entries(svcMap).map(([name, info]) => ({
+					name,
+					type: (info as { type?: string } | undefined)?.type ?? "",
+				}));
 				setServices(list);
 			})
 			.catch(() => {});
@@ -97,7 +95,9 @@ export function Inbox() {
 			const data = await fetchWithAuth(
 				`/api/services/${encodeURIComponent(selectedService)}/folders`,
 			);
-			const folderNames = (data.folders || []).map((f: any) => f.name);
+			const folderNames = (data.folders || []).map(
+				(f: { name: string }) => f.name,
+			);
 			if (folderNames.length > 0) {
 				setFolders(folderNames);
 			}
@@ -152,7 +152,7 @@ export function Inbox() {
 	};
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4" data-testid="inbox-page">
 			<div className="flex items-center justify-between">
 				<div>
 					<h2 className="text-2xl font-bold tracking-tight text-white">
@@ -204,8 +204,11 @@ export function Inbox() {
 				<CardContent className="pt-4 pb-3">
 					<div className="flex flex-wrap gap-3 items-center">
 						<div className="flex items-center gap-2">
-							<label className="text-xs text-slate-400">Service</label>
+							<label htmlFor="inbox-service" className="text-xs text-slate-400">
+								Service
+							</label>
 							<select
+								id="inbox-service"
 								className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1"
 								value={selectedService}
 								onChange={(e) => setSelectedService(e.target.value)}
@@ -219,8 +222,11 @@ export function Inbox() {
 							</select>
 						</div>
 						<div className="flex items-center gap-2">
-							<label className="text-xs text-slate-400">Folder</label>
+							<label htmlFor="inbox-folder" className="text-xs text-slate-400">
+								Folder
+							</label>
 							<select
+								id="inbox-folder"
 								className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1"
 								value={folder}
 								onChange={(e) => setFolder(e.target.value)}
@@ -233,8 +239,11 @@ export function Inbox() {
 							</select>
 						</div>
 						<div className="flex items-center gap-2">
-							<label className="text-xs text-slate-400">Limit</label>
+							<label htmlFor="inbox-limit" className="text-xs text-slate-400">
+								Limit
+							</label>
 							<select
+								id="inbox-limit"
 								className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1"
 								value={limit}
 								onChange={(e) => setLimit(Number(e.target.value))}
@@ -259,6 +268,7 @@ export function Inbox() {
 						<div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-slate-800">
 							<Input
 								className="bg-slate-900 border-slate-700 text-white text-sm w-52"
+								data-testid="filter-sender"
 								placeholder="Filter by sender..."
 								value={fromFilter}
 								onChange={(e) => setFromFilter(e.target.value)}
@@ -266,6 +276,7 @@ export function Inbox() {
 							/>
 							<Input
 								className="bg-slate-900 border-slate-700 text-white text-sm w-52"
+								data-testid="filter-subject"
 								placeholder="Filter by subject..."
 								value={subjectFilter}
 								onChange={(e) => setSubjectFilter(e.target.value)}
@@ -274,6 +285,7 @@ export function Inbox() {
 							<Button
 								size="sm"
 								className="bg-blue-600 hover:bg-blue-700"
+								data-testid="apply-filters"
 								onClick={fetchEmails}
 							>
 								Apply
@@ -321,6 +333,8 @@ export function Inbox() {
 						</p>
 					)}
 					{emails.map((email, i) => (
+						// biome-ignore lint/a11y/noStaticElementInteractions: list row with inner delete button - nesting buttons is invalid HTML
+						// biome-ignore lint/a11y/useKeyWithClickEvents: row opens email via onClick; inner button handles its own key
 						<div
 							key={email.id || i}
 							className="group flex items-start gap-3 py-3 border-b border-slate-800 last:border-0 hover:bg-slate-900/30 px-2 rounded transition-colors cursor-pointer"

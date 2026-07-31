@@ -259,7 +259,7 @@ export function Lab() {
 	};
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="lab-page">
 			<div className="flex items-center justify-between">
 				<div>
 					<h2 className="text-2xl font-bold tracking-tight text-white">
@@ -286,6 +286,7 @@ export function Lab() {
 						{!serverRunning ? (
 							<Button
 								size="sm"
+								data-testid="lab-start"
 								className="bg-emerald-600 hover:bg-emerald-700 h-7 text-xs"
 								onClick={handleStart}
 								disabled={serverLoading}
@@ -300,6 +301,7 @@ export function Lab() {
 						) : (
 							<Button
 								size="sm"
+								data-testid="lab-stop"
 								variant="outline"
 								className="border-red-800 text-red-400 hover:bg-red-950/20 h-7 text-xs"
 								onClick={handleStop}
@@ -518,6 +520,8 @@ export function Lab() {
 						<div className="space-y-0">
 							{emails.map((email) => (
 								<div key={email.id}>
+									{/* biome-ignore lint/a11y/noStaticElementInteractions: list row with inner forward button - nesting buttons is invalid HTML */}
+									{/* biome-ignore lint/a11y/useKeyWithClickEvents: row opens email via onClick; inner button handles its own key */}
 									<div
 										className="flex items-start gap-3 py-2.5 px-2 rounded cursor-pointer hover:bg-slate-900/30 transition-colors border-b border-slate-800 last:border-0"
 										onClick={() => handleOpenEmail(email.id)}
