@@ -507,7 +507,7 @@ export function Chat() {
 				</div>
 			)}
 
-			<Card className="flex-1 min-h-0 border-slate-800 bg-slate-950/50 flex flex-col overflow-hidden">
+			<Card className="flex-1 min-h-0 border-slate-800 bg-slate-950/50 flex flex-col">
 				<CardContent
 					ref={scrollRef}
 					data-testid="chat-messages"
