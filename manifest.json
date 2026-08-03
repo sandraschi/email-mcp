@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.2",
   "name": "email-mcp",
-  "version": "0.4.1",
+  "version": "0.5.0-beta.1",
   "description": "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, webhook integrations, draft management, and AI-assisted writing",
   "author": {
     "name": "FlowEngineer"

@@ -1,13 +1,78 @@
 {
-    "product_name": "Email MCP",
-    "install_dir": "%LOCALAPPDATA%\\Email MCP",
-    "operator_exe": "email-mcp-native.exe",
-    "backend_process_names": ["email-mcp-native", "email-mcp-native-backend"],
-    "backend_port": 10813,
-    "health_path": "/api/v1/health",
-    "diagnostics_path": "/api/v1/diagnostics",
-    "feature_smoke_path": "/api/v1/diagnostics",
-    "window_title_re": "Email MCP",
-    "nsis_glob": "native/target/release/bundle/nsis/Email MCP_*_x64-setup.exe",
-    "uninstall_registry_filter": "*Email MCP*"
+  "product_name": "Email MCP",
+  "install_dir": "%LOCALAPPDATA%\\Email MCP",
+  "operator_exe": "email-mcp-native.exe",
+  "backend_process_names": [
+    "email-mcp-native",
+    "email-mcp-native-backend"
+  ],
+  "backend_port": 10813,
+  "health_path": "/api/v1/health",
+  "diagnostics_path": "/api/v1/diagnostics",
+  "feature_smoke_path": "/api/v1/diagnostics",
+  "window_title_re": "Email MCP",
+  "nsis_glob": "native/target/release/bundle/nsis/Email MCP_*_x64-setup.exe",
+  "uninstall_registry_filter": "*Email MCP*",
+  "nav_routes": [
+    [
+      "Dashboard",
+      "Dashboard"
+    ],
+    [
+      "Inbox",
+      "Inbox"
+    ],
+    [
+      "Mail Reader",
+      "Mail Reader"
+    ],
+    [
+      "Search",
+      "Search"
+    ],
+    [
+      "Compose",
+      "Compose"
+    ],
+    [
+      "AI Chat",
+      "AI Chat"
+    ],
+    [
+      "Mail Lab",
+      "Mail Lab"
+    ],
+    [
+      "Services",
+      "Services"
+    ],
+    [
+      "Contacts",
+      "Contacts"
+    ],
+    [
+      "Auto-Reply",
+      "Auto-Reply"
+    ],
+    [
+      "Rules",
+      "Rules"
+    ],
+    [
+      "Logs",
+      "Logs"
+    ],
+    [
+      "Tools",
+      "Tools"
+    ],
+    [
+      "Help",
+      "Help"
+    ],
+    [
+      "Settings",
+      "Settings"
+    ]
+  ]
 }

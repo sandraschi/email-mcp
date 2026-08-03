@@ -14,7 +14,13 @@ Endpoints:
     GET  /api/inbox/{message_id}  -- fetch single email with full body
     POST /api/inbox/{message_id}/mark-read  -- mark as read
     POST /api/inbox/{message_id}/unread      -- mark as unread
+    POST /api/inbox/{message_id}/move        -- move email to another folder
+    POST /api/inbox/{message_id}/copy        -- copy email to another folder
+    POST /api/inbox/{message_id}/forward     -- forward email to recipients
     DELETE /api/inbox/{message_id} -- delete email
+    GET  /api/connectors/status     -- probe aiwatcher + robofang connectors
+    POST /api/connectors/aiwatcher  -- push event into aiwatcher fleet ingest
+    POST /api/connectors/robofang   -- push email into robofang inbox hook
     GET  /api/search              -- search emails via IMAP
     POST /api/send                -- send email
     GET  /api/skills              -- list skill:// resources
@@ -119,7 +125,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
     @app.get("/api/status")
     async def get_status(user: str = Depends(authenticate)):
-        return {"status": "connected", "user": user, "mcp": mcp_app.name, "version": "0.4.1"}
+        return {"status": "connected", "user": user, "mcp": mcp_app.name, "version": "0.5.0-beta.1"}
 
     @app.get("/api/v1/diagnostics")
     async def diagnostics(user: str = Depends(authenticate)):
@@ -597,6 +603,108 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post("/api/inbox/{message_id}/move")
+    async def move_email(
+        message_id: str,
+        payload: dict[str, Any] = Body(default={}),
+        _user: str = Depends(authenticate),
+    ):
+        try:
+            return _extract_tool_result(
+                await mcp_app.call_tool(
+                    "move_email",
+                    {
+                        "email_id": message_id,
+                        "service": payload.get("service", "default"),
+                        "folder": payload.get("folder", "INBOX"),
+                        "to_folder": payload.get("to_folder", ""),
+                    },
+                )
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post("/api/inbox/{message_id}/copy")
+    async def copy_email(
+        message_id: str,
+        payload: dict[str, Any] = Body(default={}),
+        _user: str = Depends(authenticate),
+    ):
+        try:
+            return _extract_tool_result(
+                await mcp_app.call_tool(
+                    "copy_email",
+                    {
+                        "email_id": message_id,
+                        "service": payload.get("service", "default"),
+                        "folder": payload.get("folder", "INBOX"),
+                        "to_folder": payload.get("to_folder", ""),
+                    },
+                )
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post("/api/inbox/{message_id}/forward")
+    async def forward_email(
+        message_id: str,
+        payload: dict[str, Any] = Body(default={}),
+        _user: str = Depends(authenticate),
+    ):
+        try:
+            return _extract_tool_result(
+                await mcp_app.call_tool(
+                    "forward_email",
+                    {
+                        "email_id": message_id,
+                        "service": payload.get("service", "default"),
+                        "folder": payload.get("folder", "INBOX"),
+                        "to": payload.get("to", ""),
+                        "comment": payload.get("comment", ""),
+                    },
+                )
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    # ── Fleet connectors ──────────────────────────────────────────────────────
+
+    @app.get("/api/connectors/status")
+    async def connectors_status(_user: str = Depends(authenticate)):
+        """Probe aiwatcher + robofang connector health."""
+        from email_mcp.connectors import connector_health
+
+        return await connector_health()
+
+    @app.post("/api/connectors/aiwatcher")
+    async def connectors_aiwatcher(
+        payload: dict[str, Any] = Body(default={}),
+        _user: str = Depends(authenticate),
+    ):
+        """Push an event into aiwatcher's fleet ingest."""
+        from email_mcp.connectors import push_aiwatcher
+
+        return await push_aiwatcher(
+            payload.get("title", ""),
+            payload.get("summary", ""),
+            url=payload.get("url", ""),
+            urgency_hint=payload.get("urgency_hint"),
+        )
+
+    @app.post("/api/connectors/robofang")
+    async def connectors_robofang(
+        payload: dict[str, Any] = Body(default={}),
+        _user: str = Depends(authenticate),
+    ):
+        """Send an email into robofang's inbox hook."""
+        from email_mcp.connectors import push_robofang
+
+        return await push_robofang(
+            payload.get("from_addr", ""),
+            payload.get("body", ""),
+            subject=payload.get("subject", ""),
+        )
 
     # ── Search ───────────────────────────────────────────────────────────────
 

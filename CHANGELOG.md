@@ -1,4 +1,20 @@
 
+## [0.5.0-beta.1] - 2026-08-03 "Graph API + Fleet Connectors" (beta)
+
+### Highlights
+- **Microsoft Graph service** — send/receive for personal Outlook/Hotmail
+  (basic SMTP auth disabled on those accounts): OAuth device flow with
+  Microsoft's public client ID (no Azure registration), auto-refreshing tokens,
+  `service="default"` auto-backs onto Graph when a token exists.
+- **Fleet connectors** — `email_connector` tool + REST: aiwatcher fleet ingest,
+  robofang email hook, connector health (opt-in, fail-soft).
+- **Folder treeview** in the webapp Inbox (unread badges, expandable, inline CRUD)
+  + custom folder name -> Graph id resolution.
+- **New email ops**: `copy_email`, `forward_email` (tools + REST + webapp).
+- **Fixes**: 202-empty-body Graph send crash; OAuth token refresh kept the wrong
+  scope family (expired tokens now refresh correctly); `.env` now loaded at startup.
+- 189 tests passing, 42 MCP tools.
+
 ## [Unreleased] -- 2026-06-14
 
 ### Added (2026-08-03 - Graph send/receive + connectors)

@@ -181,6 +181,24 @@ class EmailService(ABC):
         """Move a single email between folders (COPY + DELETE)."""
         return {"success": False, "error": f"move_message not supported for {self.name}"}
 
+    async def copy_message(
+        self,
+        from_folder: str,
+        to_folder: str,
+        email_id: str,
+    ) -> dict[str, Any]:
+        """Copy a single email to another folder (original stays)."""
+        return {"success": False, "error": f"copy_message not supported for {self.name}"}
+
+    async def forward_message(
+        self,
+        email_id: str,
+        to: str | list[str],
+        comment: str = "",
+    ) -> dict[str, Any]:
+        """Forward a single email to new recipients."""
+        return {"success": False, "error": f"forward_message not supported for {self.name}"}
+
     async def flag_spam(
         self,
         folder: str,
@@ -645,6 +663,91 @@ class SMTPEmailService(EmailService):
             }
         except Exception as e:
             return {"success": False, "error": f"IMAP move failed: {e!s}"}
+
+    async def copy_message(
+        self,
+        from_folder: str,
+        to_folder: str,
+        email_id: str,
+    ) -> dict[str, Any]:
+        """Copy a single email to another IMAP folder (original stays)."""
+        if not self._imap_ready():
+            return {"success": False, "error": f"IMAP not configured for {self.name}"}
+        try:
+
+            def copy_sync():
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                self._imap_auth(mail)
+                mail.select(from_folder)
+                eid = email_id.encode() if isinstance(email_id, str) else email_id
+                mail.copy(eid, to_folder)
+                mail.close()
+                mail.logout()
+                return True
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, copy_sync)
+            return {
+                "success": True,
+                "service": self.name,
+                "email_id": email_id,
+                "message": f"Copied {email_id} to {to_folder}",
+            }
+        except Exception as e:
+            return {"success": False, "error": f"IMAP copy failed: {e!s}"}
+
+    async def forward_message(
+        self,
+        email_id: str,
+        to: str | list[str],
+        comment: str = "",
+    ) -> dict[str, Any]:
+        """Forward a single email via IMAP fetch + SMTP send."""
+        if not (self._imap_ready() and self._smtp_ready()):
+            return {"success": False, "error": f"IMAP/SMTP not configured for {self.name}"}
+        recipients = [addr.strip() for addr in (to.split(",") if isinstance(to, str) else to) if addr.strip()]
+        if not recipients:
+            return {"success": False, "error": "No recipients provided for forward"}
+        try:
+
+            def forward_sync():
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                self._imap_auth(mail)
+                mail.select("INBOX")
+                eid = email_id.encode() if isinstance(email_id, str) else email_id
+                status, msg_data = mail.fetch(eid, "(RFC822)")
+                mail.close()
+                mail.logout()
+                if status != "OK" or not msg_data or msg_data[0] is None:
+                    raise RuntimeError(f"message {email_id} not fetchable")
+                raw = msg_data[0][1]
+                original = email.message_from_bytes(raw)
+                fwd = MIMEMultipart("alternative")
+                fwd["Subject"] = f"Fwd: {decode_email_header(original.get('Subject', '(No Subject)'))}"
+                fwd["From"] = self.smtp_from or self.smtp_user
+                fwd["To"] = ", ".join(recipients)
+                body = comment or ""
+                if body:
+                    body += "\n\n"
+                body += f"---------- Forwarded message ----------\nFrom: {decode_email_header(original.get('From', ''))}\nDate: {decode_email_header(original.get('Date', ''))}\nSubject: {decode_email_header(original.get('Subject', ''))}\n\n"
+                fwd.attach(MIMEText(body, "plain"))
+                with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                    server.starttls()
+                    self._smtp_auth(server)
+                    server.sendmail(self.smtp_from or self.smtp_user, recipients, fwd.as_string())
+                return True
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, forward_sync)
+            return {
+                "success": True,
+                "service": self.name,
+                "email_id": email_id,
+                "to": ", ".join(recipients),
+                "message": f"Forwarded {email_id} to {', '.join(recipients)}",
+            }
+        except Exception as e:
+            return {"success": False, "error": f"IMAP forward failed: {e!s}"}
 
     async def flag_spam(
         self,

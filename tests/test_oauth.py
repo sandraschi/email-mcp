@@ -79,7 +79,40 @@ def test_get_token_refreshes_when_expired(tmp_path, monkeypatch):
     assert oauth.get_token("a@example.com").access_token == "new"
 
 
-def test_start_device_flow_requires_client_id():
+def test_get_token_refreshes_with_tokens_own_scope(tmp_path, monkeypatch):
+    """Refreshing a graph token must request graph scopes (family-preserving)."""
+    monkeypatch.setenv("EMAIL_MCP_OAUTH_TOKEN_FILE", str(tmp_path / "tokens.json"))
+    monkeypatch.setenv("EMAIL_MCP_OAUTH_CLIENT_ID", "client-1")
+    token = oauth.OAuthToken(
+        account="a@example.com",
+        access_token="old",
+        refresh_token="ref",
+        scope=oauth.GRAPH_SCOPE,
+        expires_at=time.time() - 10,
+    )
+    oauth.save_token(token)
+
+    seen = {}
+
+    def fake_post(url, data, timeout=60.0):
+        seen["scope"] = data.get("scope")
+        return {
+            "access_token": "new",
+            "refresh_token": "ref2",
+            "scope": oauth.GRAPH_SCOPE,
+            "expires_in": 3600,
+        }
+
+    monkeypatch.setattr(oauth, "_post", fake_post)
+    loaded = oauth.get_token("a@example.com", oauth.GRAPH_SCOPE)
+    assert loaded is not None
+    assert loaded.access_token == "new"
+    assert "graph.microsoft.com" in (seen["scope"] or "")
+    assert oauth.has_token("a@example.com", oauth.GRAPH_SCOPE)
+
+
+def test_start_device_flow_requires_client_id(monkeypatch):
+    monkeypatch.delenv("EMAIL_MCP_OAUTH_CLIENT_ID", raising=False)
     result = oauth.start_device_flow(cid=None)
     assert result["success"] is False
     assert "CLIENT_ID" in result["error"]

@@ -21,6 +21,7 @@ class FakeResponse:
         self.status_code = status_code
         self._json = json_data
         self.text = str(json_data)
+        self.content = b"{}" if status_code < 300 else b""
 
     def json(self):
         return self._json
@@ -229,6 +230,60 @@ async def test_search(service, monkeypatch):
     _, url, params, _ = fake.calls[0]
     assert url == f"{GRAPH_BASE}/me/messages"
     assert params["$search"] == '"invoice"'
+
+
+async def test_copy_message(service, monkeypatch):
+    captured = {}
+
+    class CapturingClient(FakeAsyncClient):
+        async def request(self, method, url, params=None, headers=None, json=None, timeout=None):
+            captured["json"] = json
+            return FakeResponse(201, {})
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: CapturingClient([]))
+    result = await service.copy_message("INBOX", "Archive", "m1")
+    assert result["success"] is True
+    assert captured["json"] == {"destinationId": "archive"}
+
+
+async def test_copy_message_resolves_custom_folder(service, monkeypatch):
+    calls = []
+
+    class ResolvingClient(FakeAsyncClient):
+        def __init__(self):
+            super().__init__([(200, {"value": [{"id": "fid-1", "displayName": "Github"}]}), (201, {})])
+
+        async def request(self, method, url, params=None, headers=None, json=None, timeout=None):
+            calls.append((url, json))
+            return await super().request(method, url, params, headers, json, timeout)
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: ResolvingClient())
+    result = await service.copy_message("INBOX", "Github", "m1")
+    assert result["success"] is True
+    assert calls[0][0] == f"{GRAPH_BASE}/me/mailFolders"
+    assert calls[1][0] == f"{GRAPH_BASE}/me/messages/m1/copy"
+    assert calls[1][1] == {"destinationId": "fid-1"}
+
+
+async def test_forward_message(service, monkeypatch):
+    captured = {}
+
+    class CapturingClient(FakeAsyncClient):
+        async def request(self, method, url, params=None, headers=None, json=None, timeout=None):
+            captured["json"] = json
+            return FakeResponse(202, {})
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: CapturingClient([]))
+    result = await service.forward_message("m1", "boss@x.com", comment="FYI")
+    assert result["success"] is True
+    assert captured["json"]["comment"] == "FYI"
+    assert captured["json"]["toRecipients"] == [{"emailAddress": {"address": "boss@x.com"}}]
+
+
+async def test_forward_message_requires_recipient(service, monkeypatch):
+    result = await service.forward_message("m1", "")
+    assert result["success"] is False
+    assert "recipient" in result["error"].lower()
 
 
 async def test_no_token_reports_clear_error(monkeypatch, tmp_path):

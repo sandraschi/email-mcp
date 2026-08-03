@@ -396,7 +396,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return {
             "server": "Email-MCP",
-            "version": "0.4.0",
+            "version": "0.5.0-beta.1",
             "services": service_statuses,
             "total_services": len(service_statuses),
             "configured_services": configured_count,
@@ -436,7 +436,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
                 "approve_reply",
                 "auto_respond_now",
             ],
-            "message": f"Email MCP server v0.4.1 - {connected_count}/{len(service_statuses)} services connected",
+            "message": f"Email MCP server v0.5.0-beta.1 - {connected_count}/{len(service_statuses)} services connected",
         }
 
     @mcp.tool(annotations=_MUTATING)
@@ -632,7 +632,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         """
         return {
             "server": "Email-MCP",
-            "version": "0.4.1",
+            "version": "0.5.0-beta.1",
             "description": "Multi-service email platform supporting SMTP, APIs, local testing, webhooks, search, and AI features",
             "supported_services": {
                 "smtp": "Standard email providers (Gmail, Outlook, Yahoo, iCloud, ProtonMail)",
@@ -835,6 +835,56 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         if service not in server.services:
             return {"success": False, "error": f"Service {service!r} not available"}
         return await server.services[service].move_message(folder, to_folder, email_id)
+
+    @mcp.tool(annotations=_MUTATING)
+    async def copy_email(
+        email_id: str,
+        to_folder: str,
+        service: str = "default",
+        folder: str = "INBOX",
+    ) -> dict[str, Any]:
+        """Copy an email to another folder, leaving the original in place.
+
+        ## Return Format
+        {success, service, email_id, to_folder, message}
+
+        ## Examples
+        copy_email(email_id="abc123", to_folder="Github")
+        copy_email(email_id="def456", to_folder="Archive", service="graph")
+        """
+        if service not in server.services:
+            return {"success": False, "error": f"Service {service!r} not available"}
+        result = await server.services[service].copy_message(folder, to_folder, email_id)
+        if not result.get("success"):
+            result["message"] = f"Failed to copy email: {result.get('error')}"
+        return result
+
+    @mcp.tool(annotations=_MUTATING)
+    async def forward_email(
+        email_id: str,
+        to: str | list[str],
+        comment: str = "",
+        service: str = "default",
+        folder: str = "INBOX",
+    ) -> dict[str, Any]:
+        """Forward an existing email to new recipients (original preserved).
+
+        The forwarded copy keeps the original subject (Fwd: prefix) and
+        body; an optional comment is prepended.
+
+        ## Return Format
+        {success, service, email_id, to, message}
+
+        ## Examples
+        forward_email(email_id="abc123", to="boss@example.com")
+        forward_email(email_id="abc123", to=["a@x.com", "b@x.com"], comment="See attached thread")
+        """
+        if service not in server.services:
+            return {"success": False, "error": f"Service {service!r} not available"}
+        result = await server.services[service].forward_message(email_id, to, comment)
+        if not result.get("success"):
+            result["message"] = f"Failed to forward email: {result.get('error')}"
+        return result
 
     @mcp.tool(annotations=_DESTRUCTIVE)
     async def flag_spam(
@@ -1100,6 +1150,58 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         from .watcher import watcher_status as _ws
 
         return _ws()
+
+    @mcp.tool(annotations=_MUTATING)
+    async def email_connector(
+        operation: str,
+        title: str = "",
+        summary: str = "",
+        url: str = "",
+        urgency_hint: float | None = None,
+        from_addr: str = "",
+        subject: str = "",
+        body: str = "",
+    ) -> dict[str, Any]:
+        """Push email events into the fleet pipeline (aiwatcher / robofang).
+
+        [RATIONALE]
+        One portmanteau keeps the connector surface compact: operations map to
+        aiwatcher's fleet ingest and robofang's email hook, plus a health probe.
+
+        Operations:
+        - aiwatcher: ingest an event (title, summary, url, urgency_hint) into
+          aiwatcher's news pipeline. Source is fixed to 'email-mcp'.
+        - robofang: send an email (from_addr, subject, body) into robofang's
+          inbox hook for processing/reply.
+        - status: probe both connectors (reachability + enabled state).
+
+        Connectors are opt-in: set EMAIL_MCP_AIWATCHER_URL / EMAIL_MCP_ROBOFANG_URL
+        in .env (empty = disabled). Failures are returned, never raised.
+
+        ## Return Format
+        {success, connector, ...operation-specific fields}
+
+        ## Examples
+        email_connector(operation="aiwatcher", title="Urgent: payment due",
+                        summary="Invoice overdue", urgency_hint=8.0)
+        email_connector(operation="robofang", from_addr="sandra@hotmail.com",
+                        subject="Alert", body="Backup failed")
+        email_connector(operation="status")
+        """
+        from email_mcp.connectors import connector_health, push_aiwatcher, push_robofang
+
+        op = (operation or "").strip().lower()
+        if op == "status":
+            return await connector_health()
+        if op == "aiwatcher":
+            return await push_aiwatcher(title, summary, url=url, urgency_hint=urgency_hint)
+        if op == "robofang":
+            return await push_robofang(from_addr, body, subject)
+        return {
+            "success": False,
+            "connector": "unknown",
+            "error": f"Unknown operation '{operation}'. Use aiwatcher, robofang, or status.",
+        }
 
     @mcp.tool(annotations=_MUTATING)
     async def add_contact(

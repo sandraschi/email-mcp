@@ -288,5 +288,35 @@
     "html": null,
     "service": "default",
     "updated_at": 1785542087
+  },
+  "12d1446c": {
+    "id": "12d1446c",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1785724233
+  },
+  "81606c5e": {
+    "id": "81606c5e",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1785727319
+  },
+  "4437017b": {
+    "id": "4437017b",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1785732555
   }
 }

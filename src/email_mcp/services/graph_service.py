@@ -10,6 +10,7 @@ search, folders, triage) work with service="graph" transparently.
 from __future__ import annotations
 
 import base64
+import time
 from typing import Any
 from urllib.parse import quote
 
@@ -24,16 +25,28 @@ GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 _WELL_KNOWN = {
     "inbox": "inbox",
     "sent": "sentitems",
+    "sent items": "sentitems",
     "drafts": "drafts",
     "trash": "deleteditems",
+    "deleted": "deleteditems",
+    "deleted items": "deleteditems",
     "junk": "junkemail",
+    "junk email": "junkemail",
     "spam": "junkemail",
     "archive": "archive",
+    "outbox": "outbox",
 }
+
+_FOLDER_CACHE_TTL = 300.0  # seconds
 
 
 def _folder_id(folder: str) -> str:
-    return _WELL_KNOWN.get(folder.strip().lower(), quote(folder.strip()))
+    low = folder.strip().lower()
+    if low in _WELL_KNOWN:
+        return _WELL_KNOWN[low]
+    if folder.strip().startswith("AQMkAD"):  # already a Graph folder id
+        return folder.strip()
+    return quote(folder.strip())
 
 
 def _recipients(addresses: list[str] | str | None) -> list[dict[str, Any]]:
@@ -67,6 +80,8 @@ class GraphEmailService(EmailService):
     def __init__(self, config: EmailServiceConfig):
         super().__init__(config)
         self.user = config.config.get("user") or config.config.get("imap_user") or config.config.get("smtp_user") or ""
+        self._folder_map: dict[str, str] | None = None
+        self._folder_map_ts = 0.0
 
     def _ready(self) -> bool:
         return bool(self.user and oauth.has_token(self.user, oauth.GRAPH_SCOPE))
@@ -74,6 +89,69 @@ class GraphEmailService(EmailService):
     def _token(self) -> str | None:
         token = oauth.get_token(self.user, oauth.GRAPH_SCOPE)
         return token.access_token if token else None
+
+    def _set_folder_map(self, folders: list[dict[str, Any]]) -> None:
+        """Cache displayName -> folder id (also seeds from list_folders payloads)."""
+        self._folder_map = {f.get("displayName", "").strip().lower(): f.get("id", "") for f in folders if f.get("id")}
+        self._folder_map_ts = time.time()
+
+    async def _all_folders(self) -> list[dict[str, Any]]:
+        """Fetch top-level folders plus their descendants (one request per parent)."""
+        _, data = await self._request(
+            "GET",
+            "/me/mailFolders",
+            params={
+                "$select": "id,displayName,parentFolderId,childFolderCount,unreadItemCount,totalItemCount",
+                "$top": "999",
+            },
+        )
+        folders = data.get("value", [])
+        result: list[dict[str, Any]] = list(folders)
+        seen = {f.get("id") for f in result}
+        pending = [f for f in result if f.get("childFolderCount", 0) > 0]
+        while pending:
+            parent = pending.pop(0)
+            try:
+                _, children = await self._request(
+                    "GET",
+                    f"/me/mailFolders/{parent.get('id')}/childFolders",
+                    params={
+                        "$select": "id,displayName,parentFolderId,childFolderCount,unreadItemCount,totalItemCount",
+                        "$top": "999",
+                    },
+                )
+            except Exception:
+                continue
+            for child in children.get("value", []):
+                if child.get("id") not in seen:
+                    seen.add(child.get("id"))
+                    result.append(child)
+                    if child.get("childFolderCount", 0) > 0:
+                        pending.append(child)
+        return result
+
+    async def _fetch_folder_map(self) -> dict[str, str]:
+        """Fetch all folders once and cache displayName -> id for TTL seconds."""
+        if self._folder_map is not None and time.time() - self._folder_map_ts < _FOLDER_CACHE_TTL:
+            return self._folder_map
+        try:
+            self._set_folder_map(await self._all_folders())
+        except Exception:
+            self._folder_map = self._folder_map or {}
+        return self._folder_map
+
+    async def _resolve_folder(self, folder: str) -> str:
+        """Return a Graph folder id for a display name / well-known name / raw id."""
+        f = (folder or "").strip()
+        low = f.lower()
+        if low in _WELL_KNOWN:
+            return _WELL_KNOWN[low]
+        if f.startswith("AQMkAD"):
+            return f
+        folder_map = await self._fetch_folder_map()
+        if low in folder_map:
+            return folder_map[low]
+        return folder_map.get(low.rsplit("/", 1)[-1], _folder_id(f))
 
     async def _request(
         self,
@@ -105,8 +183,8 @@ class GraphEmailService(EmailService):
             )
         if resp.status_code >= 400:
             raise RuntimeError(f"Graph {method} {path} -> HTTP {resp.status_code}: {resp.text[:300]}")
-        if resp.status_code == 204:
-            return 204, {}
+        if not resp.content:
+            return resp.status_code, {}
         return resp.status_code, resp.json()
 
     async def send_email(
@@ -181,7 +259,8 @@ class GraphEmailService(EmailService):
             }
             if unread_only:
                 params["$filter"] = "isRead eq false"
-            _, data = await self._request("GET", f"/me/mailFolders/{_folder_id(folder)}/messages", params=params)
+            folder_id = await self._resolve_folder(folder)
+            _, data = await self._request("GET", f"/me/mailFolders/{folder_id}/messages", params=params)
             emails = []
             for item in data.get("value", []):
                 frm = _from_str(item)
@@ -262,10 +341,11 @@ class GraphEmailService(EmailService):
         if not self._ready():
             return {"success": False, "error": f"Graph not authorized for {self.name}"}
         try:
+            folder_id = await self._resolve_folder(to_folder)
             await self._request(
                 "POST",
                 f"/me/messages/{quote(email_id)}/move",
-                json_body={"destinationId": _folder_id(to_folder)},
+                json_body={"destinationId": folder_id},
             )
             return {
                 "success": True,
@@ -316,12 +396,79 @@ class GraphEmailService(EmailService):
     async def mark_unread(self, folder: str, email_id: str) -> dict[str, Any]:
         return await self._set_read(email_id, False)
 
+    async def copy_message(self, from_folder: str, to_folder: str, email_id: str) -> dict[str, Any]:
+        """Copy a message to another folder (original stays)."""
+        if not self._ready():
+            return {"success": False, "error": f"Graph not authorized for {self.name}"}
+        try:
+            folder_id = await self._resolve_folder(to_folder)
+            await self._request(
+                "POST",
+                f"/me/messages/{quote(email_id)}/copy",
+                json_body={"destinationId": folder_id},
+            )
+            return {
+                "success": True,
+                "service": self.name,
+                "email_id": email_id,
+                "to_folder": to_folder,
+                "message": f"Copied message {email_id[:20]}... to {to_folder}",
+            }
+        except Exception as exc:
+            return {"success": False, "error": f"Graph copy failed: {exc}"}
+
+    async def forward_message(
+        self,
+        email_id: str,
+        to: str | list[str],
+        comment: str = "",
+    ) -> dict[str, Any]:
+        """Forward a message to new recipients (original preserved, optional comment)."""
+        if not self._ready():
+            return {"success": False, "error": f"Graph not authorized for {self.name}"}
+        try:
+            recipients = _recipients(to)
+            if not recipients:
+                return {"success": False, "error": "No recipients provided for forward"}
+            await self._request(
+                "POST",
+                f"/me/messages/{quote(email_id)}/forward",
+                json_body={"comment": comment or "", "toRecipients": recipients},
+            )
+            return {
+                "success": True,
+                "service": self.name,
+                "email_id": email_id,
+                "to": _addresses_str(recipients),
+                "message": f"Forwarded message {email_id[:20]}... to {_addresses_str(recipients)}",
+            }
+        except Exception as exc:
+            return {"success": False, "error": f"Graph forward failed: {exc}"}
+
     async def list_folders(self, service: str = "default") -> list[dict[str, Any]]:
         if not self._ready():
             return []
         try:
-            _, data = await self._request("GET", "/me/mailFolders", params={"$select": "id,displayName"})
-            return [{"name": f.get("displayName", ""), "delimiter": "/"} for f in data.get("value", [])]
+            folders = await self._all_folders()
+            self._set_folder_map(folders)
+
+            def build(folder: dict[str, Any]) -> dict[str, Any]:
+                return {
+                    "id": folder.get("id", ""),
+                    "name": folder.get("displayName", ""),
+                    "unread": folder.get("unreadItemCount", 0),
+                    "total": folder.get("totalItemCount", 0),
+                    "children": [
+                        build(c)
+                        for c in sorted(
+                            (f for f in folders if f.get("parentFolderId") == folder.get("id")),
+                            key=lambda x: str(x.get("displayName", "")).lower(),
+                        )
+                    ],
+                }
+
+            roots = [f for f in folders if not any(f.get("parentFolderId") == g.get("id") for g in folders)]
+            return [build(r) for r in sorted(roots, key=lambda x: str(x.get("displayName", "")).lower())]
         except Exception:
             return []
 
@@ -338,7 +485,8 @@ class GraphEmailService(EmailService):
         if not self._ready():
             return {"success": False, "error": f"Graph not authorized for {self.name}"}
         try:
-            await self._request("DELETE", f"/me/mailFolders/{_folder_id(folder)}")
+            folder_id = await self._resolve_folder(folder)
+            await self._request("DELETE", f"/me/mailFolders/{folder_id}")
             return {"success": True, "folder": folder, "message": f"Deleted folder {folder}"}
         except Exception as exc:
             return {"success": False, "error": f"Graph delete_folder failed: {exc}"}
@@ -347,9 +495,10 @@ class GraphEmailService(EmailService):
         if not self._ready():
             return {"success": False, "error": f"Graph not authorized for {self.name}"}
         try:
+            folder_id = await self._resolve_folder(old_name)
             await self._request(
                 "PATCH",
-                f"/me/mailFolders/{_folder_id(old_name)}",
+                f"/me/mailFolders/{folder_id}",
                 json_body={"displayName": new_name},
             )
             return {
@@ -372,7 +521,9 @@ class GraphEmailService(EmailService):
                 "$select": "id,subject,from,receivedDateTime,isRead",
             }
             if folder and folder.strip().lower() not in ("inbox", ""):
-                params["$search"] = f'"{query}" AND folder:{_folder_id(folder)}'
+                low = folder.strip().lower()
+                fname = _WELL_KNOWN[low] if low in _WELL_KNOWN else folder.strip()
+                params["$search"] = f'"{query}" AND folder:"{fname}"'
             _, data = await self._request("GET", "/me/messages", params=params)
             emails = [
                 {

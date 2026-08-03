@@ -43,8 +43,10 @@ DEVICE_CODE_URL = f"{AUTHORITY}/devicecode"
 TOKEN_URL = f"{AUTHORITY}/token"
 VERIFICATION_URI = "https://microsoft.com/devicelogin"
 
-DEFAULT_SCOPE = "https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access"
-GRAPH_SCOPE = "https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Send offline_access"
+DEFAULT_SCOPE = "openid profile email https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access"
+GRAPH_SCOPE = (
+    "openid profile email https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Send offline_access"
+)
 
 SCOPE_FAMILIES = {"exchange": DEFAULT_SCOPE, "graph": GRAPH_SCOPE}
 
@@ -140,7 +142,7 @@ def get_token(account: str, scope: str = DEFAULT_SCOPE) -> OAuthToken | None:
     cid = client_id()
     if not cid:
         return None
-    refreshed = refresh_access_token(cid, token.refresh_token)
+    refreshed = refresh_access_token(cid, token.refresh_token, scopes=token.scope)
     if not refreshed:
         return None
     refreshed.account = token.account
@@ -224,7 +226,7 @@ def poll_device_flow(
     except Exception as exc:
         return {"success": False, "status": "error", "error": f"poll failed: {exc}"}
 
-    account = _account_from_id_token(data.get("id_token", ""))
+    account = _account_from_id_token(data.get("id_token", "")) or _account_from_id_token(data.get("access_token", ""))
     if not account:
         return {"success": False, "status": "error", "error": "Could not determine account from id_token"}
     token = OAuthToken(
