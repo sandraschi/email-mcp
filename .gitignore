@@ -102,3 +102,6 @@ reports/
 cua-reports/
 .mcpb
 data/
+
+src/autorespond_rules.json
+src/autorespond_pending.json

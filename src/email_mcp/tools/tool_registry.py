@@ -1102,6 +1102,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         interval: int = 60,
         webhook_url: str = "",
         services: str = '[{"name":"default","folder":"INBOX"}]',
+        auto_respond: bool = False,
     ) -> dict[str, Any]:
         """Start background IMAP polling for new emails.
 
@@ -1109,11 +1110,15 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         POSTs a JSON payload to the webhook URL. Designed for integration with
         robofang (TTS alerts) or fleet-agent (workflow triggers).
 
+        With auto_respond=True, new emails also run through the auto-respond
+        rule engine (replies, filter actions, notifications).
+
         ## Return Format
         {running, message, services: [name]}
 
         ## Examples
         start_watcher(interval=60, webhook_url="http://localhost:10956/api/alerts")
+        start_watcher(interval=120, auto_respond=True)
         """
         import json as _j
 
@@ -1127,7 +1132,16 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         ]
         from .watcher import start_watcher as _sw
 
-        return _sw(interval, webhook_url, svc_list, server.mcp)
+        ai_router = None
+        if auto_respond:
+            try:
+                from email_mcp.ai import AIRouter
+
+                ai_router = AIRouter(server.mcp)
+            except Exception as exc:
+                logger.warning("ai_router unavailable for watcher: %s", exc)
+
+        return _sw(interval, webhook_url, svc_list, server.mcp, auto_respond=auto_respond, ai_router=ai_router)
 
     @mcp.tool(annotations=_MUTATING)
     async def stop_watcher() -> dict[str, Any]:
@@ -1277,6 +1291,9 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         auto_send: bool = False,
         ai_prompt: str = "",
         service: str = "default",
+        filter_action: str = "",
+        filter_target: str = "",
+        priority: int = 100,
     ) -> dict[str, Any]:
         """Add an auto-respond rule.
 
@@ -1284,16 +1301,35 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         use_ai=true generates a reply via LLM. auto_send sends it immediately
         without human approval. Otherwise the reply goes to the pending queue.
 
+        filter_action runs a workflow on the matched email: mark_read, star,
+        move (filter_target=folder), spam, delete, forward (filter_target=email),
+        or notify (filter_target=aiwatcher|robofang|both).
+        Lower priority values match first (default 100).
+
         ## Return Format
         {success, rule: {id, name, match_pattern, ...}}
 
         ## Examples
         add_auto_rule(name="Invoice reply", match_pattern="invoice", reply_body="Thanks, we'll process this.")
-        add_auto_rule(name="AI reply", match_pattern="urgent", use_ai=True, ai_prompt="Reply politely saying I'm away", auto_send=False)
+        add_auto_rule(name="Github triage", match_pattern="github", filter_action="move", filter_target="Github", priority=10)
+        add_auto_rule(name="Urgent notify", match_pattern="urgent", filter_action="notify", filter_target="both")
         """
         from .autorespond import add_rule as _ar
 
-        return _ar(name, match_field, match_pattern, reply_body, reply_subject, use_ai, auto_send, ai_prompt, service)
+        return _ar(
+            name,
+            match_field,
+            match_pattern,
+            reply_body,
+            reply_subject,
+            use_ai,
+            auto_send,
+            ai_prompt,
+            service,
+            filter_action=filter_action,
+            filter_target=filter_target,
+            priority=priority,
+        )
 
     @mcp.tool(annotations=_READ_ONLY)
     async def list_auto_rules() -> dict[str, Any]:
@@ -1305,6 +1341,48 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         from .autorespond import list_rules as _lr
 
         return {"rules": _lr()}
+
+    @mcp.tool(annotations=_MUTATING)
+    async def update_auto_rule(rule_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+        """Update an auto-respond rule (match field/pattern, actions, priority, enabled).
+
+        Allowed keys: name, match_field, match_pattern, reply_body, reply_subject,
+        use_ai, auto_send, ai_prompt, service, response_mode, spoof_tone,
+        spam_action, filter_action, filter_target, priority, enabled.
+
+        ## Return Format
+        {success, rule: {...}}
+
+        ## Examples
+        update_auto_rule(rule_id="abc123", updates={"enabled": False})
+        update_auto_rule(rule_id="abc123", updates={"filter_action": "move", "filter_target": "Github", "priority": 10})
+        """
+        from .autorespond import update_rule as _ur
+
+        return _ur(rule_id, updates or {})
+
+    @mcp.tool(annotations=_READ_ONLY)
+    async def test_auto_rule(
+        email_from: str = "",
+        email_subject: str = "",
+        email_body: str = "",
+        rule_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Dry-run rule matching against a sample email (nothing executes).
+
+        With rule_id, tests only that rule; otherwise tests all enabled rules
+        in priority order. Returns the winning rule and the actions it would fire.
+
+        ## Return Format
+        {success, matched, rule: {id, name, priority}, would_fire: [str], message}
+
+        ## Examples
+        test_auto_rule(email_subject="invoice overdue")
+        test_auto_rule(email_from="boss@x.com", email_subject="urgent", rule_id="abc123")
+        """
+        from .autorespond import test_rule as _tr
+
+        return _tr(email_from, email_subject, email_body, rule_id)
 
     @mcp.tool(annotations=_MUTATING)
     async def delete_auto_rule(rule_id: str) -> dict[str, Any]:

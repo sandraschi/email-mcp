@@ -318,5 +318,15 @@
     "html": null,
     "service": "default",
     "updated_at": 1785732555
+  },
+  "ec41b861": {
+    "id": "ec41b861",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1785734578
   }
 }

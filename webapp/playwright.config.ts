@@ -16,14 +16,14 @@ export default defineConfig({
 			port: 10813,
 			cwd: "../",
 			timeout: 30000,
-			reuseExistingServer: false,
+			reuseExistingServer: true,
 		},
 		{
 			command: "npm run build && npx vite preview --port 10812 --strictPort",
 			port: 10812,
 			cwd: ".",
 			timeout: 120000,
-			reuseExistingServer: false,
+			reuseExistingServer: true,
 		},
 	],
 });

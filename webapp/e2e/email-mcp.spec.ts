@@ -27,6 +27,27 @@ test.describe("Email-MCP Webapp", () => {
     ).toBeVisible();
   });
 
+  test("Inbox shows folder tree with unread badges", async ({ page }) => {
+    await page.goto("/inbox");
+    await expect(page.getByTestId("folder-tree")).toBeVisible();
+    await expect(page.getByRole("button", { name: "New folder" })).toBeVisible();
+    // folder tree loads async from Graph (recursive childFolders fetch) - allow time
+    await expect(page.getByTestId("folder-node").first()).toBeVisible({
+      timeout: 20000,
+    });
+  });
+
+  test("Rules page loads with Add Rule form", async ({ page }) => {
+    await page.goto("/rules");
+    await expect(
+      page.getByRole("heading", { name: "Rules" }),
+    ).toBeVisible();
+    await page.getByTestId("rules-add").click();
+    await expect(page.getByText("Match Pattern (regex)")).toBeVisible();
+    await expect(page.getByText("Priority (lower = first)")).toBeVisible();
+    await page.getByRole("button", { name: "Add Rule" }).first().click();
+  });
+
   test("Compose page loads with AI Improve and Expander", async ({ page }) => {
     await page.goto("/compose");
     await expect(

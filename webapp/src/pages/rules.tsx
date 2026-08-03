@@ -14,6 +14,7 @@ type Rule = {
 	match_pattern: string;
 	filter_action: string;
 	filter_target: string;
+	priority: number;
 	enabled: boolean;
 	service: string;
 };
@@ -25,7 +26,17 @@ const ACTIONS = [
 	{ value: "spam", label: "Flag as Spam", color: "text-red-400" },
 	{ value: "delete", label: "Delete", color: "text-red-400" },
 	{ value: "forward", label: "Forward to", color: "text-purple-400" },
-	{ value: "notify", label: "Notify (log)", color: "text-emerald-400" },
+	{
+		value: "notify",
+		label: "Notify (aiwatcher/robofang)",
+		color: "text-emerald-400",
+	},
+];
+
+const NOTIFY_TARGETS = [
+	{ value: "both", label: "aiwatcher + robofang" },
+	{ value: "aiwatcher", label: "aiwatcher" },
+	{ value: "robofang", label: "robofang" },
 ];
 
 export function Rules() {
@@ -39,6 +50,7 @@ export function Rules() {
 		match_pattern: "",
 		filter_action: "mark_read",
 		filter_target: "",
+		priority: 100,
 		service: "default",
 	});
 	const [saving, setSaving] = useState(false);
@@ -161,7 +173,24 @@ export function Rules() {
 									<option value="subject">Subject</option>
 									<option value="from">From (sender)</option>
 									<option value="text_body">Body</option>
+									<option value="all">All fields</option>
 								</select>
+							</div>
+							<div>
+								<Label className="text-slate-300">
+									Priority (lower = first)
+								</Label>
+								<Input
+									type="number"
+									className="bg-slate-900 border-slate-700 text-white mt-1"
+									value={newRule.priority}
+									onChange={(e) =>
+										setNewRule({
+											...newRule,
+											priority: Number(e.target.value) || 100,
+										})
+									}
+								/>
 							</div>
 							<div>
 								<Label className="text-slate-300">Match Pattern (regex)</Label>
@@ -214,6 +243,24 @@ export function Rules() {
 											setNewRule({ ...newRule, filter_target: e.target.value })
 										}
 									/>
+								</div>
+							)}
+							{newRule.filter_action === "notify" && (
+								<div className="md:col-span-2">
+									<Label className="text-slate-300">Notify Target</Label>
+									<select
+										className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-3 py-2 w-full mt-1"
+										value={newRule.filter_target || "both"}
+										onChange={(e) =>
+											setNewRule({ ...newRule, filter_target: e.target.value })
+										}
+									>
+										{NOTIFY_TARGETS.map((t) => (
+											<option key={t.value} value={t.value}>
+												{t.label}
+											</option>
+										))}
+									</select>
 								</div>
 							)}
 						</div>
@@ -285,6 +332,11 @@ export function Rules() {
 											{rule.match_pattern}
 										</span>
 										<span className="text-slate-600">/</span>
+										{rule.priority != null && rule.priority !== 100 && (
+											<span className="text-slate-500 ml-2">
+												prio {rule.priority}
+											</span>
+										)}
 									</p>
 								</div>
 								<label className="relative inline-flex items-center cursor-pointer">

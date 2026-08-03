@@ -74,6 +74,7 @@ export function Lab() {
 	const [watcherRunning, setWatcherRunning] = useState(false);
 	const [watcherInterval, setWatcherInterval] = useState(60);
 	const [webhookUrl, setWebhookUrl] = useState("");
+	const [watcherAutoRespond, setWatcherAutoRespond] = useState(false);
 
 	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -192,6 +193,7 @@ export function Lab() {
 				body: JSON.stringify({
 					interval: watcherInterval,
 					webhook_url: webhookUrl.trim(),
+					auto_respond: watcherAutoRespond,
 				}),
 			});
 			setWatcherRunning(data.running);
@@ -462,12 +464,21 @@ export function Lab() {
 							value={watcherInterval}
 							onChange={(e) => setWatcherInterval(Number(e.target.value) || 60)}
 						/>
+						<label className="flex items-center gap-1 text-xs text-slate-400 cursor-pointer">
+							<input
+								type="checkbox"
+								checked={watcherAutoRespond}
+								onChange={(e) => setWatcherAutoRespond(e.target.checked)}
+								className="accent-emerald-500"
+							/>
+							Auto-respond
+						</label>
 						{!watcherRunning ? (
 							<Button
 								size="sm"
 								className="bg-cyan-600 hover:bg-cyan-700 h-7 text-xs"
 								onClick={handleWatcherStart}
-								disabled={!webhookUrl.trim()}
+								disabled={!webhookUrl.trim() && !watcherAutoRespond}
 							>
 								<Bell className="h-3 w-3 mr-1" /> Start Watch
 							</Button>

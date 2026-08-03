@@ -77,6 +77,9 @@ def add_rule(
     response_mode: str = "normal",
     spoof_tone: str = "mock-stupid",
     spam_action: str = "ignore",
+    priority: int = 100,
+    filter_action: str = "",
+    filter_target: str = "",
 ) -> dict[str, Any]:
     _load_rules()
     rule = {
@@ -93,8 +96,9 @@ def add_rule(
         "response_mode": response_mode,
         "spoof_tone": spoof_tone,
         "spam_action": spam_action,
-        "filter_action": "",
-        "filter_target": "",
+        "filter_action": filter_action,
+        "filter_target": filter_target,
+        "priority": int(priority),
         "enabled": True,
         "created_at": int(time.time()),
     }
@@ -122,6 +126,7 @@ def update_rule(rule_id: str, updates: dict[str, Any]) -> dict[str, Any]:
                 "spam_action",
                 "filter_action",
                 "filter_target",
+                "priority",
                 "enabled",
             )
             for key in keys:
@@ -205,22 +210,78 @@ def generate_spoof_reply(email: dict[str, Any], tone: str = "mock-stupid") -> st
 # ── Rule matching ──────────────────────────────────────────────────────────
 
 
+def _match_text(rule: dict[str, Any], email: dict[str, Any]) -> str:
+    """Combine the email fields the rule's match_field targets."""
+    field = rule.get("match_field", "subject")
+    if field == "all":
+        parts = [
+            email.get("subject", ""),
+            email.get("from", ""),
+            email.get("text_body", email.get("body", "")),
+        ]
+        return " ".join(str(p) for p in parts if p)
+    return str(email.get(field, ""))
+
+
 def match_rule(email: dict[str, Any]) -> dict[str, Any] | None:
-    """Find the first enabled rule matching this email."""
+    """Find the best enabled rule for this email.
+
+    Rules are evaluated in priority order (lower value = higher priority,
+    tie broken by insertion order). Only the first match fires.
+    """
     _load_rules()
-    for rule in _RULES:
+    ordered = sorted(enumerate(_RULES), key=lambda item: (int(item[1].get("priority", 100)), item[0]))
+    for _idx, rule in ordered:
         if not rule.get("enabled", True):
             continue
-        field = email.get(rule.get("match_field", "subject"), "")
         pattern = rule.get("match_pattern", "")
         if not pattern:
             continue
         try:
-            if re.search(pattern, str(field), re.IGNORECASE):
+            if re.search(pattern, _match_text(rule, email), re.IGNORECASE):
                 return rule
         except re.error:
             continue
     return None
+
+
+def test_rule(
+    email_from: str = "",
+    email_subject: str = "",
+    email_body: str = "",
+    rule_id: str | None = None,
+) -> dict[str, Any]:
+    """Dry-run rule matching against a sample email (no actions executed).
+
+    Returns the matched rule and the actions that would fire.
+    """
+    sample = {"from": email_from, "subject": email_subject, "text_body": email_body}
+    matched: dict[str, Any] | None = None
+    if rule_id:
+        _load_rules()
+        rule = next((r for r in _RULES if r["id"] == rule_id), None)
+        if rule is None:
+            return {"success": False, "error": f"Rule {rule_id!r} not found"}
+        if rule.get("enabled", True) and rule.get("match_pattern"):
+            try:
+                if re.search(rule["match_pattern"], _match_text(rule, sample), re.IGNORECASE):
+                    matched = rule
+            except re.error:
+                matched = None
+    else:
+        matched = match_rule(sample)
+    if not matched:
+        return {"success": True, "matched": False, "message": "No rule matched"}
+    actions = ["reply" if (matched.get("reply_body") or matched.get("use_ai")) else None]
+    if matched.get("filter_action"):
+        actions.append(matched["filter_action"])
+    return {
+        "success": True,
+        "matched": True,
+        "rule": {"id": matched["id"], "name": matched["name"], "priority": matched.get("priority", 100)},
+        "would_fire": [a for a in actions if a],
+        "message": f"Rule '{matched['name']}' would fire: {', '.join(a for a in actions if a) or 'no action'}",
+    }
 
 
 # ── Pending queue (for human approval) ─────────────────────────────────────
@@ -306,7 +367,26 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
 
     # Filter actions -- run on matched emails regardless of reply mode
     filter_action = rule.get("filter_action", "")
-    if filter_action and mcp_app:
+    if filter_action == "notify":
+        target = (rule.get("filter_target", "") or "both").strip().lower()
+        title = email.get("subject", "(no subject)")
+        summary = f"From: {email.get('from', '')}\n{(email.get('text_body') or email.get('body', ''))[:500]}"
+        notified = []
+        try:
+            from email_mcp.connectors import push_aiwatcher, push_robofang
+
+            if target in ("aiwatcher", "both"):
+                res = await push_aiwatcher(title, summary, source="email-mcp-rules", urgency_hint=7.0)
+                if res.get("success"):
+                    notified.append("aiwatcher")
+            if target in ("robofang", "both"):
+                res = await push_robofang(email.get("from", "rule@email-mcp"), summary, subject=title)
+                if res.get("success"):
+                    notified.append("robofang")
+        except Exception as e:
+            logger.warning("Filter notify failed: %s", e)
+        logger.info("Filter: notified %s about %s", notified or "nobody", title)
+    elif filter_action and mcp_app:
         email_id = email.get("id", "")
         folder = email.get("folder", "INBOX")
         svc = rule.get("service", "default")
@@ -339,12 +419,6 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
                     logger.info("Filter: flagged %s as spam", email_id)
                 except Exception as e:
                     logger.warning("Filter spam flag failed: %s", e)
-            elif filter_action == "notify":
-                logger.info(
-                    "Filter: NOTIFY -- matched email subject=%s from=%s",
-                    email.get("subject", ""),
-                    email.get("from", ""),
-                )
             elif filter_action == "forward":
                 target = rule.get("filter_target", "")
                 if target and email_id:

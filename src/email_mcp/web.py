@@ -1767,7 +1767,16 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         interval_s = max(30, min(payload.get("interval", 60), 3600))
         webhook_url = payload.get("webhook_url", "").strip()
         services = payload.get("services", [{"name": "default", "folder": "INBOX"}])
-        return start_watcher(interval_s, webhook_url, services, mcp_app)
+        auto_respond = bool(payload.get("auto_respond", False))
+        ai_router = None
+        if auto_respond:
+            try:
+                from email_mcp.ai import AIRouter
+
+                ai_router = AIRouter(mcp_app)
+            except Exception:
+                ai_router = None
+        return start_watcher(interval_s, webhook_url, services, mcp_app, auto_respond=auto_respond, ai_router=ai_router)
 
     @app.post("/api/watcher/stop")
     async def watcher_stop(_user: str = Depends(authenticate)):
@@ -1820,6 +1829,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             auto_send=payload.get("auto_send", False),
             ai_prompt=payload.get("ai_prompt", ""),
             service=payload.get("service", "default"),
+            filter_action=payload.get("filter_action", ""),
+            filter_target=payload.get("filter_target", ""),
+            priority=payload.get("priority", 100),
         )
 
     @app.put("/api/auto-rules/{rule_id}")
