@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env pwsh
+#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
     Build the PyInstaller sidecar binary for the Tauri native wrapper.
@@ -14,13 +14,12 @@ Write-Host "=== email-mcp sidecar build ===" -ForegroundColor Cyan
 
 Push-Location $Root
 try {
-    # Ensure PyInstaller is available
-    $pi = uv run pyinstaller --version 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "-> Installing PyInstaller..." -ForegroundColor Yellow
-        uv pip install pyinstaller --break-system-packages
-    } else {
-        Write-Host "-> PyInstaller: $pi" -ForegroundColor Gray
+    # Ensure PyInstaller is available in the PROJECT venv (uv tool env lacks
+    # fastmcp metadata and fails with PackageNotFoundError)
+    $pyiExe = "$Root\.venv\Scripts\pyinstaller.exe"
+    if (-not (Test-Path $pyiExe)) {
+        Write-Host "-> Installing PyInstaller in project venv..." -ForegroundColor Yellow
+        uv add --dev pyinstaller
     }
 
     # Clean previous build artefacts
@@ -28,7 +27,7 @@ try {
     Remove-Item -Force "$Root\dist\email-mcp-backend.exe" -ErrorAction SilentlyContinue
 
     Write-Host "-> Running PyInstaller..." -ForegroundColor Yellow
-    uv run pyinstaller email-mcp-backend.spec --clean --noconfirm
+    & $pyiExe email-mcp-backend.spec --clean --noconfirm
     if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed (exit $LASTEXITCODE)" }
 
     # Tauri expects the binary named with the target triple

@@ -34,8 +34,7 @@
     ],
     "resources": [
       "resources/email-mcp-backend.exe",
-            "resources/.env",
-      "../scripts/install-mcp-clients.ps1"
+      "resources/.env.example"
     ],
     "targets": [
       "nsis"

@@ -59,6 +59,11 @@ ignore = ["S101", "B008", "S101", "B008", "S112", "S110", "S603", "S607", "S106"
 quote-style = "double"
 indent-style = "space"
 
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.21.0",
+]
+
 [tool.ruff.lint.per-file-ignores]
 "examples/*.py" = ["F821"]
 "scripts/*.py" = ["S310"]
