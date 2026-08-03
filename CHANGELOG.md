@@ -1,4 +1,25 @@
 
+## [0.5.0-beta.2] - 2026-08-03 "Auto-Respond + Certified Installer"
+
+### Added
+- **Auto-respond firing pipeline**: mail watcher runs the rule engine on fresh
+  mail (replies / filter actions / notifications) - `start_watcher(auto_respond=True)`,
+  Lab page toggle, REST + MCP wired
+- **Rule engine upgrades**: priority ordering (lower = first), `all` match field
+  (subject+from+body), real `notify` action (aiwatcher/robofang connectors),
+  `update_auto_rule` + `test_auto_rule` MCP tools
+- **Installed-app persistence**: Tauri mode now stores OAuth tokens + rules in
+  `%LOCALAPPDATA%\ai.fleet.email-mcp\` (first run seeds `.env` from the bundled
+  example) - tokens no longer lost to the temp dir
+- **NSIS installer certified**: CUA smoke test 8/8 (install -> launch -> window ->
+  screenshot -> 15-page nav walk -> diagnostics -> uninstall). Build pipeline
+  fixes documented in BUILD_LOG.md (venv PyInstaller, dual-transport
+  run_server.py, .env.example bundling, public /api/v1/health)
+- **Fixes**: filter_action/filter_target/priority were dropped by REST + tool
+  (UI action picker never persisted) - now round-trip; notify stub replaced
+  with real connector pushes
+- 206 tests passing, 44 MCP tools
+
 ## [0.5.0-beta.1] - 2026-08-03 "Graph API + Fleet Connectors" (beta)
 
 ### Highlights

@@ -125,14 +125,14 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
     @app.get("/api/status")
     async def get_status(user: str = Depends(authenticate)):
-        return {"status": "connected", "user": user, "mcp": mcp_app.name, "version": "0.5.0-beta.1"}
+        return {"status": "connected", "user": user, "mcp": mcp_app.name, "version": "0.5.0-beta.2"}
 
     @app.get("/api/v1/health")
     async def health_v1():
         return {
             "status": "ok",
             "server": mcp_app.name,
-            "version": "0.5.0-beta.1",
+            "version": "0.5.0-beta.2",
             "uptime_seconds": 0,
             "tool_count": len(await mcp_app.list_tools()),
         }

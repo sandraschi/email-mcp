@@ -5,6 +5,21 @@ from __future__ import annotations
 from email_mcp import autorespond
 
 
+def test_runtime_dir_tauri_mode(monkeypatch, tmp_path):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setenv("EMAIL_MCP_TAURI", "1")
+    assert autorespond._runtime_dir() == tmp_path / "ai.fleet.email-mcp"
+
+
+def test_runtime_dir_dev_default(monkeypatch):
+    monkeypatch.delenv("EMAIL_MCP_TAURI", raising=False)
+    assert autorespond._runtime_dir() is None
+    # dev defaults live under repo src/
+    d = autorespond._default_data_dir
+    assert str(d).endswith("src")
+    assert "ai.fleet.email-mcp" not in str(d)
+
+
 def _fresh(monkeypatch, tmp_path):
     from pathlib import Path
 

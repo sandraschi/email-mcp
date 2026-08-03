@@ -11,15 +11,23 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+
+def _runtime_dir() -> Path | None:
+    """Persistent data dir: LOCALAPPDATA in the Tauri wrapper, else repo src/."""
+    base = os.getenv("LOCALAPPDATA", "")
+    if base and os.getenv("EMAIL_MCP_TAURI", "").lower() in ("1", "true", "yes"):
+        return Path(base) / "ai.fleet.email-mcp"
+    return None
+
+
+_default_data_dir = _runtime_dir() or Path(__file__).resolve().parent.parent
+
+
 _RULES: list[dict[str, Any]] = []
-_RULES_FILE = Path(
-    os.getenv("EMAIL_MCP_AUTORESPOND_RULES", Path(__file__).resolve().parent.parent / "autorespond_rules.json")
-)
+_RULES_FILE = Path(os.getenv("EMAIL_MCP_AUTORESPOND_RULES", str(_default_data_dir / "autorespond_rules.json")))
 
 _PENDING: list[dict[str, Any]] = []
-_PENDING_FILE = Path(
-    os.getenv("EMAIL_MCP_AUTORESPOND_PENDING", Path(__file__).resolve().parent.parent / "autorespond_pending.json")
-)
+_PENDING_FILE = Path(os.getenv("EMAIL_MCP_AUTORESPOND_PENDING", str(_default_data_dir / "autorespond_pending.json")))
 
 
 def _load_rules() -> None:

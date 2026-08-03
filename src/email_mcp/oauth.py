@@ -72,9 +72,22 @@ def scope() -> str:
     return os.getenv("EMAIL_MCP_OAUTH_SCOPE", DEFAULT_SCOPE).strip()
 
 
+def _tauri_appdata_dir() -> Path | None:
+    r"""%LOCALAPPDATA%\{identifier} when running inside the Tauri wrapper."""
+    base = os.getenv("LOCALAPPDATA", "")
+    if base and os.getenv("EMAIL_MCP_TAURI", "").lower() in ("1", "true", "yes"):
+        return Path(base) / "ai.fleet.email-mcp"
+    return None
+
+
 def token_file() -> Path:
     path = os.getenv("EMAIL_MCP_OAUTH_TOKEN_FILE", "").strip()
-    return Path(path) if path else Path(__file__).resolve().parent.parent.parent / "data" / "oauth_tokens.json"
+    if path:
+        return Path(path)
+    appdata = _tauri_appdata_dir()
+    if appdata is not None:
+        return appdata / "oauth_tokens.json"
+    return Path(__file__).resolve().parent.parent.parent / "data" / "oauth_tokens.json"
 
 
 @dataclass

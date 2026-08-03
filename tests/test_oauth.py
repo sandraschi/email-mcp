@@ -111,6 +111,21 @@ def test_get_token_refreshes_with_tokens_own_scope(tmp_path, monkeypatch):
     assert oauth.has_token("a@example.com", oauth.GRAPH_SCOPE)
 
 
+def test_token_file_tauri_mode(monkeypatch, tmp_path):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setenv("EMAIL_MCP_TAURI", "1")
+    monkeypatch.delenv("EMAIL_MCP_OAUTH_TOKEN_FILE", raising=False)
+    assert oauth.token_file() == tmp_path / "ai.fleet.email-mcp" / "oauth_tokens.json"
+
+
+def test_token_file_dev_default(monkeypatch):
+    monkeypatch.delenv("EMAIL_MCP_TAURI", raising=False)
+    monkeypatch.delenv("EMAIL_MCP_OAUTH_TOKEN_FILE", raising=False)
+    p = oauth.token_file()
+    assert p.name == "oauth_tokens.json"
+    assert "data" in p.parts
+
+
 def test_start_device_flow_requires_client_id(monkeypatch):
     monkeypatch.delenv("EMAIL_MCP_OAUTH_CLIENT_ID", raising=False)
     result = oauth.start_device_flow(cid=None)

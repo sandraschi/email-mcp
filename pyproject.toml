@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "email-mcp"
-version = "0.5.0-beta.1"
+version = "0.5.0-beta.2"
 description = "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations (FastMCP 3.2, Prefab UI)"
 readme = "README.md"
 requires-python = ">=3.12"
