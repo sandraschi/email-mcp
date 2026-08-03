@@ -1,6 +1,6 @@
 # Tools
 
-Email MCP registers 39 MCP tools. Every tool returns a dict with `success` and a
+Email MCP registers 42 MCP tools. Every tool returns a dict with `success` and a
 natural-language `message`; failures include `error` with recovery guidance.
 Email content in results is safety-wrapped against prompt injection.
 
@@ -8,7 +8,8 @@ Email content in results is safety-wrapped against prompt injection.
 
 | Tool | Description |
 |------|-------------|
-| `send_email(to, subject, body, service, html, cc, bcc, attachments)` | Send via any configured service (SMTP/API/local/webhook). `to` accepts string, comma-separated, or list. |
+| `send_email(to, subject, body, service, html, cc, bcc, attachments)` | Send via any configured service (SMTP/API/local/webhook/Graph). `to` accepts string, comma-separated, or list. |
+| `forward_email(email_id, to, comment, service, folder)` | Forward an existing email; optional comment, original preserved. |
 
 ## Receiving
 
@@ -17,7 +18,8 @@ Email content in results is safety-wrapped against prompt injection.
 | `check_inbox(service, folder, limit, unread_only, from_contains, subject_contains)` | List emails with server-side filters. |
 | `fetch_email_detail(email_id, service, folder)` | Full message: text + HTML body, headers. |
 | `search_emails(query, service, folder, limit)` | IMAP SEARCH across subject/from/body. |
-| `move_email(email_id, to_folder, service, folder)` | Move between IMAP folders. |
+| `move_email(email_id, to_folder, service, folder)` | Move between folders (COPY + DELETE). |
+| `copy_email(email_id, to_folder, service, folder)` | Copy to another folder, original stays. |
 | `flag_spam(email_id, service, folder)` | Junk flag + move to Spam. |
 | `delete_email(email_id, service, folder)` | Delete (Trash move where supported). |
 | `mark_email_read(email_id, service, folder)` / `mark_email_unread(...)` | Toggle SEEN flag. |
@@ -26,10 +28,16 @@ Email content in results is safety-wrapped against prompt injection.
 
 | Tool | Description |
 |------|-------------|
-| `list_folders(service)` | List mailboxes. |
+| `list_folders(service)` | List mailboxes (tree with unread counts on Graph). |
 | `create_folder(name, service)` | Create folder. |
 | `delete_folder(name, service)` | Delete folder. |
 | `rename_folder(old_name, new_name, service)` | Rename folder. |
+
+## Fleet Connectors
+
+| Tool | Description |
+|------|-------------|
+| `email_connector(operation, ...)` | `aiwatcher` (fleet ingest), `robofang` (email hook), `status` (probe both). See [connectors.md](connectors.md). |
 
 ## Services
 

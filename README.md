@@ -4,14 +4,14 @@
   <a href="https://github.com/casey/just"><img src="https://img.shields.io/badge/just-ready_to_go-7c5cfc?style=flat-square&logo=just&logoColor=white" alt="Just"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.13+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"></a>
-  <a href="tests/"><img src="https://img.shields.io/badge/tests-148%20passing-brightgreen?style=flat-square" alt="Tests"></a>
+  <a href="tests/"><img src="https://img.shields.io/badge/tests-188%20passing-brightgreen?style=flat-square" alt="Tests"></a>
   <a href="https://biomejs.dev"><img src="https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat-square&logo=biome&logoColor=white" alt="Biome"></a>
   <a href="https://github.com/PrefectHQ/fastmcp"><img src="https://img.shields.io/badge/FastMCP-3.4-7c5cfc?style=flat-square" alt="FastMCP"></a>
 </p>
 
 A full-featured email server for MCP clients. Send and receive mail through SMTP/IMAP, transactional APIs (SendGrid, Mailgun, Resend), local test servers (MailHog), and webhooks (Slack, Discord). Includes a web dashboard with AI-assisted compose, a throwaway SMTP lab, folder management, contact import, background mail watching, and creative AI workflows (love letters, complaints, ASCII art, SVG cards).
 
-**v0.4.1** -- 148 tests passing, 39 MCP tools, FastMCP 3.4+, dual transport (stdio + HTTP).
+**v0.4.1** -- 188 tests passing, 42 MCP tools, FastMCP 3.4+, dual transport (stdio + HTTP).
 
 ---
 
@@ -31,7 +31,8 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 
 | Type | Providers | Guide |
 |------|-----------|-------|
-| **SMTP/IMAP** | Gmail, Outlook, Yahoo, iCloud, ProtonMail | [docs/gmail.md](docs/gmail.md), [docs/outlook.md](docs/outlook.md), [docs/protonmail.md](docs/protonmail.md) |
+| **Microsoft Graph** | Personal Outlook/Hotmail (basic SMTP/IMAP auth disabled) | [docs/outlook.md](docs/outlook.md) |
+| **SMTP/IMAP** | Gmail, Outlook/M365, Yahoo, iCloud, ProtonMail | [docs/gmail.md](docs/gmail.md), [docs/outlook.md](docs/outlook.md), [docs/protonmail.md](docs/protonmail.md) |
 | **Transactional APIs** | SendGrid, Mailgun, Resend, Amazon SES | [docs/api-services.md](docs/api-services.md) |
 | **Local Testing** | MailHog, Mailpit, MailCatcher, Inbucket | [docs/local-testing.md](docs/local-testing.md) |
 | **Webhooks** | Slack, Discord, Telegram | [docs/webhook-integrations.md](docs/webhook-integrations.md) |
@@ -49,7 +50,8 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 | [docs/mail-watcher.md](docs/mail-watcher.md) | Background IMAP polling + webhook notifications |
 | [docs/robofang-integration.md](docs/robofang-integration.md) | Integrate with robofang for TTS/light alerts |
 | [docs/gmail.md](docs/gmail.md) | Gmail app password setup |
-| [docs/outlook.md](docs/outlook.md) | Outlook/Hotmail SMTP/IMAP |
+| [docs/outlook.md](docs/outlook.md) | Outlook/Hotmail — Graph API (OAuth) + SMTP/IMAP |
+| [docs/connectors.md](docs/connectors.md) | aiwatcher + robofang fleet event connectors |
 | [docs/protonmail.md](docs/protonmail.md) | ProtonMail Bridge & direct access |
 | [docs/api-services.md](docs/api-services.md) | SendGrid, Mailgun, Resend, SES |
 | [docs/local-testing.md](docs/local-testing.md) | MailHog, Mailpit for dev |
@@ -57,8 +59,10 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 
 ## Features
 
-- **39 MCP tools**: send, receive, search, delete, mark-read, manage email services, contacts, auto-respond, workflows, mail lab
+- **42 MCP tools**: send, receive, search, delete, move, copy, forward, mark-read, folder CRUD, manage email services, contacts, auto-respond, workflows, mail lab, fleet connectors
 - **Web dashboard**: full React SPA at `localhost:10812`
+- **Microsoft Graph support**: send/receive for personal Outlook/Hotmail via Graph REST API (OAuth device flow, public client ID — no Azure registration)
+- **Folder treeview**: expandable sidebar with unread badges + inline folder CRUD
 - **AI assistant**: natural language email commands (Ollama, OpenAI, Anthropic, Google)
 - **AI Improve**: rewrite email body with style/length/mood controls
 - **AI Assist**: describe a service in plain language, LLM fills the config form
@@ -102,7 +106,11 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 | `fetch_email_detail` | Get full email with body |
 | `search_emails` | IMAP full-text search |
 | `delete_email` | Remove email (IMAP) |
+| `move_email` | Move between folders (COPY + DELETE) |
+| `copy_email` | Copy to another folder, original stays |
+| `forward_email` | Forward with optional comment |
 | `mark_email_read` / `mark_email_unread` | Toggle read status |
+| `email_connector` | Fleet events: aiwatcher ingest / robofang hook / status |
 | `email_status` | Test connectivity |
 | `list_services` | List configured services |
 | `configure_service` / `remove_service` | Manage services |

@@ -4,47 +4,49 @@
 > SMTP/IMAP basic authentication for personal accounts (Sept 2024+). App passwords
 > ARE basic auth, so they no longer work for **password** login — expect `5.7.139
 > Authentication unsuccessful, basic authentication is disabled` on SMTP and
-> `AUTHENTICATE failed` on IMAP. The supported path is **OAuth2 (XOAUTH2)** below,
-> which Email MCP supports since 0.5.0 via the device-code flow.
+> `AUTHENTICATE failed` on IMAP. The supported path is the **Microsoft Graph API**
+> below (or XOAUTH2 for SMTP/IMAP).
 
-## OAuth2 setup (required for personal accounts)
+## Graph API (recommended — simplest)
 
-1. **Register an app** at https://portal.azure.com (sign in with any Microsoft
-   account):
-   - Microsoft Entra ID → **App registrations** → **New registration**
-   - Name: `email-mcp`; Supported account types: **Personal Microsoft accounts
-     only**; no redirect URI needed (device-code flow).
-   - Copy the **Application (client) ID**.
-2. **Enable public client flows**: App registration → **Authentication** →
-   **Advanced settings** → *Allow public client flows* → **Yes**.
-3. **Add permissions**: App registration → **API permissions** → **Add
-   permission** → *APIs my organization uses* → search **Office 365 Exchange
-   Online** → **Delegated** → tick `IMAP.AccessAsUser.All` and `SMTP.Send`.
-4. Set in `.env`:
-   ```bash
-   EMAIL_MCP_OAUTH_CLIENT_ID=<Application (client) ID>
-   ```
-5. **Connect**: open the webapp **Settings → Outlook OAuth** and click
-   *Connect Outlook*. You get a code — open https://microsoft.com/devicelogin,
-   enter it, approve the scopes. Tokens are stored locally
-   (`data/oauth_tokens.json`, gitignored) and refresh automatically.
+email-mcp can send, receive, search, and manage folders for personal
+Outlook/Hotmail accounts through the Microsoft Graph REST API. No Azure app
+registration is needed — the server uses Microsoft's public Graph command-line
+client ID by default.
 
-After connecting, `check_inbox` and `send_email` use XOAUTH2 for the default
-service automatically; the username is your full email address
-(`you@hotmail.com`), the IMAP/SMTP servers are:
+1. **Connect once** (device-code flow): open the webapp
+   **Settings → Outlook OAuth**, pick **Graph (Mail API)**, click *Connect
+   Outlook*, enter the displayed code at https://microsoft.com/devicelogin and
+   approve. Tokens are stored in `data/oauth_tokens.json` (gitignored) and
+   refresh automatically.
+2. **Send**: `send_email(...)` with `service="graph"` — or nothing at all:
+   when an OAuth token exists for an Outlook-family account, `service="default"`
+   is backed by Graph automatically.
+3. **Receive**: `check_inbox`, `fetch_email_detail`, `search_emails`,
+   `list_folders`, `move_email`, `copy_email`, `forward_email`, `delete_email`
+   all work through the same service.
+
+Environment (already set in `.env`):
 
 ```bash
-export SMTP_SERVER="smtp-mail.outlook.com"
-export SMTP_PORT="587"
-export SMTP_USER="your-email@outlook.com"
-export IMAP_SERVER="outlook.office365.com"
-export IMAP_PORT="993"
-export IMAP_USER="your-email@outlook.com"
+SMTP_USER="your-email@hotmail.com"
+EMAIL_MCP_OAUTH_CLIENT_ID=14d82eec-204b-4c2f-b7e8-296a70dab67e
 ```
 
-(`SMTP_PASSWORD` / `IMAP_PASSWORD` can stay empty when OAuth is connected —
-the token replaces them. The old app-password flow below still applies to
-Microsoft 365 business mailboxes with SMTP AUTH enabled.)
+`EMAIL_MCP_OAUTH_CLIENT_ID` can be replaced with your own Azure app registration
+if you prefer (Personal Microsoft accounts only, public client flows enabled,
+`Mail.Read` + `Mail.Send` delegated permissions).
+
+Custom folders (e.g. `Github`, `Family/Dog`) are matched by display name and
+resolved to their Graph folder id automatically; the webapp Inbox shows a
+folder tree with unread counts.
+
+## OAuth2 / XOAUTH2 over SMTP-IMAP (alternative)
+
+The device-code flow also supports the Exchange scopes (`IMAP.AccessAsUser.All`
++ `SMTP.Send`) — use the **Exchange (IMAP/SMTP)** scope in Settings instead.
+When a token exists, `SMTPEmailService` authenticates with XOAUTH2 and
+`SMTP_PASSWORD`/`IMAP_PASSWORD` can stay empty.
 
 ## Step 1: Enable two-step verification (required for app passwords)
 

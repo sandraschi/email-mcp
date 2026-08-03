@@ -2,7 +2,9 @@
 
 ## Repo: email-mcp
 
-Full-featured email server for MCP clients. Web dashboard at 10812, backend at 10813. 86 tests, 0 ruff warnings. 32+ MCP tools.
+Full-featured email server for MCP clients. Web dashboard at 10812, backend at 10813.
+188 tests, 42 MCP tools. Microsoft Graph support for personal Outlook/Hotmail
+(basic SMTP auth is disabled on those accounts — 535 5.7.139).
 
 ---
 
@@ -23,10 +25,13 @@ Full-featured email server for MCP clients. Web dashboard at 10812, backend at 1
 
 ---
 
-## Current State (2026-05-23)
+## Current State (2026-08-03)
 
 ### Features
-- **32+ MCP tools**: send, receive, search, delete, mark-read/unread, folders CRUD, list/configure/remove services, mailing lists, email_help, suggest_subject, agentic_assist, watcher, contacts, workflows, auto-respond
+- **42+ MCP tools**: send, receive, search, delete, move, copy, forward, mark-read/unread, folders CRUD, list/configure/remove services, mailing lists, email_help, suggest_subject, agentic_assist, watcher, contacts, workflows, auto-respond, email_connector
+- **Microsoft Graph**: personal Outlook/Hotmail via Graph REST (send/receive/search/folders); OAuth device flow with public client ID (no Azure registration); `service="default"` auto-backs onto Graph when a token exists for an Outlook account
+- **Folder treeview**: Inbox sidebar tree (expandable, unread badges, icons) + inline folder CRUD (new/rename/delete); custom folder names resolve to Graph folder ids
+- **Fleet connectors**: `email_connector` tool + REST — aiwatcher fleet ingest and robofang email hook (opt-in env, fail-soft)
 - **Auto-Respond**: rule engine + AI drafting + pending queue + spam spoof mode (irate/mock-stupid/absurd/polite-but-confused)
 - **Bulk Send**: paste email lists, max 50, anti-spam warnings
 - **Mail Watcher**: background IMAP polling with webhook POST

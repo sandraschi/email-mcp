@@ -1,6 +1,35 @@
 
 ## [Unreleased] -- 2026-06-14
 
+### Added (2026-08-03 - Graph send/receive + connectors)
+- **Microsoft Graph service**: personal Outlook/Hotmail accounts have SMTP/IMAP basic
+  auth disabled (535 5.7.139) — the `graph` service (and `service="default"` when an
+  OAuth token exists for an Outlook-family account) now sends/receives via the Graph
+  REST API (`POST /me/sendMail`). OAuth uses Microsoft's public Graph CLI client ID —
+  no Azure app registration needed (`EMAIL_MCP_OAUTH_CLIENT_ID`).
+- **OAuth device flow fixes** (oauth.py): scopes now include `openid profile email`
+  (Microsoft returns no `id_token` otherwise and valid tokens were discarded); account
+  extraction falls back to the access_token JWT.
+- **Graph send fix** (graph_service.py): `/me/sendMail` returns 202 with an empty body —
+  `_request()` crashed on `resp.json()` (`Expecting value: line 1 column 1`); empty 2xx
+  bodies now handled.
+- **`.env` loading**: server.py now loads the repo `.env` (nothing did before — config
+  never reached the server when launched via start.ps1/uvicorn).
+- **Folder name resolution** (graph_service.py): custom folders (e.g. `Github`,
+  `Family/Dog`) resolve displayName -> Graph folder id (folder names 400 in Graph URLs);
+  `list_folders` returns a full tree with unread/total counts (recursive childFolders).
+- **Webapp folder treeview**: Inbox page now has a sidebar folder tree (expandable,
+  unread badges, per-folder icons) replacing the flat dropdown, plus folder CRUD
+  (new/rename/delete) directly in the tree.
+- **Email ops**: `copy_email` and `forward_email` tools + REST (`POST /api/inbox/{id}/copy`,
+  `/api/inbox/{id}/forward`); Graph + IMAP implementations; email-detail page gained
+  working Move/Copy (folder picker) and Forward (to + comment) actions.
+- **Fleet connectors**: `email_connector` MCP tool + REST (`GET /api/connectors/status`,
+  `POST /api/connectors/aiwatcher`, `POST /api/connectors/robofang`) push events to
+  aiwatcher's `/api/fleet/ingest` and robofang's `/api/hooks/email` (opt-in via
+  `EMAIL_MCP_AIWATCHER_URL` / `EMAIL_MCP_ROBOFANG_URL`, fail-soft).
+- **Tests**: 188 passing (9 connector tests, 4 Graph copy/forward tests).
+
 ### Fixed (2026-07-31 - assfix)
 - Packaging: rebuilt `mcpb/src` staging as `mcpb/src/email_mcp/` (was flattened bare modules — bundle could not import itself); purged `.pyc` dross
 - Packaging: MCPB prompts brought to 3-4-100 bar (system.md 3000 words, user.md 4000 words, examples.json 104 entries)

@@ -1,28 +1,42 @@
 # email-mcp — Full Documentation
-> Version 0.4.1 — FastMCP 3.4+ — 148 tests — 39 MCP tools
+> Version 0.4.1 — FastMCP 3.4+ — 188 tests — 42 MCP tools
 
 ## Quick Start
 ```powershell
 .\start.ps1
 ```
 Requires Python 3.12+, uv. Opens web dashboard at http://localhost:10812.
+`.env` is loaded automatically at server startup (repo root).
 
 ## Supported Email Systems
-- **SMTP/IMAP**: Gmail, Outlook, Yahoo, iCloud, ProtonMail, Zoho, GMX, Fastmail
+- **Microsoft Graph**: personal Outlook/Hotmail (SMTP/IMAP basic auth disabled) —
+  OAuth device flow, public client ID, no Azure registration
+- **SMTP/IMAP**: Gmail, Outlook/M365, Yahoo, iCloud, ProtonMail, Zoho, GMX, Fastmail
 - **Transactional APIs**: SendGrid, Mailgun, Resend, Amazon SES
 - **Local Testing**: MailHog, Mailpit, MailCatcher, Inbucket
 - **Webhooks**: Slack, Discord, Telegram
 
-## MCP Tools (39)
-send_email, check_inbox, fetch_email_detail, search_emails, delete_email, mark_email_read, mark_email_unread, email_status, configure_service, remove_service, list_services, email_help, list_folders, create_folder, delete_folder, rename_folder, mailing_lists_catalog, mailing_list_latest, suggest_email_subject, email_agentic_assist, start_watcher, stop_watcher, watcher_status, add_contact, search_contacts, run_workflow, add_auto_rule, list_auto_rules, delete_auto_rule, list_pending_replies, approve_reply, auto_respond_now
+## MCP Tools (42)
+send_email, check_inbox, fetch_email_detail, search_emails, delete_email, move_email,
+copy_email, forward_email, mark_email_read, mark_email_unread, email_status,
+configure_service, remove_service, list_services, email_help, list_folders,
+create_folder, delete_folder, rename_folder, mailing_lists_catalog,
+mailing_list_latest, suggest_email_subject, email_agentic_assist, start_watcher,
+stop_watcher, watcher_status, email_connector, add_contact, search_contacts,
+run_workflow, add_auto_rule, list_auto_rules, delete_auto_rule,
+list_pending_replies, approve_reply, auto_respond_now
 
 ## Architecture
 - **Backend**: FastMCP 3.2+ / FastAPI on port 10813
 - **Frontend**: React 19 + Vite + Tailwind on port 10812
 - **DB**: JSON file-based (contacts, drafts, rules, signatures, templates, scheduled)
 - **AI**: Multi-provider (Ollama, LM Studio, OpenAI, Anthropic, Google)
+- **Fleet connectors**: aiwatcher (`/api/fleet/ingest`) + robofang (`/api/hooks/email`)
 
 ## Key Features
+- Microsoft Graph send/receive for personal Outlook/Hotmail (OAuth, auto-refresh)
+- Folder treeview with unread counts + inline folder CRUD in the webapp
+- Move / copy / forward email operations (tools + REST + webapp)
 - AI-assisted compose, improve, expand, and creative workflows (7 presets)
 - Auto-respond engine with rule matching, AI drafting, spam detection, spoof mode
 - Bulk send with rate limiting and anti-spam safeguards
@@ -31,6 +45,17 @@ send_email, check_inbox, fetch_email_detail, search_emails, delete_email, mark_e
 - Contact import: CSV, vCard, Google People API, Microsoft Graph API + curated official lists
 - Prompt injection defense: Unicode stripping + safety boundary wrapping
 - Dual transport: stdio (Claude Desktop) + HTTP streamable
+
+## Environment Variables
+- `SMTP_SERVER`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` — default SMTP service
+- `IMAP_SERVER`, `IMAP_PORT`, `IMAP_USER`, `IMAP_PASSWORD` — default IMAP service
+- `EMAIL_MCP_OAUTH_CLIENT_ID` — Microsoft OAuth client (default: public Graph CLI client ID)
+- `EMAIL_MCP_AIWATCHER_URL` — aiwatcher base URL (fleet ingest; unset = disabled)
+- `EMAIL_MCP_AIWATCHER_KEY` — X-AIWatcher-Key header when AIWATCHER_API_KEY is set
+- `EMAIL_MCP_ROBOFANG_URL` — robofang bridge URL (email hook; unset = disabled)
+- `EMAIL_MCP_MAILING_LISTS`, `EMAIL_MCP_MAILING_LISTS_FILE` — newsletter presets
+- `EMAIL_SERVICES` — additional services JSON
+- `AI_PROVIDER`, `AI_MODEL`, `AI_ENDPOINT`, `ANTHROPIC_API_KEY` — AI features
 
 See [README.md](README.md) for full details.
 See [docs/](docs/) for setup guides.
