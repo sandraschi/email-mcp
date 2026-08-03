@@ -237,6 +237,14 @@
       "description": "Suggest 1-3 concise email subject lines for the given body (uses MCP sampling when available)."
     },
     {
+      "name": "test_auto_rule",
+      "description": "Dry-run rule matching against a sample email (nothing executes)."
+    },
+    {
+      "name": "update_auto_rule",
+      "description": "Update an auto-respond rule (match field/pattern, actions, priority, enabled)."
+    },
+    {
       "name": "watcher_status",
       "description": "Check if the mail watcher is running.\n\n## Return Format\n{running, config: {interval, webhook_url, services}}"
     }
