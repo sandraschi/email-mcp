@@ -109,3 +109,5 @@ src/autorespond_pending.json
 native/resources/*.exe
 native/binaries/*.exe
 dist/email-mcp-backend.exe
+
+native/gen/

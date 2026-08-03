@@ -171,6 +171,20 @@ def has_token(account: str, scope: str = DEFAULT_SCOPE) -> bool:
         return _token_key(account, scope) in store or account.lower() in store
 
 
+def graph_account() -> str | None:
+    """Return the account that holds a graph-family token, if any.
+
+    Used by services that don't know the account yet (e.g. the installed
+    desktop app before OAuth consent).
+    """
+    with _lock:
+        store = _load_store()
+        for key in store:
+            if key.endswith("|graph"):
+                return key.rsplit("|", 1)[0]
+    return None
+
+
 def _post(url: str, data: dict[str, str], timeout: float = 60.0) -> dict[str, Any]:
     resp = httpx.post(url, data=data, timeout=timeout)
     resp.raise_for_status()

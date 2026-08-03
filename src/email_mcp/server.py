@@ -251,8 +251,11 @@ class EmailMCP:
 
             # Personal Outlook/Hotmail accounts have SMTP/IMAP basic auth disabled
             # (535 5.7.139); if an OAuth token exists, back "default" with Graph so
-            # send_email() works out of the box without service="graph".
-            if oauth.has_token(smtp_user, oauth.GRAPH_SCOPE) and "outlook" in (smtp_server or "").lower():
+            # send_email() works out of the box without service="graph". Also
+            # triggers when the SMTP config is a placeholder (first-run .env).
+            smtp_looks_placeholder = "example.com" in (smtp_server or "").lower()
+            has_graph_token = oauth.has_token(smtp_user, oauth.GRAPH_SCOPE) or oauth.graph_account() is not None
+            if has_graph_token and ("outlook" in (smtp_server or "").lower() or smtp_looks_placeholder):
                 from email_mcp.services.graph_service import GraphEmailService
 
                 self.services["default"] = GraphEmailService(

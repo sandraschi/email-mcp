@@ -286,6 +286,22 @@ async def test_forward_message_requires_recipient(service, monkeypatch):
     assert "recipient" in result["error"].lower()
 
 
+async def test_lazy_account_resolution_from_token_store(monkeypatch, tmp_path):
+    """Service without a configured user resolves the account from the token store."""
+    monkeypatch.setenv("EMAIL_MCP_OAUTH_TOKEN_FILE", str(tmp_path / "tokens.json"))
+    token = oauth.OAuthToken(
+        account="real@hotmail.com",
+        access_token="tok",
+        refresh_token="ref",
+        scope=oauth.GRAPH_SCOPE,
+        expires_at=time.time() + 3600,
+    )
+    oauth.save_token(token)
+    svc = GraphEmailService(EmailServiceConfig(name="graph", type="graph", config={"user": ""}))
+    assert svc._account() == "real@hotmail.com"
+    assert svc._ready() is True
+
+
 async def test_no_token_reports_clear_error(monkeypatch, tmp_path):
     monkeypatch.setenv("EMAIL_MCP_OAUTH_TOKEN_FILE", str(tmp_path / "empty.json"))
     cfg = EmailServiceConfig(name="graph", type="graph", config={"user": "x@y.com"})

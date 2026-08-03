@@ -84,11 +84,22 @@ class GraphEmailService(EmailService):
         self._folder_map_ts = 0.0
 
     def _ready(self) -> bool:
-        return bool(self.user and oauth.has_token(self.user, oauth.GRAPH_SCOPE))
+        return bool(self._account() and oauth.has_token(self._account(), oauth.GRAPH_SCOPE))
 
     def _token(self) -> str | None:
-        token = oauth.get_token(self.user, oauth.GRAPH_SCOPE)
+        token = oauth.get_token(self._account(), oauth.GRAPH_SCOPE)
         return token.access_token if token else None
+
+    def _account(self) -> str:
+        """Resolve the mailbox account: configured user with a token, else any token holder."""
+        if self.user:
+            if oauth.has_token(self.user, oauth.GRAPH_SCOPE):
+                return self.user
+            token_holder = oauth.graph_account()
+            if token_holder:
+                return token_holder
+            return self.user
+        return oauth.graph_account() or ""
 
     def _set_folder_map(self, folders: list[dict[str, Any]]) -> None:
         """Cache displayName -> folder id (also seeds from list_folders payloads)."""

@@ -1,5 +1,16 @@
 # BUILD_LOG.md — email-mcp NSIS builds
 
+## 2026-08-03 — v0.5.0-beta.2 (second certified build, refreshed)
+
+**Result**: PASS — CUA 8/8. Rebuilt after installed-app verification fixes:
+
+| # | Symptom | Root cause | Fix |
+|---|---------|------------|-----|
+| 8 | Installed app: "Graph not authorized" after OAuth consent | Graph service derived its account from the seeded `.env` placeholder (`you@example.com`); token stored under the real account | `oauth.graph_account()` + lazy `_account()` resolution in GraphEmailService; default-service fallback also triggers on placeholder SMTP configs |
+| 9 | Installed app: tokens/rules lost | defaults pointed into the frozen temp dir | Tauri mode (`EMAIL_MCP_TAURI=1`) stores OAuth tokens + rules in `%LOCALAPPDATA%\ai.fleet.email-mcp\`; first run seeds `.env` from the bundled example |
+
+**Verified installed-app flow**: install → `.env` seeded → OAuth consent → token in LOCALAPPDATA → `send_email(service="default")` via Graph.
+
 ## 2026-08-03 — v0.5.0-beta.1 (first certified build)
 
 **Result**: PASS — `just cua-nsis-test` 8/8 phases (install → launch → window → screenshot → 15-page nav walk → diagnostics → uninstall).
