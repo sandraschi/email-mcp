@@ -97,6 +97,10 @@
       "description": "Configure a new email service dynamically.\n\nAdds a new email service configuration at runtime. The service will be\navailable for sending emails and inbox checking immediately."
     },
     {
+      "name": "copy_email",
+      "description": "Copy an email to another folder, leaving the original in place."
+    },
+    {
       "name": "create_folder",
       "description": "Create a new IMAP folder.\n\n## Return Format\n{success, folder, message}"
     },
@@ -117,6 +121,10 @@
       "description": "Plan a short multi-step email workflow using sampling (agentic assist).\n\nUses the host LLM via sampling when available; optional Anthropic fallback if configured."
     },
     {
+      "name": "email_connector",
+      "description": "Push email events into the fleet pipeline (aiwatcher / robofang)."
+    },
+    {
       "name": "email_help",
       "description": "Get help and usage information for email MCP tools and services.\n\nReturns comprehensive help information including available tools, supported services,\nusage examples, configuration requirements, and "
     },
@@ -135,6 +143,10 @@
     {
       "name": "flag_spam",
       "description": "Flag an email as spam (Junk flag + move to Spam folder).\n\n## Return Format\n{success, service, email_id, message}"
+    },
+    {
+      "name": "forward_email",
+      "description": "Forward an existing email to new recipients (original preserved)."
     },
     {
       "name": "list_auto_rules",
