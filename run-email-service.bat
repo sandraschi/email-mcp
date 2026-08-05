@@ -9,4 +9,4 @@ if exist "%~dp0.env" (
     )
 )
 
-C:\Users\sandr\.local\bin\uv.exe run python -m email_mcp.server --http --port 10813
+"%~dp0.venv\Scripts\python.exe" -m email_mcp.server --http --port 10813
