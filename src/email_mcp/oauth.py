@@ -63,6 +63,25 @@ def family_scope(family: str) -> str:
 
 _lock = threading.RLock()
 
+# Cooldown so a dead refresh token is not hammered on every poll cycle.
+# (account, family) -> unix ts until which refreshes are skipped.
+_refresh_fail_until: dict[tuple[str, str], float] = {}
+_REFRESH_FAIL_COOLDOWN = 120.0  # seconds
+
+# Refresh errors that mean the refresh token is permanently dead (revoked,
+# expired due to inactivity, or the client id changed). These trigger the
+# auto-recovery device flow instead of a retry loop.
+_PERMANENT_DEAD_CODES = {"invalid_grant", "invalid_client", "unauthorized_client"}
+
+# Auto-recovery state: when a refresh token dies, the guardian starts a new
+# device flow on its own, polls it, and swaps in the fresh token. The user
+# only has to type the one-time code at microsoft.com/devicelogin.
+_DEAD: dict[tuple[str, str], float] = {}  # (account, family) -> when marked dead
+_AUTO_FLOW: dict[str, Any] | None = None  # pending auto-recovery device flow
+_GUARDIAN_THREAD: threading.Thread | None = None
+_GUARDIAN_INTERVAL = 30.0  # seconds between guardian ticks
+_WARM_MARGIN = 300.0  # seconds before expiry at which the guardian refreshes
+
 
 def client_id() -> str | None:
     return os.getenv("EMAIL_MCP_OAUTH_CLIENT_ID", "").strip() or None
@@ -155,12 +174,24 @@ def get_token(account: str, scope: str = DEFAULT_SCOPE) -> OAuthToken | None:
     cid = client_id()
     if not cid:
         return None
-    refreshed = refresh_access_token(cid, token.refresh_token, scopes=token.scope)
-    if not refreshed:
-        return None
-    refreshed.account = token.account
-    save_token(refreshed)
-    return refreshed
+    fam = _family(token.scope)
+    if _dead_key(token.account, fam) in _DEAD:
+        # Refresh token is known-dead: serve the access token until it truly
+        # expires (degraded mode), the guardian handles the re-auth flow.
+        return token if time.time() < token.expires_at else None
+    if _refresh_fail_until.get((token.account.lower(), fam), 0.0) > time.time():
+        return token if time.time() < token.expires_at else None
+    refreshed, err_code = refresh_access_token(cid, token.refresh_token, scopes=token.scope)
+    if refreshed:
+        refreshed.account = token.account
+        save_token(refreshed)
+        return refreshed
+    if err_code in _PERMANENT_DEAD_CODES:
+        mark_token_dead(token.account, fam)
+    else:
+        _refresh_fail_until[(token.account.lower(), fam)] = time.time() + _REFRESH_FAIL_COOLDOWN
+    # degraded mode: keep serving the current access token until it expires
+    return token if time.time() < token.expires_at else None
 
 
 def has_token(account: str, scope: str = DEFAULT_SCOPE) -> bool:
@@ -274,8 +305,13 @@ def poll_device_flow(
     }
 
 
-def refresh_access_token(cid: str, refresh_token: str, scopes: str | None = None) -> OAuthToken | None:
-    """Exchange a refresh token for a fresh access token."""
+def refresh_access_token(cid: str, refresh_token: str, scopes: str | None = None) -> tuple[OAuthToken | None, str]:
+    """Exchange a refresh token for a fresh access token.
+
+    Returns (token, error_code): error_code is "" on success, a permanent
+    error name ("invalid_grant", "invalid_client", ...) when the refresh
+    token is dead, or "network" for transient failures.
+    """
     try:
         data = _post(
             TOKEN_URL,
@@ -286,15 +322,28 @@ def refresh_access_token(cid: str, refresh_token: str, scopes: str | None = None
                 "scope": scopes or scope(),
             },
         )
+    except httpx.HTTPStatusError as exc:
+        err_code = ""
+        try:
+            err = exc.response.json()
+            err_code = err.get("error", "")
+            detail = err.get("error_description") or err_code
+        except Exception:
+            detail = ""
+        logger.warning("oauth refresh failed: %s - %s", exc.response.status_code, detail)
+        return None, err_code
     except Exception as exc:
         logger.warning("oauth refresh failed: %s", exc)
-        return None
-    return OAuthToken(
-        account="",
-        access_token=data["access_token"],
-        refresh_token=data.get("refresh_token", refresh_token),
-        scope=data.get("scope", scopes or scope()),
-        expires_at=time.time() + int(data.get("expires_in", 3600)),
+        return None, "network"
+    return (
+        OAuthToken(
+            account="",
+            access_token=data["access_token"],
+            refresh_token=data.get("refresh_token", refresh_token),
+            scope=data.get("scope", scopes or scope()),
+            expires_at=time.time() + int(data.get("expires_in", 3600)),
+        ),
+        "",
     )
 
 
@@ -346,3 +395,146 @@ def authenticate_smtp(server: Any, user: str) -> bool:
     except Exception as exc:
         logger.warning("XOAUTH2 SMTP auth failed for %s: %s", user, exc)
         return False
+
+
+# ── Auto-recovery guardian ─────────────────────────────────────────────────
+# Background daemon: keeps access tokens warm (proactive refresh, which also
+# resets Microsoft's inactivity clock on the refresh token) and, when a
+# refresh token dies, automatically starts a new device-code flow, polls it
+# until the user enters the code, and stores the fresh token. The server
+# never needs manual reconnection - the user only types the one-time code.
+
+
+def _dead_key(account: str, family: str) -> tuple[str, str]:
+    return (account.lower(), family)
+
+
+def mark_token_dead(account: str, family: str) -> None:
+    """Record that the account's refresh token was permanently rejected."""
+    with _lock:
+        _DEAD[_dead_key(account, family)] = time.time()
+    logger.warning("OAuth refresh token for %s/%s rejected - auto-reauth queued", account, family)
+
+
+def clear_token_dead(account: str, family: str) -> None:
+    with _lock:
+        _DEAD.pop(_dead_key(account, family), None)
+
+
+def pending_flow(family: str = "graph") -> dict[str, Any] | None:
+    """Return the pending auto-recovery device flow for family, if any."""
+    with _lock:
+        flow = _AUTO_FLOW
+        if not flow or flow["family"] != family or flow["expires_at"] < time.time():
+            return None
+        return dict(flow)
+
+
+def auto_flow() -> dict[str, Any] | None:
+    """Public status of the pending auto-recovery flow (for REST/UI)."""
+    flow = pending_flow()
+    return flow or None
+
+
+def ensure_auto_flow(family: str = "graph") -> dict[str, Any]:
+    """Idempotent: return the pending flow for family, starting one if needed."""
+    global _AUTO_FLOW
+    with _lock:
+        existing = pending_flow(family)
+        if existing:
+            return existing
+        started = start_device_flow(scopes=family_scope(family))
+        if not started.get("success"):
+            logger.warning("auto-reauth: device flow could not start: %s", started.get("error"))
+            return started
+        _AUTO_FLOW = {
+            "family": family,
+            "device_code": started["device_code"],
+            "user_code": started["user_code"],
+            "verification_uri": started.get("verification_uri") or VERIFICATION_URI,
+            "expires_at": time.time() + started.get("expires_in", 900),
+            "interval": started.get("interval", 5),
+            "message": started.get("message", ""),
+        }
+        logger.warning(
+            "OAuth auto-reauth: enter code %s at %s (family=%s)",
+            started["user_code"],
+            _AUTO_FLOW["verification_uri"],
+            family,
+        )
+        return dict(_AUTO_FLOW)
+
+
+def _clear_flow() -> None:
+    global _AUTO_FLOW
+    _AUTO_FLOW = None
+
+
+def guardian_tick() -> dict[str, Any]:
+    """One pass of the OAuth guardian: poll pending flow, warm/repair tokens."""
+    flow = pending_flow()
+    if flow:
+        result = poll_device_flow(flow["device_code"], scopes=family_scope(flow["family"]))
+        status = result.get("status")
+        if status == "authorized":
+            logger.info("OAuth auto-reauth completed: %s", result.get("account"))
+            _clear_flow()
+            account = (result.get("account") or "").lower()
+            with _lock:
+                for key in list(_DEAD):
+                    if not account or key[0] == account:
+                        _DEAD.pop(key, None)
+            # Fresh token is on disk (poll_device_flow saved it) - nothing to warm.
+            return {"dead": len(_DEAD), "flow": False}
+        elif status in ("declined", "expired", "error"):
+            _clear_flow()  # restart with a fresh flow next tick
+
+    store = _load_store()
+    for key, raw in list(store.items()):
+        if "|" not in key:
+            continue
+        account, family = key.rsplit("|", 1)
+        if _dead_key(account, family) in _DEAD:
+            continue
+        try:
+            token = OAuthToken(**raw)
+        except TypeError:
+            continue
+        if time.time() < token.expires_at - _WARM_MARGIN:
+            continue
+        cid = client_id()
+        if not cid:
+            continue
+        refreshed, err_code = refresh_access_token(cid, token.refresh_token, scopes=token.scope)
+        if refreshed:
+            refreshed.account = token.account
+            save_token(refreshed)
+        elif err_code in _PERMANENT_DEAD_CODES:
+            mark_token_dead(account, family)
+
+    with _lock:
+        needs_flow = bool(_DEAD)
+    if needs_flow:
+        ensure_auto_flow()
+
+    return {"dead": len(_DEAD), "flow": bool(pending_flow())}
+
+
+def _guardian_loop() -> None:
+    while True:
+        try:
+            guardian_tick()
+        except Exception:
+            logger.exception("OAuth guardian tick failed")
+        time.sleep(_GUARDIAN_INTERVAL)
+
+
+def start_guardian() -> None:
+    """Start the background OAuth guardian thread (idempotent)."""
+    global _GUARDIAN_THREAD
+    with _lock:
+        if _GUARDIAN_THREAD is not None and _GUARDIAN_THREAD.is_alive():
+            return
+        _GUARDIAN_THREAD = threading.Thread(target=_guardian_loop, name="oauth-guardian", daemon=True)
+        _GUARDIAN_THREAD.start()
+    logger.info("OAuth guardian started (interval=%ss)", _GUARDIAN_INTERVAL)

@@ -1461,6 +1461,27 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             "families": families,
             "authorized": families.get("exchange", {}).get("authorized", False),
             "expires_at": families.get("exchange", {}).get("expires_at"),
+            "reauth_pending": oauth.auto_flow() is not None,
+        }
+
+    @app.get("/api/oauth/flow")
+    async def oauth_flow(_user: str = Depends(authenticate)):
+        """Pending auto-recovery device flow, if the guardian started one.
+
+        The server auto-starts this flow when a refresh token dies; the UI
+        shows the user_code so the user can complete it at microsoft.com/devicelogin.
+        """
+        flow = oauth.auto_flow()
+        if not flow:
+            return {"status": "ok", "pending": False}
+        return {
+            "status": "ok",
+            "pending": True,
+            "user_code": flow["user_code"],
+            "verification_uri": flow["verification_uri"],
+            "family": flow["family"],
+            "expires_at": flow["expires_at"],
+            "message": flow["message"],
         }
 
     @app.post("/api/llm/configure")

@@ -132,6 +132,11 @@ async def server_lifespan(mcp_instance: FastMCP):
         _l.handlers.clear()
         _l.setLevel(logging.WARNING)
         _l.propagate = False
+    # Auto-recovery guardian: keeps OAuth access tokens warm and automatically
+    # re-runs the device flow when a refresh token dies (no manual reconnection).
+    from email_mcp import oauth
+
+    oauth.start_guardian()
     yield
     logger.info("Email MCP server shutting down")
 
