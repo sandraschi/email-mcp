@@ -58,12 +58,12 @@ package:
     Set-Location '{{justfile_directory()}}'
     uv run python build_mcpb.py
 
-# Build PyInstaller sidecar binary → native/binaries/
+# --- Build PyInstaller sidecar binary  native binaries ---
 build-sidecar:
     Set-Location '{{justfile_directory()}}'
     powershell.exe -NoProfile -File '{{justfile_directory()}}\native\build-sidecar.ps1'
 
-# Build Tauri desktop app — sidecar must exist first
+# --- Build Tauri desktop app  sidecar must exist first ---
 build-native:
     Set-Location '{{justfile_directory()}}\native'
     $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
@@ -99,7 +99,7 @@ stats:
     Set-Location '{{justfile_directory()}}'
     uv run python tools/repo_stats.py
 
-# Copy src/email_mcp → mcp-server/
+# --- Copy src email_mcp  mcp-server ---
 copy-mcp:
     uv run python copy_server.py
 
@@ -122,7 +122,7 @@ clean:
     Get-ChildItem -Recurse -Filter __pycache__ | Remove-Item -Recurse -Force 2>$null
     Write-Host 'Cleaned' -ForegroundColor Green
 
-# CI pipeline: build → check → test
+# --- CI pipeline build  check  test ---
 ci: build check test
 
 # Bootstrap: install dev deps + pre-commit hook
