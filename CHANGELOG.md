@@ -1,4 +1,9 @@
 
+## [Unreleased]
+
+### Fixed
+- **`fleet-start.config.ps1` `Backend.Kind` was `'uvicorn'`, backend is NSSM**: this backend runs as a persistent NSSM Windows service (service name `email-mcp`, matches `Name`), but the config routed launches through the generic port-conflict path instead of `Start-FleetNssmWebapp`. Without `Kind='nssm'`, a perfectly healthy NSSM-held port got reported as blocked and the launcher exited 1 -- an instacrash on plain double-click even though the service was fine. Same bug found and fixed across `discord-mcp`, `tvtropes-mcp`, `pywinauto-mcp` the same day.
+
 ## [0.5.0-beta.2] - 2026-08-03 "Auto-Respond + Certified Installer"
 
 ### Added
