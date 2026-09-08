@@ -131,7 +131,7 @@ def wrap_untrusted_list(items: list[dict[str, Any]], source: str = "email") -> l
 
 
 def error_response(error: str, error_type: str = "general", **kwargs: Any) -> dict[str, Any]:
-    """Standard error response with auto-logging — ALWAYS use inside except blocks.
+    """Standard error response with auto-logging - ALWAYS use inside except blocks.
 
     Automatically logs the full traceback via logger.exception(), so no caller
     ever loses a traceback again. Add extra context via kwargs.

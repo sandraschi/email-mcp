@@ -173,7 +173,7 @@ class GraphEmailService(EmailService):
     ) -> tuple[int, dict[str, Any]]:
         token = self._token()
         if not token:
-            raise oauth.OAuthUnavailable(f"No Graph token for {self.user} — connect Outlook OAuth (Graph) first")
+            raise oauth.OAuthUnavailable(f"No Graph token for {self.user} - connect Outlook OAuth (Graph) first")
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
@@ -190,7 +190,7 @@ class GraphEmailService(EmailService):
             )
         if resp.status_code in (401, 403):
             raise oauth.OAuthUnavailable(
-                f"Graph authorization failed (HTTP {resp.status_code}) for {self.user} — reconnect Outlook OAuth (Graph)"
+                f"Graph authorization failed (HTTP {resp.status_code}) for {self.user} - reconnect Outlook OAuth (Graph)"
             )
         if resp.status_code >= 400:
             raise RuntimeError(f"Graph {method} {path} -> HTTP {resp.status_code}: {resp.text[:300]}")
@@ -333,7 +333,7 @@ class GraphEmailService(EmailService):
             return {"success": False, "error": f"Graph fetch failed: {exc}"}
 
     async def delete_message(self, folder: str, email_id: str) -> dict[str, Any]:
-        """Delete (soft) a message — Graph moves it to deleteditems."""
+        """Delete (soft) a message - Graph moves it to deleteditems."""
         if not self._ready():
             return {"success": False, "error": f"Graph not authorized for {self.name}"}
         try:

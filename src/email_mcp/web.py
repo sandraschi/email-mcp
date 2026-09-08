@@ -1283,7 +1283,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
     # ── Local LLM autodiscovery ───────────────────────────────────────────────
 
     async def _detect_llm() -> dict[str, Any]:
-        """Core LLM detection — shared between /api/llm/models and /api/llm/discover."""
+        """Core LLM detection - shared between /api/llm/models and /api/llm/discover."""
         providers: list[dict[str, Any]] = []
 
         async with httpx.AsyncClient(timeout=3.0) as client:
