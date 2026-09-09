@@ -1797,7 +1797,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
         interval_s = max(30, min(payload.get("interval", 60), 3600))
         webhook_url = payload.get("webhook_url", "").strip()
-        services = payload.get("services", [{"name": "default", "folder": "INBOX"}])
+        # No explicit services list from the UI => auto-watch every configured
+        # account's INBOX, re-derived each poll (new accounts picked up live).
+        services = payload.get("services") or None
         auto_respond = bool(payload.get("auto_respond", False))
         ai_router = None
         if auto_respond:
@@ -1807,7 +1809,15 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 ai_router = AIRouter(mcp_app)
             except Exception:
                 ai_router = None
-        return start_watcher(interval_s, webhook_url, services, mcp_app, auto_respond=auto_respond, ai_router=ai_router)
+        return start_watcher(
+            interval_s,
+            webhook_url,
+            services,
+            mcp_app,
+            auto_respond=auto_respond,
+            ai_router=ai_router,
+            server_instance=server_instance,
+        )
 
     @app.post("/api/watcher/stop")
     async def watcher_stop(_user: str = Depends(authenticate)):

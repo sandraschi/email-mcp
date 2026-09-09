@@ -137,6 +137,14 @@ async def server_lifespan(mcp_instance: FastMCP):
     from email_mcp import oauth
 
     oauth.start_guardian()
+
+    from email_mcp.watcher import maybe_resume_watcher
+
+    try:
+        await maybe_resume_watcher(mcp_instance, email_mcp)
+    except Exception:
+        logger.warning("Mail watcher auto-resume failed", exc_info=True)
+
     yield
     logger.info("Email MCP server shutting down")
 
