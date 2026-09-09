@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "email-mcp-backend",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "python", "-m", "email_mcp.server", "--http", "--port", "10813"],
+      "port": 10813
+    },
+    {
+      "name": "email-mcp-webapp",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["--cwd", "webapp", "run", "dev"],
+      "port": 10812
+    }
+  ]
+}

@@ -104,19 +104,27 @@ function FolderTree({
 	depth,
 	selected,
 	expanded,
+	dragOverFolder,
 	onToggle,
 	onSelect,
 	onRename,
 	onDelete,
+	onDragEnterFolder,
+	onDragLeaveFolder,
+	onDropEmail,
 }: {
 	nodes: FolderNode[];
 	depth: number;
 	selected: string;
 	expanded: Record<string, boolean>;
+	dragOverFolder?: string | null;
 	onToggle: (name: string) => void;
 	onSelect: (name: string) => void;
 	onRename?: (name: string) => void;
 	onDelete?: (name: string) => void;
+	onDragEnterFolder?: (name: string) => void;
+	onDragLeaveFolder?: (name: string) => void;
+	onDropEmail?: (name: string) => void;
 }) {
 	return (
 		<>
@@ -124,6 +132,7 @@ function FolderTree({
 				const hasChildren = (n.children?.length ?? 0) > 0;
 				const open = !!expanded[n.name];
 				const isSelected = selected === n.name;
+				const isDragOver = dragOverFolder === n.name;
 				return (
 					<div key={n.id ?? n.name} data-testid="folder-node">
 						{/* biome-ignore lint/a11y/useSemanticElements: row acts as selectable tree node with inner expand button - nesting buttons is invalid HTML */}
@@ -132,10 +141,13 @@ function FolderTree({
 							tabIndex={0}
 							aria-label={n.name}
 							aria-expanded={hasChildren ? open : undefined}
+							data-testid="folder-drop-target"
 							className={`flex items-center gap-1.5 w-full text-left rounded px-1.5 py-1 text-sm cursor-pointer select-none ${
-								isSelected
-									? "bg-blue-600/20 text-white"
-									: "text-slate-300 hover:bg-slate-800/60"
+								isDragOver
+									? "bg-emerald-600/20 ring-1 ring-emerald-500 text-white"
+									: isSelected
+										? "bg-blue-600/20 text-white"
+										: "text-slate-300 hover:bg-slate-800/60"
 							}`}
 							style={{ paddingLeft: `${depth * 14 + 6}px` }}
 							onClick={() => onSelect(n.name)}
@@ -144,6 +156,23 @@ function FolderTree({
 									e.preventDefault();
 									onSelect(n.name);
 								}
+							}}
+							onDragOver={(e) => {
+								if (!onDropEmail) return;
+								e.preventDefault();
+								e.dataTransfer.dropEffect = "move";
+							}}
+							onDragEnter={(e) => {
+								if (!onDragEnterFolder) return;
+								e.preventDefault();
+								onDragEnterFolder(n.name);
+							}}
+							onDragLeave={() => onDragLeaveFolder?.(n.name)}
+							onDrop={(e) => {
+								if (!onDropEmail) return;
+								e.preventDefault();
+								e.stopPropagation();
+								onDropEmail(n.name);
 							}}
 						>
 							{hasChildren ? (
@@ -207,10 +236,14 @@ function FolderTree({
 								depth={depth + 1}
 								selected={selected}
 								expanded={expanded}
+								dragOverFolder={dragOverFolder}
 								onToggle={onToggle}
 								onSelect={onSelect}
 								onRename={onRename}
 								onDelete={onDelete}
+								onDragEnterFolder={onDragEnterFolder}
+								onDragLeaveFolder={onDragLeaveFolder}
+								onDropEmail={onDropEmail}
 							/>
 						)}
 					</div>
@@ -239,6 +272,9 @@ export function Inbox() {
 	const [showFilters, setShowFilters] = useState(false);
 	const [autoRefresh, setAutoRefresh] = useState(true);
 	const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+	const [draggedEmailId, setDraggedEmailId] = useState<string | null>(null);
+	const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+	const [movingIds, setMovingIds] = useState<Set<string>>(new Set());
 	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 	const fetchEmails = useCallback(async () => {
@@ -343,6 +379,39 @@ export function Inbox() {
 			toast("error", err instanceof Error ? err.message : "Delete failed");
 		} finally {
 			setDeletingIds((prev) => {
+				const next = new Set(prev);
+				next.delete(emailId);
+				return next;
+			});
+		}
+	};
+
+	const handleMoveEmail = async (emailId: string, toFolder: string) => {
+		if (toFolder === folder) return;
+		setMovingIds((prev) => new Set(prev).add(emailId));
+		try {
+			const res = await fetchWithAuth(
+				`/api/inbox/${encodeURIComponent(emailId)}/move`,
+				{
+					method: "POST",
+					body: JSON.stringify({
+						service: selectedService,
+						folder,
+						to_folder: toFolder,
+					}),
+				},
+			);
+			if (res.success === false) {
+				toast("error", res.error || "Move failed");
+				return;
+			}
+			setEmails((prev) => prev.filter((em) => em.id !== emailId));
+			toast("success", `Moved to "${toFolder}"`);
+			fetchFolders();
+		} catch (err: unknown) {
+			toast("error", err instanceof Error ? err.message : "Move failed");
+		} finally {
+			setMovingIds((prev) => {
 				const next = new Set(prev);
 				next.delete(emailId);
 				return next;
@@ -582,6 +651,7 @@ export function Inbox() {
 								depth={0}
 								selected={folder}
 								expanded={expanded}
+								dragOverFolder={dragOverFolder}
 								onToggle={(name) =>
 									setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
 								}
@@ -591,6 +661,15 @@ export function Inbox() {
 								}}
 								onRename={handleRenameFolder}
 								onDelete={handleDeleteFolder}
+								onDragEnterFolder={setDragOverFolder}
+								onDragLeaveFolder={(name) =>
+									setDragOverFolder((cur) => (cur === name ? null : cur))
+								}
+								onDropEmail={(name) => {
+									setDragOverFolder(null);
+									if (draggedEmailId) handleMoveEmail(draggedEmailId, name);
+									setDraggedEmailId(null);
+								}}
 							/>
 						)}
 					</CardContent>
@@ -638,8 +717,22 @@ export function Inbox() {
 							// biome-ignore lint/a11y/useKeyWithClickEvents: row opens email via onClick; inner button handles its own key
 							<div
 								key={email.id || i}
-								className="group flex items-start gap-3 py-3 border-b border-slate-800 last:border-0 hover:bg-slate-900/30 px-2 rounded transition-colors cursor-pointer"
+								draggable
+								title="Drag to a folder in the sidebar to move this message"
+								data-testid="inbox-row"
+								className={`group flex items-start gap-3 py-3 border-b border-slate-800 last:border-0 hover:bg-slate-900/30 px-2 rounded transition-colors cursor-pointer ${
+									draggedEmailId === email.id ? "opacity-40" : ""
+								} ${movingIds.has(email.id) ? "pointer-events-none opacity-50" : ""}`}
 								onClick={() => handleOpenEmail(email)}
+								onDragStart={(e) => {
+									e.dataTransfer.effectAllowed = "move";
+									e.dataTransfer.setData("text/plain", email.id);
+									setDraggedEmailId(email.id);
+								}}
+								onDragEnd={() => {
+									setDraggedEmailId(null);
+									setDragOverFolder(null);
+								}}
 							>
 								<div className="mt-0.5 p-1.5 bg-slate-900 rounded shrink-0">
 									<Mail
