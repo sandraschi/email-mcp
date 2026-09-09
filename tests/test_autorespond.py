@@ -158,3 +158,96 @@ async def test_auto_respond_queues_pending(monkeypatch, tmp_path):
     pending = autorespond.list_pending()
     assert len(pending) == 1
     assert pending[0]["reply_body"] == "Hi there!"
+
+
+async def test_auto_respond_star_filter_calls_flag_not_mark_read(monkeypatch, tmp_path):
+    """Regression test for the Star action being mislabeled mark_email_read (BUG fix)."""
+    _fresh(monkeypatch, tmp_path)
+    autorespond.add_rule("st", match_field="subject", match_pattern="important", filter_action="star")
+    calls = []
+
+    class FakeMCP:
+        async def call_tool(self, name, args):
+            calls.append((name, args))
+            return {"success": True}
+
+    email = {"id": "m4", "subject": "important notice", "from": "c@x.com", "text_body": "", "folder": "INBOX"}
+    result = await autorespond.auto_respond(email, mcp_app=FakeMCP())
+    assert result["matched"] is True
+    tool_names = [name for name, _args in calls]
+    assert "flag_email" in tool_names
+    assert "mark_email_read" not in tool_names
+
+
+class _FakeBackfillMCP:
+    """Minimal check_inbox + mutation stub for backfill_apply_rules tests."""
+
+    def __init__(self, emails):
+        self._emails = emails
+        self.calls = []
+
+    async def call_tool(self, name, args):
+        self.calls.append((name, args))
+        if name == "check_inbox":
+            return {"success": True, "emails": self._emails}
+        return {"success": True}
+
+
+async def test_backfill_dry_run_makes_no_mutating_calls(monkeypatch, tmp_path):
+    _fresh(monkeypatch, tmp_path)
+    autorespond.add_rule(
+        "mv", match_field="subject", match_pattern="github", filter_action="move", filter_target="Github"
+    )
+    emails = [{"id": "e1", "subject": "github PR opened", "from": "bot@github.com"}]
+    mcp = _FakeBackfillMCP(emails)
+
+    result = await autorespond.backfill_apply_rules("default", "INBOX", mcp, dry_run=True)
+
+    assert result["success"] is True
+    assert result["scanned"] == 1
+    assert result["matched"] == 1
+    assert result["applied"] == 1  # "would apply"
+    assert result["dry_run"] is True
+    mutating_calls = [c for c in mcp.calls if c[0] != "check_inbox"]
+    assert mutating_calls == []
+
+
+async def test_backfill_skips_non_organizational_actions(monkeypatch, tmp_path):
+    _fresh(monkeypatch, tmp_path)
+    autorespond.add_rule(
+        "n", match_field="subject", match_pattern="urgent", filter_action="notify", filter_target="both"
+    )
+    emails = [{"id": "e2", "subject": "urgent: read me", "from": "a@x.com"}]
+    mcp = _FakeBackfillMCP(emails)
+
+    result = await autorespond.backfill_apply_rules("default", "INBOX", mcp, dry_run=False)
+
+    assert result["matched"] == 1
+    assert result["applied"] == 0  # notify is not organizational -- never fires in backfill
+    assert result["results"][0]["reason"] == "not organizational (skipped in backfill)"
+
+
+async def test_backfill_skips_body_match_rules(monkeypatch, tmp_path):
+    _fresh(monkeypatch, tmp_path)
+    autorespond.add_rule("body-rule", match_field="text_body", match_pattern="payment", filter_action="delete")
+    emails = [{"id": "e3", "subject": "no match here", "from": "a@x.com"}]
+    mcp = _FakeBackfillMCP(emails)
+
+    result = await autorespond.backfill_apply_rules("default", "INBOX", mcp, dry_run=True)
+
+    assert result["matched"] == 0  # text_body rules aren't evaluated in backfill
+    assert "body-rule" in result["rules_skipped_body_match"]
+
+
+async def test_backfill_apply_actually_calls_tool(monkeypatch, tmp_path):
+    _fresh(monkeypatch, tmp_path)
+    autorespond.add_rule("mr", match_field="subject", match_pattern="newsletter", filter_action="mark_read")
+    emails = [{"id": "e4", "subject": "weekly newsletter", "from": "list@x.com"}]
+    mcp = _FakeBackfillMCP(emails)
+
+    result = await autorespond.backfill_apply_rules("default", "INBOX", mcp, dry_run=False)
+
+    assert result["applied"] == 1
+    assert result["results"][0]["applied"] is True
+    tool_names = [name for name, _args in mcp.calls]
+    assert "mark_email_read" in tool_names
