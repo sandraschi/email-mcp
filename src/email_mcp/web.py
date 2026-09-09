@@ -1937,6 +1937,20 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
         return {"pending": list_pending()}
 
+    @app.post("/api/auto-rules/backfill")
+    async def auto_rules_backfill(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        """Apply existing rules to mail already sitting in a folder (dry_run by default)."""
+        from .autorespond import backfill_apply_rules
+
+        service = payload.get("service", "default")
+        folder = payload.get("folder", "INBOX")
+        limit = max(1, min(int(payload.get("limit", 200)), 500))
+        dry_run = bool(payload.get("dry_run", True))
+        return await backfill_apply_rules(service, folder, mcp_app, limit=limit, dry_run=dry_run)
+
     @app.post("/api/auto-pending/{pending_id}/approve")
     async def auto_approve_pending(pending_id: str, _user: str = Depends(authenticate)):
         from .autorespond import approve_pending

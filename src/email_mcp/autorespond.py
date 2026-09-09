@@ -520,6 +520,120 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
     return {"matched": True, "action": "none", "rule": rule["name"]}
 
 
+# ── Backfill: apply existing rules to mail already sitting in a folder ─────
+
+
+async def backfill_apply_rules(
+    service: str, folder: str, mcp_app, limit: int = 200, dry_run: bool = True
+) -> dict[str, Any]:
+    """One-time sweep: apply matching rules' filter actions to existing mail.
+
+    Only ORGANIZATIONAL_FILTER_ACTIONS (mark_read/star/delete/move/spam) are
+    applied. "notify" and "forward" never fire here -- replaying those
+    against a backlog would spam aiwatcher/robofang or send mail based on
+    rules written with only new mail in mind; they still fire normally via
+    auto_respond() on freshly-arrived mail.
+
+    Rules whose match_field is "text_body" are skipped entirely (reported in
+    rules_skipped_body_match) -- the inbox listing this sweep works from
+    doesn't include message bodies, and fetching full bodies for every
+    message in a mailbox is too expensive for a bulk sweep. "all" rules are
+    still evaluated, just without the body signal.
+
+    dry_run=True (default) previews matches/actions without mutating
+    anything -- call again with dry_run=False to actually apply.
+
+    ## Return Format
+    {success, scanned, matched, applied, dry_run, rules_skipped_body_match, results, message}
+    """
+    logger = logging.getLogger(__name__)
+    if not mcp_app:
+        return {"success": False, "error": "No mcp_app available"}
+
+    _load_rules()
+    usable_rules = sorted(
+        (r for r in _RULES if r.get("enabled", True) and r.get("match_field") in ("subject", "from", "all")),
+        key=lambda r: int(r.get("priority", 100)),
+    )
+    skipped_rules = [r["name"] for r in _RULES if r.get("enabled", True) and r.get("match_field") == "text_body"]
+
+    try:
+        result = await mcp_app.call_tool(
+            "check_inbox", {"service": service, "folder": folder, "unread_only": False, "limit": limit}
+        )
+    except Exception as e:
+        return {"success": False, "error": f"check_inbox failed: {e}"}
+
+    emails: list[dict[str, Any]] = []
+    if hasattr(result, "content"):
+        for c in result.content:
+            if hasattr(c, "text"):
+                try:
+                    data = json.loads(c.text)
+                    if isinstance(data, dict):
+                        emails = data.get("emails", [])
+                except Exception:
+                    pass
+    elif isinstance(result, dict):
+        emails = result.get("emails", [])
+
+    matched = 0
+    actionable = 0
+    results: list[dict[str, Any]] = []
+    for email in emails:
+        email = {**email, "folder": folder}
+        rule = None
+        for r in usable_rules:
+            pattern = r.get("match_pattern", "")
+            if not pattern:
+                continue
+            try:
+                if re.search(pattern, _match_text(r, email), re.IGNORECASE):
+                    rule = r
+                    break
+            except re.error:
+                continue
+        if not rule:
+            continue
+        matched += 1
+        filter_action = rule.get("filter_action", "")
+        row = {"id": email.get("id"), "subject": email.get("subject"), "rule": rule["name"], "action": filter_action}
+        if filter_action not in ORGANIZATIONAL_FILTER_ACTIONS:
+            results.append({**row, "applied": False, "reason": "not organizational (skipped in backfill)"})
+            continue
+        actionable += 1
+        if dry_run:
+            results.append({**row, "applied": False, "reason": "dry_run"})
+            continue
+        outcome = await apply_filter_action(rule, email, mcp_app)
+        results.append({**row, **outcome})
+
+    logger.info(
+        "Backfill sweep %s/%s: scanned=%d matched=%d actionable=%d dry_run=%s",
+        service,
+        folder,
+        len(emails),
+        matched,
+        actionable,
+        dry_run,
+    )
+    return {
+        "success": True,
+        "service": service,
+        "folder": folder,
+        "scanned": len(emails),
+        "matched": matched,
+        "applied": actionable,
+        "dry_run": dry_run,
+        "rules_skipped_body_match": skipped_rules,
+        "results": results,
+        "message": (
+            f"{'Would apply' if dry_run else 'Applied'} {actionable} rule action(s) "
+            f"across {matched} matched of {len(emails)} scanned messages"
+        ),
+    }
+
+
 # Initialize
 _load_rules()
 _load_pending()

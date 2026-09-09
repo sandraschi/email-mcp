@@ -401,7 +401,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             "total_services": len(service_statuses),
             "configured_services": configured_count,
             "connected_services": connected_count,
-            "tools_exposed": 32,
+            "tools_exposed": 35,
             "tools": [
                 "send_email",
                 "check_inbox",
@@ -410,6 +410,8 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
                 "delete_email",
                 "mark_email_read",
                 "mark_email_unread",
+                "flag_email",
+                "unflag_email",
                 "list_folders",
                 "create_folder",
                 "delete_folder",
@@ -432,6 +434,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
                 "add_auto_rule",
                 "list_auto_rules",
                 "delete_auto_rule",
+                "backfill_auto_rules",
                 "list_pending_replies",
                 "approve_reply",
                 "auto_respond_now",
@@ -1424,6 +1427,37 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         from .autorespond import delete_rule as _dr
 
         return _dr(rule_id)
+
+    @mcp.tool(annotations=_MUTATING)
+    async def backfill_auto_rules(
+        service: str = "default",
+        folder: str = "INBOX",
+        limit: int = 200,
+        dry_run: bool = True,
+    ) -> dict[str, Any]:
+        """Apply existing auto-rules to mail already sitting in a folder (not just new mail).
+
+        [RATIONALE] Rules only ever fired going forward via the mail watcher --
+        existing inbox clutter never got sorted retroactively. This sweeps a
+        folder once and applies each matched rule's organizational filter
+        action (mark_read/star/delete/move/spam). "notify" and "forward" never
+        fire here (would spam connectors or send mail based on rules written
+        for new mail only). Rules matching on message body are skipped -- this
+        sweep only sees subject/from, not body text.
+
+        dry_run=True (default) previews what would happen; call again with
+        dry_run=False to actually apply.
+
+        ## Return Format
+        {success, scanned, matched, applied, dry_run, rules_skipped_body_match, results, message}
+
+        ## Examples
+        backfill_auto_rules(folder="INBOX")
+        backfill_auto_rules(service="gmail", folder="INBOX", dry_run=False)
+        """
+        from .autorespond import backfill_apply_rules as _bf
+
+        return await _bf(service, folder, server.mcp, limit=limit, dry_run=dry_run)
 
     @mcp.tool(annotations=_READ_ONLY)
     async def list_pending_replies() -> dict[str, Any]:
