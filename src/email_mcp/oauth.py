@@ -45,7 +45,8 @@ VERIFICATION_URI = "https://microsoft.com/devicelogin"
 
 DEFAULT_SCOPE = "openid profile email https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access"
 GRAPH_SCOPE = (
-    "openid profile email https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Send offline_access"
+    "openid profile email https://graph.microsoft.com/Mail.ReadWrite "
+    "https://graph.microsoft.com/Mail.Send offline_access"
 )
 
 SCOPE_FAMILIES = {"exchange": DEFAULT_SCOPE, "graph": GRAPH_SCOPE}

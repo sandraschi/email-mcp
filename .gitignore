@@ -105,6 +105,7 @@ data/
 
 src/autorespond_rules.json
 src/autorespond_pending.json
+src/watcher_config.json
 
 native/resources/*.exe
 native/binaries/*.exe
