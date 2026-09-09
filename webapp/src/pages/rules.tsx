@@ -1,4 +1,14 @@
-import { Filter, GripVertical, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+	Bell,
+	Eye,
+	Filter,
+	GripVertical,
+	Loader2,
+	Play,
+	Plus,
+	Square,
+	Trash2,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
@@ -6,6 +16,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchWithAuth } from "@/lib/api";
+
+type BackfillResultRow = {
+	id?: string;
+	subject?: string;
+	rule?: string;
+	action?: string;
+	applied?: boolean;
+	reason?: string;
+	message?: string;
+};
+
+type BackfillResult = {
+	success: boolean;
+	scanned: number;
+	matched: number;
+	applied: number;
+	dry_run: boolean;
+	rules_skipped_body_match?: string[];
+	results?: BackfillResultRow[];
+	message?: string;
+	error?: string;
+};
 
 type Rule = {
 	id: string;
@@ -55,6 +87,110 @@ export function Rules() {
 	});
 	const [saving, setSaving] = useState(false);
 	const [deleting, setDeleting] = useState<string | null>(null);
+
+	// Watcher
+	const [watcherRunning, setWatcherRunning] = useState(false);
+	const [watcherPersisted, setWatcherPersisted] = useState(false);
+	const [watcherInterval, setWatcherInterval] = useState(60);
+	const [watcherAutoRespond, setWatcherAutoRespond] = useState(true);
+	const [watcherBusy, setWatcherBusy] = useState(false);
+
+	// Backfill ("Run rules now")
+	const [showBackfill, setShowBackfill] = useState(false);
+	const [services, setServices] = useState<string[]>([]);
+	const [backfillService, setBackfillService] = useState("default");
+	const [backfillFolder, setBackfillFolder] = useState("INBOX");
+	const [backfillLimit, setBackfillLimit] = useState(200);
+	const [backfillBusy, setBackfillBusy] = useState(false);
+	const [backfillResult, setBackfillResult] = useState<BackfillResult | null>(
+		null,
+	);
+
+	const loadWatcherStatus = useCallback(async () => {
+		try {
+			const d = await fetchWithAuth("/api/watcher/status");
+			setWatcherRunning(!!d.running);
+			setWatcherPersisted(!!d.persisted_enabled);
+			if (d.config?.interval) setWatcherInterval(d.config.interval);
+			if (typeof d.config?.auto_respond === "boolean")
+				setWatcherAutoRespond(d.config.auto_respond);
+		} catch {
+			/* ignore */
+		}
+	}, []);
+
+	useEffect(() => {
+		loadWatcherStatus();
+		fetchWithAuth("/api/services")
+			.then((d) => {
+				const names = Object.keys(d.services || {});
+				setServices(names.length ? names : ["default"]);
+			})
+			.catch(() => setServices(["default"]));
+	}, [loadWatcherStatus]);
+
+	const handleWatcherStart = async () => {
+		setWatcherBusy(true);
+		try {
+			const d = await fetchWithAuth("/api/watcher/start", {
+				method: "POST",
+				body: JSON.stringify({
+					interval: watcherInterval,
+					auto_respond: watcherAutoRespond,
+				}),
+			});
+			setWatcherRunning(!!d.running);
+			toast(
+				d.running ? "success" : "error",
+				d.message || (d.running ? "Watcher started" : "Failed to start"),
+			);
+			loadWatcherStatus();
+		} catch (err: unknown) {
+			toast("error", err instanceof Error ? err.message : "Start failed");
+		} finally {
+			setWatcherBusy(false);
+		}
+	};
+
+	const handleWatcherStop = async () => {
+		setWatcherBusy(true);
+		try {
+			const d = await fetchWithAuth("/api/watcher/stop", { method: "POST" });
+			setWatcherRunning(false);
+			toast("success", d.message || "Watcher stopped");
+			loadWatcherStatus();
+		} catch (err: unknown) {
+			toast("error", err instanceof Error ? err.message : "Stop failed");
+		} finally {
+			setWatcherBusy(false);
+		}
+	};
+
+	const runBackfill = async (dryRun: boolean) => {
+		setBackfillBusy(true);
+		setBackfillResult(null);
+		try {
+			const d = await fetchWithAuth("/api/auto-rules/backfill", {
+				method: "POST",
+				body: JSON.stringify({
+					service: backfillService,
+					folder: backfillFolder,
+					limit: backfillLimit,
+					dry_run: dryRun,
+				}),
+			});
+			setBackfillResult(d);
+			if (d.success === false) {
+				toast("error", d.error || "Backfill failed");
+			} else {
+				toast("success", d.message || "Backfill complete");
+			}
+		} catch (err: unknown) {
+			toast("error", err instanceof Error ? err.message : "Backfill failed");
+		} finally {
+			setBackfillBusy(false);
+		}
+	};
 
 	const loadRules = useCallback(async () => {
 		setLoading(true);
@@ -142,6 +278,215 @@ export function Rules() {
 					<Plus className="h-4 w-4 mr-1" /> {showAdd ? "Cancel" : "Add Rule"}
 				</Button>
 			</div>
+
+			{/* Mail Watcher -- runs rules against new mail as it arrives */}
+			<Card
+				className="border-cyan-900/30 bg-cyan-950/10"
+				data-testid="watcher-card"
+			>
+				<CardHeader className="pb-2">
+					<CardTitle className="text-white text-sm flex items-center gap-2">
+						<Bell className="h-4 w-4 text-cyan-400" />
+						Mail Watcher
+					</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="flex gap-2 items-center flex-wrap">
+						<span
+							className="text-xs text-slate-400"
+							data-testid="watcher-status"
+						>
+							{watcherRunning ? (
+								<span className="flex items-center gap-1 text-emerald-400">
+									<span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+									Watching every configured account (every {watcherInterval}s)
+								</span>
+							) : (
+								"Not watching -- rules only apply when you run them or the watcher is on"
+							)}
+						</span>
+						<Input
+							type="number"
+							className="bg-slate-900 border-slate-700 text-white text-xs w-16 h-7"
+							value={watcherInterval}
+							disabled={watcherRunning}
+							onChange={(e) => setWatcherInterval(Number(e.target.value) || 60)}
+						/>
+						<label className="flex items-center gap-1 text-xs text-slate-400 cursor-pointer">
+							<input
+								type="checkbox"
+								checked={watcherAutoRespond}
+								disabled={watcherRunning}
+								onChange={(e) => setWatcherAutoRespond(e.target.checked)}
+								className="accent-emerald-500"
+							/>
+							Run rules on new mail
+						</label>
+						{!watcherRunning ? (
+							<Button
+								size="sm"
+								className="bg-cyan-600 hover:bg-cyan-700 h-7 text-xs"
+								onClick={handleWatcherStart}
+								disabled={watcherBusy}
+							>
+								{watcherBusy ? (
+									<Loader2 className="h-3 w-3 mr-1 animate-spin" />
+								) : (
+									<Bell className="h-3 w-3 mr-1" />
+								)}
+								Start Watching
+							</Button>
+						) : (
+							<Button
+								size="sm"
+								variant="outline"
+								className="border-red-800 text-red-400 hover:bg-red-950/20 h-7 text-xs"
+								onClick={handleWatcherStop}
+								disabled={watcherBusy}
+							>
+								<Square className="h-3 w-3 mr-1" /> Stop
+							</Button>
+						)}
+					</div>
+					<p className="text-xs text-slate-500 mt-1.5">
+						Auto-watches every account configured in Settings and re-discovers
+						new ones automatically.{" "}
+						{watcherRunning || watcherPersisted
+							? "Resumes on its own if the server restarts."
+							: "Won't resume on restart until started."}
+					</p>
+				</CardContent>
+			</Card>
+
+			{/* Backfill -- apply rules to mail already sitting in a folder */}
+			<Card className="border-slate-800 bg-slate-950/50">
+				<CardHeader className="pb-2 flex flex-row items-center justify-between">
+					<CardTitle className="text-white text-sm flex items-center gap-2">
+						<Play className="h-4 w-4 text-emerald-400" />
+						Run Rules Now
+					</CardTitle>
+					<Button
+						size="sm"
+						variant="outline"
+						className="border-slate-700 text-slate-300 hover:bg-slate-800 h-7 text-xs"
+						data-testid="backfill-toggle"
+						onClick={() => setShowBackfill((s) => !s)}
+					>
+						{showBackfill ? "Cancel" : "Sort existing mail"}
+					</Button>
+				</CardHeader>
+				{showBackfill && (
+					<CardContent className="space-y-3">
+						<p className="text-xs text-slate-500">
+							Applies matching rules to mail already sitting in a folder
+							(mark-read / star / delete / move / spam only -- notify and
+							forward never fire here). Preview first.
+						</p>
+						<div className="flex flex-wrap gap-3 items-center">
+							<div>
+								<Label className="text-slate-300 text-xs">Service</Label>
+								<select
+									className="bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1 mt-1 block"
+									value={backfillService}
+									onChange={(e) => setBackfillService(e.target.value)}
+								>
+									{services.map((s) => (
+										<option key={s} value={s}>
+											{s}
+										</option>
+									))}
+								</select>
+							</div>
+							<div>
+								<Label className="text-slate-300 text-xs">Folder</Label>
+								<Input
+									className="bg-slate-900 border-slate-700 text-white text-sm w-40 mt-1"
+									value={backfillFolder}
+									onChange={(e) => setBackfillFolder(e.target.value)}
+								/>
+							</div>
+							<div>
+								<Label className="text-slate-300 text-xs">Scan up to</Label>
+								<Input
+									type="number"
+									className="bg-slate-900 border-slate-700 text-white text-sm w-24 mt-1"
+									value={backfillLimit}
+									onChange={(e) =>
+										setBackfillLimit(Number(e.target.value) || 200)
+									}
+								/>
+							</div>
+						</div>
+						<div className="flex gap-2">
+							<Button
+								size="sm"
+								variant="outline"
+								className="border-slate-700 text-slate-300 hover:bg-slate-800"
+								data-testid="backfill-preview"
+								onClick={() => runBackfill(true)}
+								disabled={backfillBusy}
+							>
+								{backfillBusy ? (
+									<Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+								) : (
+									<Eye className="h-3.5 w-3.5 mr-1" />
+								)}
+								Preview
+							</Button>
+							<Button
+								size="sm"
+								className="bg-emerald-600 hover:bg-emerald-700"
+								data-testid="backfill-apply"
+								onClick={() => runBackfill(false)}
+								disabled={backfillBusy || !backfillResult}
+							>
+								<Play className="h-3.5 w-3.5 mr-1" />
+								Apply
+							</Button>
+						</div>
+						{backfillResult && (
+							<div
+								className="rounded border border-slate-800 bg-slate-900/50 p-3 text-xs space-y-2"
+								data-testid="backfill-result"
+							>
+								<p className="text-slate-300">
+									{backfillResult.message ||
+										(backfillResult.success === false
+											? backfillResult.error
+											: "")}
+								</p>
+								{!!backfillResult.rules_skipped_body_match?.length && (
+									<p className="text-amber-500">
+										Skipped (body-text rules, not supported in a backfill):{" "}
+										{backfillResult.rules_skipped_body_match.join(", ")}
+									</p>
+								)}
+								{!!backfillResult.results?.length && (
+									<div className="space-y-1 max-h-48 overflow-y-auto">
+										{backfillResult.results.map((r, i) => (
+											<div
+												key={r.id ? `${r.id}-${i}` : i}
+												className="flex items-center gap-2 text-slate-400"
+											>
+												<span
+													className={`h-1.5 w-1.5 rounded-full shrink-0 ${r.applied ? "bg-emerald-500" : "bg-slate-600"}`}
+												/>
+												<span className="truncate flex-1">
+													{r.subject || "(no subject)"}
+												</span>
+												<span className="text-slate-500 shrink-0">
+													{r.rule} -&gt; {r.action}
+													{r.reason ? ` (${r.reason})` : ""}
+												</span>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						)}
+					</CardContent>
+				)}
+			</Card>
 
 			{showAdd && (
 				<Card className="border-blue-800 bg-blue-950/20">

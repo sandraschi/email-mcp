@@ -1,5 +1,5 @@
 import {
-	Bell,
+	Filter,
 	Forward,
 	Inbox,
 	Loader2,
@@ -13,6 +13,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useToast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,12 +70,6 @@ export function Lab() {
 	// Forward
 	const [forwardTo, setForwardTo] = useState("");
 	const [forwarding, setForwarding] = useState<string | null>(null);
-
-	// Watcher
-	const [watcherRunning, setWatcherRunning] = useState(false);
-	const [watcherInterval, setWatcherInterval] = useState(60);
-	const [webhookUrl, setWebhookUrl] = useState("");
-	const [watcherAutoRespond, setWatcherAutoRespond] = useState(false);
 
 	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -184,45 +179,6 @@ export function Lab() {
 			setGenerating(false);
 		}
 	};
-
-	// Watcher handlers
-	const handleWatcherStart = async () => {
-		try {
-			const data = await fetchWithAuth("/api/watcher/start", {
-				method: "POST",
-				body: JSON.stringify({
-					interval: watcherInterval,
-					webhook_url: webhookUrl.trim(),
-					auto_respond: watcherAutoRespond,
-				}),
-			});
-			setWatcherRunning(data.running);
-			if (data.running) toast("success", data.message);
-			else toast("error", "Failed to start watcher");
-		} catch (err: unknown) {
-			toast("error", err instanceof Error ? err.message : "Start failed");
-		}
-	};
-	const handleWatcherStop = async () => {
-		try {
-			const data = await fetchWithAuth("/api/watcher/stop", { method: "POST" });
-			setWatcherRunning(false);
-			toast("success", data.message);
-		} catch (err: unknown) {
-			toast("error", err instanceof Error ? err.message : "Stop failed");
-		}
-	};
-	useEffect(() => {
-		const poll = setInterval(async () => {
-			try {
-				const data = await fetchWithAuth("/api/watcher/status");
-				setWatcherRunning(data.running);
-			} catch {
-				/* ignore */
-			}
-		}, 5000);
-		return () => clearInterval(poll);
-	}, []);
 
 	const handleOpenEmail = async (emailId: string) => {
 		setEmailLoading(true);
@@ -432,73 +388,25 @@ export function Lab() {
 				</Card>
 			</div>
 
-			{/* Mail Watcher */}
+			{/* Mail Watcher moved to Rules -- it now drives rule-based folder
+			    sorting and persists across restarts, so it lives next to the
+			    rules it runs rather than this scratch/testing page. */}
 			<Card className="border-cyan-900/30 bg-cyan-950/10">
 				<CardHeader className="pb-2">
 					<CardTitle className="text-white text-sm flex items-center gap-2">
-						<Bell className="h-4 w-4 text-cyan-400" />
+						<Filter className="h-4 w-4 text-cyan-400" />
 						Mail Watcher
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="flex gap-2 items-center flex-wrap">
-						<span className="text-xs text-slate-400">
-							{watcherRunning ? (
-								<span className="flex items-center gap-1 text-emerald-400">
-									<span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />{" "}
-									Watching (every {watcherInterval}s)
-								</span>
-							) : (
-								"Monitor IMAP for new mail and POST to a webhook"
-							)}
-						</span>
-						<Input
-							className="bg-slate-900 border-slate-700 text-white text-xs w-48 h-7"
-							placeholder="Webhook URL (robofang/fleet-agent)"
-							value={webhookUrl}
-							onChange={(e) => setWebhookUrl(e.target.value)}
-						/>
-						<Input
-							className="bg-slate-900 border-slate-700 text-white text-xs w-16 h-7"
-							placeholder="60s"
-							value={watcherInterval}
-							onChange={(e) => setWatcherInterval(Number(e.target.value) || 60)}
-						/>
-						<label className="flex items-center gap-1 text-xs text-slate-400 cursor-pointer">
-							<input
-								type="checkbox"
-								checked={watcherAutoRespond}
-								onChange={(e) => setWatcherAutoRespond(e.target.checked)}
-								className="accent-emerald-500"
-							/>
-							Auto-respond
-						</label>
-						{!watcherRunning ? (
-							<Button
-								size="sm"
-								className="bg-cyan-600 hover:bg-cyan-700 h-7 text-xs"
-								onClick={handleWatcherStart}
-								disabled={!webhookUrl.trim() && !watcherAutoRespond}
-							>
-								<Bell className="h-3 w-3 mr-1" /> Start Watch
-							</Button>
-						) : (
-							<Button
-								size="sm"
-								variant="outline"
-								className="border-red-800 text-red-400 hover:bg-red-950/20 h-7 text-xs"
-								onClick={handleWatcherStop}
-							>
-								<Square className="h-3 w-3 mr-1" /> Stop
-							</Button>
-						)}
-					</div>
-					{!webhookUrl.trim() && (
-						<p className="text-xs text-amber-500 mt-1">
-							Enter a webhook URL to receive notifications (robofang,
-							fleet-agent, etc.)
-						</p>
-					)}
+					<p className="text-xs text-slate-400">
+						Watcher start/stop, interval, and auto-respond controls moved to{" "}
+						<Link to="/rules" className="text-cyan-400 hover:underline">
+							Rules
+						</Link>
+						. It now auto-watches every configured account and resumes
+						automatically after a restart.
+					</p>
 				</CardContent>
 			</Card>
 
