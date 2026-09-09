@@ -597,6 +597,46 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    @app.post("/api/inbox/{message_id}/flag")
+    async def flag_email(
+        message_id: str,
+        payload: dict[str, Any] = Body(default={}),
+        _user: str = Depends(authenticate),
+    ):
+        try:
+            return _extract_tool_result(
+                await mcp_app.call_tool(
+                    "flag_email",
+                    {
+                        "email_id": message_id,
+                        "service": payload.get("service", "default"),
+                        "folder": payload.get("folder", "INBOX"),
+                    },
+                )
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post("/api/inbox/{message_id}/unflag")
+    async def unflag_email(
+        message_id: str,
+        payload: dict[str, Any] = Body(default={}),
+        _user: str = Depends(authenticate),
+    ):
+        try:
+            return _extract_tool_result(
+                await mcp_app.call_tool(
+                    "unflag_email",
+                    {
+                        "email_id": message_id,
+                        "service": payload.get("service", "default"),
+                        "folder": payload.get("folder", "INBOX"),
+                    },
+                )
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
     @app.delete("/api/inbox/{message_id}")
     async def delete_email(
         message_id: str,

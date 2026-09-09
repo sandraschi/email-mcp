@@ -354,6 +354,107 @@ def delete_pending(pending_id: str) -> dict[str, Any]:
 
 # ── Auto-respond on new email (called by watcher) ──────────────────────────
 
+# Actions that only reorganize a message already sitting in a mailbox --
+# safe to replay against old mail during a backfill sweep. "notify" (would
+# spam aiwatcher/robofang with historical mail) and "forward" (would send
+# mail to a third party) are deliberately excluded from backfill; they only
+# ever fire on freshly-arrived mail via auto_respond().
+ORGANIZATIONAL_FILTER_ACTIONS = frozenset({"mark_read", "star", "delete", "move", "spam"})
+
+
+async def apply_filter_action(rule: dict[str, Any], email: dict[str, Any], mcp_app=None) -> dict[str, Any]:
+    """Apply a matched rule's filter_action side effect to one email.
+
+    Shared by auto_respond() (live watcher, all actions) and the backfill
+    sweep (existing mail, ORGANIZATIONAL_FILTER_ACTIONS only).
+
+    ## Return Format
+    {applied: bool, action: str, message: str}
+    """
+    logger = logging.getLogger(__name__)
+    filter_action = rule.get("filter_action", "")
+    if not filter_action:
+        return {"applied": False, "action": "", "message": "Rule has no filter_action"}
+
+    if filter_action == "notify":
+        target = (rule.get("filter_target", "") or "both").strip().lower()
+        title = email.get("subject", "(no subject)")
+        summary = f"From: {email.get('from', '')}\n{(email.get('text_body') or email.get('body', ''))[:500]}"
+        notified = []
+        try:
+            from email_mcp.connectors import push_aiwatcher, push_robofang
+
+            if target in ("aiwatcher", "both"):
+                res = await push_aiwatcher(title, summary, source="email-mcp-rules", urgency_hint=7.0)
+                if res.get("success"):
+                    notified.append("aiwatcher")
+            if target in ("robofang", "both"):
+                res = await push_robofang(email.get("from", "rule@email-mcp"), summary, subject=title)
+                if res.get("success"):
+                    notified.append("robofang")
+        except Exception as e:
+            logger.warning("Filter notify failed: %s", e)
+            return {"applied": False, "action": filter_action, "message": str(e)}
+        logger.info("Filter: notified %s about %s", notified or "nobody", title)
+        return {"applied": bool(notified), "action": filter_action, "message": f"Notified {notified or 'nobody'}"}
+
+    if not mcp_app:
+        return {"applied": False, "action": filter_action, "message": "No mcp_app available"}
+
+    email_id = email.get("id", "")
+    folder = email.get("folder", "INBOX")
+    svc = rule.get("service", "default")
+    if not email_id:
+        return {"applied": False, "action": filter_action, "message": "Email has no id"}
+
+    try:
+        if filter_action == "mark_read":
+            await mcp_app.call_tool("mark_email_read", {"email_id": email_id, "service": svc, "folder": folder})
+            logger.info("Filter: marked %s as read", email_id)
+        elif filter_action == "star":
+            await mcp_app.call_tool("flag_email", {"email_id": email_id, "service": svc, "folder": folder})
+            logger.info("Filter: starred %s", email_id)
+        elif filter_action == "delete":
+            await mcp_app.call_tool("delete_email", {"email_id": email_id, "service": svc, "folder": folder})
+            logger.info("Filter: deleted %s", email_id)
+        elif filter_action == "move":
+            target = rule.get("filter_target", "")
+            if not target:
+                return {"applied": False, "action": filter_action, "message": "Rule has no filter_target folder"}
+            await mcp_app.call_tool(
+                "move_email", {"email_id": email_id, "to_folder": target, "service": svc, "folder": folder}
+            )
+            logger.info("Filter: moved %s to %s", email_id, target)
+        elif filter_action == "spam":
+            await mcp_app.call_tool("flag_spam", {"email_id": email_id, "service": svc, "folder": folder})
+            logger.info("Filter: flagged %s as spam", email_id)
+        elif filter_action == "forward":
+            target = rule.get("filter_target", "")
+            if not target:
+                return {"applied": False, "action": filter_action, "message": "Rule has no filter_target address"}
+            result = await mcp_app.call_tool(
+                "fetch_email_detail", {"email_id": email_id, "service": svc, "folder": folder}
+            )
+            if not (isinstance(result, dict) and result.get("success")):
+                return {"applied": False, "action": filter_action, "message": "Could not fetch email body to forward"}
+            await mcp_app.call_tool(
+                "send_email",
+                {
+                    "to": target,
+                    "subject": f"Fwd: {email.get('subject', '')}",
+                    "body": f"Forwarded from {email.get('from', '')}:\n\n{result.get('text_body', '')}",
+                    "service": svc,
+                },
+            )
+            logger.info("Filter: forwarded %s to %s", email_id, target)
+        else:
+            return {"applied": False, "action": filter_action, "message": f"Unknown filter_action {filter_action!r}"}
+    except Exception as e:
+        logger.warning("Filter action failed: %s", e)
+        return {"applied": False, "action": filter_action, "message": str(e)}
+
+    return {"applied": True, "action": filter_action, "message": f"Applied {filter_action} to {email_id}"}
+
 
 async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> dict[str, Any]:
     """Auto-respond to a new email. Called by the watcher when mail arrives."""
@@ -374,78 +475,8 @@ async def auto_respond(email: dict[str, Any], mcp_app=None, ai_router=None) -> d
     reply_body = rule.get("reply_body", "")
 
     # Filter actions -- run on matched emails regardless of reply mode
-    filter_action = rule.get("filter_action", "")
-    if filter_action == "notify":
-        target = (rule.get("filter_target", "") or "both").strip().lower()
-        title = email.get("subject", "(no subject)")
-        summary = f"From: {email.get('from', '')}\n{(email.get('text_body') or email.get('body', ''))[:500]}"
-        notified = []
-        try:
-            from email_mcp.connectors import push_aiwatcher, push_robofang
-
-            if target in ("aiwatcher", "both"):
-                res = await push_aiwatcher(title, summary, source="email-mcp-rules", urgency_hint=7.0)
-                if res.get("success"):
-                    notified.append("aiwatcher")
-            if target in ("robofang", "both"):
-                res = await push_robofang(email.get("from", "rule@email-mcp"), summary, subject=title)
-                if res.get("success"):
-                    notified.append("robofang")
-        except Exception as e:
-            logger.warning("Filter notify failed: %s", e)
-        logger.info("Filter: notified %s about %s", notified or "nobody", title)
-    elif filter_action and mcp_app:
-        email_id = email.get("id", "")
-        folder = email.get("folder", "INBOX")
-        svc = rule.get("service", "default")
-        try:
-            if filter_action == "mark_read" and email_id:
-                await mcp_app.call_tool("mark_email_read", {"email_id": email_id, "service": svc, "folder": folder})
-                logger.info("Filter: marked %s as read", email_id)
-            elif filter_action == "star" and email_id:
-                try:
-                    await mcp_app.call_tool("mark_email_read", {"email_id": email_id, "service": svc, "folder": folder})
-                except Exception:
-                    pass
-                logger.info("Filter: starred %s", email_id)
-            elif filter_action == "delete" and email_id:
-                await mcp_app.call_tool("delete_email", {"email_id": email_id, "service": svc, "folder": folder})
-                logger.info("Filter: deleted %s", email_id)
-            elif filter_action == "move":
-                target = rule.get("filter_target", "")
-                if target and email_id:
-                    try:
-                        await mcp_app.call_tool(
-                            "move_email", {"email_id": email_id, "to_folder": target, "service": svc, "folder": folder}
-                        )
-                        logger.info("Filter: moved %s to %s", email_id, target)
-                    except Exception as e:
-                        logger.warning("Filter move failed: %s", e)
-            elif filter_action == "spam" and email_id:
-                try:
-                    await mcp_app.call_tool("flag_spam", {"email_id": email_id, "service": svc, "folder": folder})
-                    logger.info("Filter: flagged %s as spam", email_id)
-                except Exception as e:
-                    logger.warning("Filter spam flag failed: %s", e)
-            elif filter_action == "forward":
-                target = rule.get("filter_target", "")
-                if target and email_id:
-                    result = await mcp_app.call_tool(
-                        "fetch_email_detail", {"email_id": email_id, "service": svc, "folder": folder}
-                    )
-                    if isinstance(result, dict) and result.get("success"):
-                        await mcp_app.call_tool(
-                            "send_email",
-                            {
-                                "to": target,
-                                "subject": f"Fwd: {email.get('subject', '')}",
-                                "body": f"Forwarded from {email.get('from', '')}:\n\n{result.get('text_body', '')}",
-                                "service": svc,
-                            },
-                        )
-                        logger.info("Filter: forwarded %s to %s", email_id, target)
-        except Exception as e:
-            logger.warning("Filter action failed: %s", e)
+    if rule.get("filter_action"):
+        await apply_filter_action(rule, email, mcp_app)
 
     # Spoof mode -- generate hilarious reply to scammers
     response_mode = rule.get("response_mode", "normal")

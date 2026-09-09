@@ -931,6 +931,36 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
             return {"success": False, "error": f"Service {service!r} not available"}
         return await server.services[service].mark_unread(folder, email_id)
 
+    @mcp.tool(annotations=_MUTATING)
+    async def flag_email(
+        email_id: str,
+        service: str = "default",
+        folder: str = "INBOX",
+    ) -> dict[str, Any]:
+        """Star/flag a single email (IMAP \\Flagged), distinct from mark-as-read.
+
+        ## Return Format
+        {success, service, email_id, message}
+        """
+        if service not in server.services:
+            return {"success": False, "error": f"Service {service!r} not available"}
+        return await server.services[service].flag_message(folder, email_id)
+
+    @mcp.tool(annotations=_MUTATING)
+    async def unflag_email(
+        email_id: str,
+        service: str = "default",
+        folder: str = "INBOX",
+    ) -> dict[str, Any]:
+        """Remove the star/flag from a single email.
+
+        ## Return Format
+        {success, service, email_id, message}
+        """
+        if service not in server.services:
+            return {"success": False, "error": f"Service {service!r} not available"}
+        return await server.services[service].unflag_message(folder, email_id)
+
     @mcp.tool(annotations=_READ_ONLY)
     async def list_folders(
         service: str = "default",

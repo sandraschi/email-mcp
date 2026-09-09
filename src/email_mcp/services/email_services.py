@@ -215,6 +215,22 @@ class EmailService(ABC):
         """Mark a single email as read (SEEN)."""
         return {"success": False, "error": f"mark_read not supported for {self.name}"}
 
+    async def flag_message(
+        self,
+        folder: str,
+        email_id: str,
+    ) -> dict[str, Any]:
+        """Flag a single email (star/important), distinct from mark_read."""
+        return {"success": False, "error": f"flag_message not supported for {self.name}"}
+
+    async def unflag_message(
+        self,
+        folder: str,
+        email_id: str,
+    ) -> dict[str, Any]:
+        """Remove the flag/star from a single email."""
+        return {"success": False, "error": f"unflag_message not supported for {self.name}"}
+
     async def list_folders(self, service: str = "default") -> list[dict[str, Any]]:
         """List IMAP folders/mailboxes."""
         return []
@@ -848,6 +864,70 @@ class SMTPEmailService(EmailService):
             }
         except Exception as e:
             return {"success": False, "error": f"IMAP mark unread failed: {e!s}"}
+
+    async def flag_message(
+        self,
+        folder: str,
+        email_id: str,
+    ) -> dict[str, Any]:
+        """Star/flag a single email (IMAP \\Flagged) via IMAP."""
+        if not self._imap_ready():
+            return {"success": False, "error": f"IMAP not configured for {self.name}"}
+
+        try:
+
+            def flag_sync():
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                self._imap_auth(mail)
+                mail.select(folder)
+                eid = email_id.encode() if isinstance(email_id, str) else email_id
+                mail.store(eid, "+FLAGS", "\\Flagged")
+                mail.close()
+                mail.logout()
+                return True
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, flag_sync)
+            return {
+                "success": True,
+                "service": self.name,
+                "email_id": email_id,
+                "message": f"Flagged {email_id}",
+            }
+        except Exception as e:
+            return {"success": False, "error": f"IMAP flag failed: {e!s}"}
+
+    async def unflag_message(
+        self,
+        folder: str,
+        email_id: str,
+    ) -> dict[str, Any]:
+        """Remove the star/flag (IMAP \\Flagged) from a single email via IMAP."""
+        if not self._imap_ready():
+            return {"success": False, "error": f"IMAP not configured for {self.name}"}
+
+        try:
+
+            def unflag_sync():
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                self._imap_auth(mail)
+                mail.select(folder)
+                eid = email_id.encode() if isinstance(email_id, str) else email_id
+                mail.store(eid, "-FLAGS", "\\Flagged")
+                mail.close()
+                mail.logout()
+                return True
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, unflag_sync)
+            return {
+                "success": True,
+                "service": self.name,
+                "email_id": email_id,
+                "message": f"Unflagged {email_id}",
+            }
+        except Exception as e:
+            return {"success": False, "error": f"IMAP unflag failed: {e!s}"}
 
     async def list_folders(self, service: str = "default") -> list[dict[str, Any]]:
         """List all IMAP folders/mailboxes for this service."""

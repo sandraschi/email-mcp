@@ -407,6 +407,27 @@ class GraphEmailService(EmailService):
     async def mark_unread(self, folder: str, email_id: str) -> dict[str, Any]:
         return await self._set_read(email_id, False)
 
+    async def _set_flag(self, email_id: str, flagged: bool) -> dict[str, Any]:
+        if not self._ready():
+            return {"success": False, "error": f"Graph not authorized for {self.name}"}
+        try:
+            status = "flagged" if flagged else "notFlagged"
+            await self._request("PATCH", f"/me/messages/{quote(email_id)}", json_body={"flag": {"flagStatus": status}})
+            return {
+                "success": True,
+                "service": self.name,
+                "email_id": email_id,
+                "message": f"{'Flagged' if flagged else 'Unflagged'} message {email_id}",
+            }
+        except Exception as exc:
+            return {"success": False, "error": f"Graph flag failed: {exc}"}
+
+    async def flag_message(self, folder: str, email_id: str) -> dict[str, Any]:
+        return await self._set_flag(email_id, True)
+
+    async def unflag_message(self, folder: str, email_id: str) -> dict[str, Any]:
+        return await self._set_flag(email_id, False)
+
     async def copy_message(self, from_folder: str, to_folder: str, email_id: str) -> dict[str, Any]:
         """Copy a message to another folder (original stays)."""
         if not self._ready():
