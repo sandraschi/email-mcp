@@ -39,6 +39,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import subprocess
 import time
 import uuid
@@ -53,6 +54,17 @@ from . import oauth
 from .activity_log import ActivityLog, create_log_router
 from .ai import AIRouter
 from .auth import authenticate
+
+
+def _unwrap_untrusted(text: Any) -> str:
+    """Strip adversarial safety wrappers for web human display."""
+    if not isinstance(text, str) or not text:
+        return "" if text is None else str(text)
+    if "---BEGIN " in text and "---END " in text:
+        m = re.search(r"---BEGIN [A-Z0-9_]+---\n?(.*?)\n?---END [A-Z0-9_]+---", text, flags=re.DOTALL)
+        if m:
+            return m.group(1).strip()
+    return text.strip()
 
 
 def _extract_tool_result(result: Any) -> dict[str, Any]:
@@ -466,21 +478,83 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
             services = status_result.get("services", {})
             for svc_name, svc_info in services.items():
-                if svc_info.get("connected") and svc_info.get("type") in ("smtp", "local"):
+                if svc_info.get("connected") and svc_info.get("type") in ("smtp", "local", "graph", "imap"):
                     try:
-                        inbox_result = _extract_tool_result(
+                        # 1. Fetch unread count
+                        unread_res = _extract_tool_result(
                             await mcp_app.call_tool(
                                 "check_inbox",
-                                {"service": svc_name, "unread_only": True, "limit": 5},
+                                {"service": svc_name, "unread_only": True, "limit": 100},
                             )
                         )
-                        if inbox_result.get("success"):
-                            unread_count += inbox_result.get("count", 0)
-                            for email in inbox_result.get("emails", []):
+                        if unread_res.get("success"):
+                            unread_count += unread_res.get("count", 0)
+
+                        # 2. Fetch recent activity (both read and unread for rich feed)
+                        recent_res = _extract_tool_result(
+                            await mcp_app.call_tool(
+                                "check_inbox",
+                                {"service": svc_name, "unread_only": False, "limit": 10},
+                            )
+                        )
+                        if recent_res.get("success"):
+                            for email in recent_res.get("emails", []):
                                 email["_service"] = svc_name
-                            recent_activity.extend(inbox_result.get("emails", []))
+                                email["clean_subject"] = _unwrap_untrusted(email.get("subject", ""))
+                                email["clean_from"] = _unwrap_untrusted(email.get("from", ""))
+                                email["subject"] = email["clean_subject"]
+                                email["from"] = email["clean_from"]
+                                recent_activity.append(email)
                     except Exception:
                         pass
+
+            # Watcher daemon status
+            watcher_info = {}
+            try:
+                from .watcher import watcher_status
+
+                watcher_info = watcher_status()
+            except Exception:
+                pass
+
+            # Automation rules count
+            rules_count = 0
+            try:
+                from .autorespond import list_rules
+
+                rules_count = len(list_rules())
+            except Exception:
+                pass
+
+            # Contacts count
+            contacts_count = 0
+            try:
+                from .contacts import list_contacts
+
+                contacts_count = len(list_contacts())
+            except Exception:
+                pass
+
+            # Connectors summary
+            connectors_info = {}
+            try:
+                from .connectors import check_all_connectors
+
+                connectors_info = await check_all_connectors()
+            except Exception:
+                pass
+
+            # Diagnostics telemetry
+            diag_info = {}
+            try:
+                import psutil
+
+                diag_info = {
+                    "cpu": psutil.cpu_percent(),
+                    "mem": psutil.virtual_memory().percent,
+                }
+            except Exception:
+                pass
 
             tools_count = len(await mcp_app.list_tools())
             return {
@@ -490,8 +564,17 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 "configured_services": status_result.get("configured_services", 0),
                 "tools_count": tools_count,
                 "drafts_count": len(_drafts),
-                "recent_activity": recent_activity[:5],
-                "mcp_version": status_result.get("version", "0.3.2"),
+                "rules_count": rules_count,
+                "contacts_count": contacts_count,
+                "primary_account": os.getenv("SMTP_USER") or os.getenv("SMTP_FROM") or "sandraschipal@hotmail.com",
+                "ai_provider": os.getenv("AI_PROVIDER", "ollama"),
+                "ai_model": os.getenv("AI_MODEL", "gemma4:12b"),
+                "watcher": watcher_info,
+                "connectors": connectors_info,
+                "services": services,
+                "diagnostics": diag_info,
+                "recent_activity": recent_activity[:10],
+                "mcp_version": status_result.get("version", "0.5.0-beta.2"),
             }
         except Exception as exc:
             return {
@@ -501,8 +584,10 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 "configured_services": 0,
                 "tools_count": 0,
                 "drafts_count": 0,
+                "rules_count": 0,
+                "contacts_count": 0,
                 "recent_activity": [],
-                "mcp_version": "0.3.2",
+                "mcp_version": "0.5.0-beta.2",
                 "error": str(exc),
             }
 
@@ -519,7 +604,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         _user: str = Depends(authenticate),
     ):
         try:
-            return _extract_tool_result(
+            raw = _extract_tool_result(
                 await mcp_app.call_tool(
                     "check_inbox",
                     {
@@ -532,6 +617,15 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                     },
                 )
             )
+            if isinstance(raw, dict) and "emails" in raw:
+                for em in raw.get("emails", []):
+                    if "subject" in em:
+                        em["clean_subject"] = _unwrap_untrusted(em["subject"])
+                        em["subject"] = em["clean_subject"]
+                    if "from" in em:
+                        em["clean_from"] = _unwrap_untrusted(em["from"])
+                        em["from"] = em["clean_from"]
+            return raw
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
