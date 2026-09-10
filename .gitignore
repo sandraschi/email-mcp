@@ -101,6 +101,8 @@ reports/
 .mypy_cache/
 cua-reports/
 .mcpb
+mcpb/src/
+mcpb/assets/
 data/
 
 src/autorespond_rules.json

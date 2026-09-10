@@ -247,6 +247,18 @@
     {
       "name": "watcher_status",
       "description": "Check if the mail watcher is running.\n\n## Return Format\n{running, config: {interval, webhook_url, services}}"
+    },
+    {
+      "name": "flag_email",
+      "description": "Star/flag a single email (IMAP \\Flagged), distinct from mark-as-read.\n\n## Return Format\n{success, service, email_id, message}"
+    },
+    {
+      "name": "unflag_email",
+      "description": "Remove the star/flag from a single email.\n\n## Return Format\n{success, service, email_id, message}"
+    },
+    {
+      "name": "backfill_auto_rules",
+      "description": "Apply existing auto-rules to mail already sitting in a folder (not just new mail)."
     }
   ]
 }

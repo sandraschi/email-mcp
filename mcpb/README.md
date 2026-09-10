@@ -4,18 +4,22 @@ Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, lo
 
 ## Usage
 
-Add to \claude_desktop_config.json\:
-\\\json
+Drag and drop `email-mcp.mcpb` into Claude Desktop's MCP Servers settings, or add manually to `claude_desktop_config.json`:
+
+```json
 {
   "mcpServers": {
     "email-mcp": {
-      "command": "uv",
-      "args": ["run", "--directory", "\D:\Dev\repos", "python", "-m", "email_mcp"],
-      "env": { "PYTHONPATH": "\D:\Dev\repos/src" }
+      "command": "python",
+      "args": ["-m", "email_mcp.server"],
+      "env": {
+        "PYTHONPATH": "${PWD}/src",
+        "PYTHONUNBUFFERED": "1"
+      }
     }
   }
 }
-\\\
+```
 
 ## Tools
 
