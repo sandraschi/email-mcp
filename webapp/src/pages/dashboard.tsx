@@ -1,5 +1,6 @@
 import {
 	Activity,
+	AlertTriangle,
 	ArrowRight,
 	Bot,
 	FileText,
@@ -77,6 +78,7 @@ type Stats = {
 	recent_activity: EmailItem[];
 	mcp_version: string;
 	error?: string;
+	partial_errors?: string[];
 };
 
 function useExponentialBackoff(fn: () => Promise<void>, maxRetries = 5) {
@@ -139,17 +141,30 @@ export function Dashboard() {
 	const [backendOk, setBackendOk] = useState<boolean | null>(null);
 	const [activeFilter, setActiveFilter] = useState<"all" | "unread">("all");
 	const [triggeringAction, setTriggeringAction] = useState(false);
+	const wasOkRef = useRef<boolean | null>(null);
 
 	const fetchStats = useCallback(async () => {
 		try {
 			const data = await fetchWithAuth("/api/stats");
 			setStats(data);
 			setBackendOk(true);
+			if (data?.error && wasOkRef.current !== false) {
+				toast("error", `Dashboard stats loaded with errors: ${data.error}`);
+			}
+			wasOkRef.current = !data?.error;
 		} catch (err) {
 			setBackendOk(false);
+			// Toast once per failure streak, not on every 60s auto-refresh retry.
+			if (wasOkRef.current !== false) {
+				toast(
+					"error",
+					`Failed to load dashboard stats: ${err instanceof Error ? err.message : String(err)}`,
+				);
+			}
+			wasOkRef.current = false;
 			throw err;
 		}
-	}, []);
+	}, [toast]);
 
 	useExponentialBackoff(fetchStats, 5);
 
@@ -189,11 +204,15 @@ export function Dashboard() {
 				await fetchWithAuth("/api/watcher/stop", { method: "POST" });
 				toast("info", "Mail watcher stopped");
 			} else {
+				// Reuse the last-known/persisted interval and auto_respond setting
+				// (set on the Rules page) rather than forcing a fixed value here.
+				const interval = stats.watcher?.config?.interval ?? 60;
+				const autoRespond = stats.watcher?.config?.auto_respond ?? true;
 				await fetchWithAuth("/api/watcher/start", {
 					method: "POST",
-					body: JSON.stringify({ interval: 120, auto_respond: true }),
+					body: JSON.stringify({ interval, auto_respond: autoRespond }),
 				});
-				toast("success", "Mail watcher started (interval: 120s)");
+				toast("success", `Mail watcher started (interval: ${interval}s)`);
 			}
 			await fetchStats();
 		} catch (err) {
@@ -213,9 +232,12 @@ export function Dashboard() {
 	}
 
 	const watcherRunning = Boolean(stats?.watcher?.running);
-	const primaryAccount = stats?.primary_account || "sandraschipal@hotmail.com";
+	const watcherInterval = stats?.watcher?.config?.interval;
+	const primaryAccount = stats?.primary_account || "Not configured";
 	const aiProvider = stats?.ai_provider || "ollama";
 	const aiModel = stats?.ai_model || "gemma4:12b";
+	const hasError = backendOk === false || Boolean(stats?.error);
+	const partialErrors = stats?.partial_errors ?? [];
 
 	const filteredActivity = (stats?.recent_activity || []).filter((email) => {
 		if (activeFilter === "unread") {
@@ -281,7 +303,9 @@ export function Dashboard() {
 							<Radio
 								className={`h-3 w-3 ${watcherRunning ? "animate-pulse text-purple-400" : ""}`}
 							/>
-							{watcherRunning ? "Watcher Active (120s)" : "Watcher Idle"}
+							{watcherRunning
+								? `Watcher Active (${watcherInterval ?? "?"}s)`
+								: "Watcher Idle"}
 						</Badge>
 
 						{/* AI Provider Badge */}
@@ -319,6 +343,42 @@ export function Dashboard() {
 					</div>
 				</div>
 			</div>
+
+			{/* Error / partial-data banner -- never fail silently */}
+			{hasError && (
+				<div
+					data-testid="dashboard-error-banner"
+					className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-950/30 px-4 py-2.5 text-sm text-red-200"
+				>
+					<AlertTriangle className="h-4 w-4 shrink-0 text-red-400" />
+					<span>
+						{stats?.error
+							? `Dashboard data is incomplete: ${stats.error}`
+							: "Could not reach the backend -- the numbers below are stale or unavailable."}
+					</span>
+					<Button
+						variant="ghost"
+						size="sm"
+						className="ml-auto h-6 text-red-200 hover:text-white hover:bg-red-900/40"
+						onClick={handleManualRefresh}
+						disabled={refreshing}
+					>
+						Retry
+					</Button>
+				</div>
+			)}
+			{!hasError && partialErrors.length > 0 && (
+				<div
+					data-testid="dashboard-partial-banner"
+					className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-950/20 px-4 py-2 text-xs text-amber-300"
+				>
+					<AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+					<span>
+						Some data failed to load and may be showing as zero:{" "}
+						{partialErrors.join(", ")}
+					</span>
+				</div>
+			)}
 
 			{/* 6 High-Leverage KPI Metric Cards */}
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -366,7 +426,7 @@ export function Dashboard() {
 							{stats?.connected_services ?? 0}
 						</div>
 						<p className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-							<span>{stats?.total_services ?? 2} accounts configured</span>
+							<span>{stats?.total_services ?? 0} accounts configured</span>
 							<ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
 						</p>
 					</CardContent>
@@ -391,7 +451,9 @@ export function Dashboard() {
 						</div>
 						<p className="text-xs text-slate-400 mt-1 flex items-center justify-between">
 							<span>
-								{watcherRunning ? "120s polling active" : "Auto-scan paused"}
+								{watcherRunning
+									? `${watcherInterval ?? "?"}s polling active`
+									: "Auto-scan paused"}
 							</span>
 							<ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
 						</p>
@@ -413,7 +475,7 @@ export function Dashboard() {
 					</CardHeader>
 					<CardContent>
 						<div className="text-3xl font-extrabold text-white group-hover:text-amber-400 transition-colors">
-							{stats?.rules_count ?? 22}
+							{stats?.rules_count ?? 0}
 						</div>
 						<p className="text-xs text-slate-400 mt-1 flex items-center justify-between">
 							<span>Triage, notify, forward</span>
@@ -463,7 +525,7 @@ export function Dashboard() {
 					</CardHeader>
 					<CardContent>
 						<div className="text-3xl font-extrabold text-white group-hover:text-pink-400 transition-colors">
-							{stats?.tools_count ?? 47}
+							{stats?.tools_count ?? 0}
 						</div>
 						<p className="text-xs text-slate-400 mt-1 flex items-center justify-between">
 							<span>Streamable HTTP</span>
@@ -742,14 +804,24 @@ export function Dashboard() {
 									<span className="text-slate-400 block mb-1">
 										Polling Interval
 									</span>
-									<span className="font-semibold text-white">120 seconds</span>
+									<span className="font-semibold text-white">
+										{watcherInterval != null
+											? `${watcherInterval} seconds`
+											: watcherRunning
+												? "Unknown"
+												: "Not running"}
+									</span>
 								</div>
 								<div className="p-2.5 rounded-md border border-slate-800 bg-slate-900/40">
 									<span className="text-slate-400 block mb-1">
 										Auto-Respond
 									</span>
-									<span className="font-semibold text-emerald-400">
-										Enabled
+									<span
+										className={`font-semibold ${stats?.watcher?.config?.auto_respond ? "text-emerald-400" : "text-slate-400"}`}
+									>
+										{stats?.watcher?.config?.auto_respond
+											? "Enabled"
+											: "Disabled"}
 									</span>
 								</div>
 							</div>
@@ -757,7 +829,7 @@ export function Dashboard() {
 							<div className="flex items-center justify-between pt-1">
 								<div className="space-y-0.5">
 									<p className="text-xs font-medium text-slate-200">
-										{stats?.rules_count ?? 22} Active Rules
+										{stats?.rules_count ?? 0} Active Rules
 									</p>
 									<p className="text-[11px] text-slate-400">
 										Filtering, notification hooks & auto-replies

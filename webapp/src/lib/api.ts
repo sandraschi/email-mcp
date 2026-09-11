@@ -24,7 +24,7 @@ export async function fetchWithAuth(
 	options: RequestInit = {},
 	timeoutMs = DEFAULT_TIMEOUT,
 ) {
-	const _resolvedUrl = buildUrl(url);
+	const resolvedUrl = buildUrl(url);
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -35,7 +35,7 @@ export async function fetchWithAuth(
 	};
 
 	try {
-		const response = await fetch(url, {
+		const response = await fetch(resolvedUrl, {
 			...options,
 			headers,
 			signal: controller.signal,
