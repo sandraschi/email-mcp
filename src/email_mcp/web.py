@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import subprocess
@@ -55,6 +56,8 @@ from .activity_log import ActivityLog, create_log_router
 from .ai import AIRouter
 from .auth import authenticate
 
+logger = logging.getLogger(__name__)
+
 
 def _unwrap_untrusted(text: Any) -> str:
     """Strip adversarial safety wrappers for web human display."""
@@ -65,6 +68,21 @@ def _unwrap_untrusted(text: Any) -> str:
         if m:
             return m.group(1).strip()
     return text.strip()
+
+
+def _resolve_primary_account(server_instance: Any) -> str | None:
+    """Best-effort real account address for the dashboard -- never a hardcoded literal fallback."""
+    env_account = os.getenv("SMTP_USER") or os.getenv("SMTP_FROM")
+    if env_account:
+        return env_account
+    default_svc = getattr(server_instance, "services", {}).get("default") if server_instance else None
+    if default_svc is None:
+        return None
+    for attr in ("imap_user", "smtp_user", "user"):
+        value = getattr(default_svc, attr, None)
+        if value:
+            return value
+    return None
 
 
 def _extract_tool_result(result: Any) -> dict[str, Any]:
@@ -163,8 +181,11 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             "success": True,
             "backend": {"port": 10813, "status": "running"},
             "system": {"cpu_percent": cpu, "memory_percent": mem, "disk_percent": disk},
-            "tools": {"total": 0},
-            "cua_status": {"tesseract_available": False, "window_found": False},
+            "tools": {"total": len(await mcp_app.list_tools())},
+            # email-mcp has no GUI/OCR surface -- these fields exist for schema
+            # parity with the fleet's CUA-NSIS smoke test contract but are
+            # genuinely not applicable here, hence None rather than a fake False.
+            "cua_status": {"tesseract_available": None, "window_found": None, "applicable": False},
         }
 
     @app.get("/api/capabilities")
@@ -187,11 +208,12 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             "search": "search_emails" in tool_names,
             "detail": "fetch_email_detail" in tool_names,
             "delete": "delete_email" in tool_names,
+            # Drafts are a REST-only webapp feature (no MCP tool gate) -- always available.
             "drafts": True,
-            "workflows": True,
-            "contacts": True,
-            "watcher": True,
-            "auto_respond": True,
+            "workflows": "run_workflow" in tool_names,
+            "contacts": any(n in tool_names for n in ("add_contact", "search_contacts")),
+            "watcher": any(n in tool_names for n in ("start_watcher", "stop_watcher", "watcher_status")),
+            "auto_respond": any(n in tool_names for n in ("add_auto_rule", "list_auto_rules", "backfill_auto_rules")),
         }
 
     # ── Tools ────────────────────────────────────────────────────────────────
@@ -471,6 +493,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
     @app.get("/api/stats")
     async def get_stats(_user: str = Depends(authenticate)):
+        partial_errors: list[str] = []
         try:
             status_result = _extract_tool_result(await mcp_app.call_tool("email_status"))
             unread_count = 0
@@ -506,7 +529,8 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                                 email["from"] = email["clean_from"]
                                 recent_activity.append(email)
                     except Exception:
-                        pass
+                        logger.warning("Dashboard stats: inbox fetch failed for service %r", svc_name, exc_info=True)
+                        partial_errors.append(f"inbox:{svc_name}")
 
             # Watcher daemon status
             watcher_info = {}
@@ -515,7 +539,8 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
                 watcher_info = watcher_status()
             except Exception:
-                pass
+                logger.warning("Dashboard stats: watcher_status failed", exc_info=True)
+                partial_errors.append("watcher")
 
             # Automation rules count
             rules_count = 0
@@ -524,7 +549,8 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
                 rules_count = len(list_rules())
             except Exception:
-                pass
+                logger.warning("Dashboard stats: list_rules failed", exc_info=True)
+                partial_errors.append("rules_count")
 
             # Contacts count
             contacts_count = 0
@@ -533,7 +559,8 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
                 contacts_count = len(list_contacts())
             except Exception:
-                pass
+                logger.warning("Dashboard stats: list_contacts failed", exc_info=True)
+                partial_errors.append("contacts_count")
 
             # Connectors summary
             connectors_info = {}
@@ -542,7 +569,8 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
                 connectors_info = await check_all_connectors()
             except Exception:
-                pass
+                logger.warning("Dashboard stats: check_all_connectors failed", exc_info=True)
+                partial_errors.append("connectors")
 
             # Diagnostics telemetry
             diag_info = {}
@@ -554,7 +582,8 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                     "mem": psutil.virtual_memory().percent,
                 }
             except Exception:
-                pass
+                logger.warning("Dashboard stats: psutil telemetry failed", exc_info=True)
+                partial_errors.append("diagnostics")
 
             tools_count = len(await mcp_app.list_tools())
             return {
@@ -566,7 +595,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 "drafts_count": len(_drafts),
                 "rules_count": rules_count,
                 "contacts_count": contacts_count,
-                "primary_account": os.getenv("SMTP_USER") or os.getenv("SMTP_FROM") or "sandraschipal@hotmail.com",
+                "primary_account": _resolve_primary_account(server_instance),
                 "ai_provider": os.getenv("AI_PROVIDER", "ollama"),
                 "ai_model": os.getenv("AI_MODEL", "gemma4:12b"),
                 "watcher": watcher_info,
@@ -575,8 +604,10 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 "diagnostics": diag_info,
                 "recent_activity": recent_activity[:10],
                 "mcp_version": status_result.get("version", "0.5.0-beta.2"),
+                "partial_errors": partial_errors,
             }
         except Exception as exc:
+            logger.exception("Dashboard stats: total failure")
             return {
                 "unread_count": 0,
                 "connected_services": 0,
@@ -588,6 +619,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 "contacts_count": 0,
                 "recent_activity": [],
                 "mcp_version": "0.5.0-beta.2",
+                "partial_errors": partial_errors,
                 "error": str(exc),
             }
 

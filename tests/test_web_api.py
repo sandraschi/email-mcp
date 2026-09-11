@@ -15,9 +15,47 @@ from __future__ import annotations
 import httpx
 import pytest
 
+from email_mcp.web import _resolve_primary_account
+
 pytestmark = pytest.mark.integration
 
 AUTH = {"Authorization": "Basic c2FuZHJhOnZpZW5uYTIwMjY="}
+
+
+class TestResolvePrimaryAccount:
+    """Regression coverage: primary_account must never fall back to a hardcoded literal."""
+
+    def test_no_env_no_server_returns_none(self, monkeypatch):
+        monkeypatch.delenv("SMTP_USER", raising=False)
+        monkeypatch.delenv("SMTP_FROM", raising=False)
+        assert _resolve_primary_account(None) is None
+
+    def test_env_var_wins(self, monkeypatch):
+        monkeypatch.setenv("SMTP_USER", "env@example.com")
+        assert _resolve_primary_account(None) == "env@example.com"
+
+    def test_falls_back_to_default_service_account(self, monkeypatch):
+        monkeypatch.delenv("SMTP_USER", raising=False)
+        monkeypatch.delenv("SMTP_FROM", raising=False)
+
+        class FakeService:
+            imap_user = "svc@example.com"
+
+        class FakeServer:
+            services = {"default": FakeService()}
+
+        assert _resolve_primary_account(FakeServer()) == "svc@example.com"
+
+    def test_no_default_service_returns_none(self, monkeypatch):
+        monkeypatch.delenv("SMTP_USER", raising=False)
+        monkeypatch.delenv("SMTP_FROM", raising=False)
+
+        class FakeServer:
+            services: dict = {}
+
+        assert _resolve_primary_account(FakeServer()) is None
+
+
 SVC_PAYLOAD = {
     "name": "svc-test",
     "type": "smtp",
@@ -48,14 +86,27 @@ class TestHealth:
         resp = await client.get("/api/v1/diagnostics", headers=AUTH)
         assert resp.status_code == 200
         data = resp.json()
-        # Diagnostics response may vary; just check it returns successfully
-        assert isinstance(data, dict)
+        # tools.total must be the real registered count, not a hardcoded 0.
+        assert data["tools"]["total"] > 0
+        # email-mcp has no GUI/OCR surface -- must be declared not-applicable,
+        # not a hardcoded False that reads as "checked, absent".
+        assert data["cua_status"]["applicable"] is False
+        assert data["cua_status"]["tesseract_available"] is None
+        assert data["cua_status"]["window_found"] is None
 
     async def test_capabilities(self, client: httpx.AsyncClient):
         resp = await client.get("/api/capabilities", headers=AUTH)
         assert resp.status_code == 200
         data = resp.json()
         assert "prefab" in data
+        # Previously hardcoded True regardless of actual tool registration --
+        # verify they're now computed against the real tool list.
+        tools_resp = await client.get("/api/tools", headers=AUTH)
+        tool_names = {t["name"] for t in tools_resp.json()["tools"]}
+        assert data["watcher"] == bool(tool_names & {"start_watcher", "stop_watcher", "watcher_status"})
+        assert data["auto_respond"] == bool(tool_names & {"add_auto_rule", "list_auto_rules", "backfill_auto_rules"})
+        assert data["contacts"] == bool(tool_names & {"add_contact", "search_contacts"})
+        assert data["workflows"] == ("run_workflow" in tool_names)
 
     async def test_tools_list(self, client: httpx.AsyncClient):
         resp = await client.get("/api/tools", headers=AUTH)
@@ -64,6 +115,10 @@ class TestHealth:
     async def test_stats(self, client: httpx.AsyncClient):
         resp = await client.get("/api/stats", headers=AUTH)
         assert resp.status_code == 200
+        data = resp.json()
+        # Sub-fetch failures must be visible, not silently absorbed.
+        assert "partial_errors" in data
+        assert isinstance(data["partial_errors"], list)
 
 
 # ---------------------------------------------------------------------------
