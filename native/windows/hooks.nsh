@@ -3,6 +3,7 @@
   DetailPrint "Stopping fleet processes..."
   ExecWait 'taskkill /F /IM email-mcp-backend.exe /T' $0
   ExecWait 'taskkill /F /IM email-mcp-native.exe /T' $0
+  ExecWait 'taskkill /F /IM "Email MCP.exe" /T' $0
   !if "${INSTALLMODE}" == "currentUser"
     nsis_tauri_utils::KillProcessCurrentUser "email-mcp-backend.exe"
     Pop $0
