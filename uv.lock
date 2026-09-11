@@ -465,7 +465,7 @@ wheels = [
 
 [[package]]
 name = "email-mcp"
-version = "0.5.0b2"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },

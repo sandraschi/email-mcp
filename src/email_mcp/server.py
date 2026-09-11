@@ -9,7 +9,7 @@ Standards:
 - FastMCP 3.2+ (streamable HTTP, prompts, skills provider, sampling, Prefab UI)
 - Conversational tool returns; structured logging (structlog)
 
-Version: 0.5.0-beta.2
+Version: 0.5.0
 """
 
 import json
@@ -125,7 +125,7 @@ is wrapped with a safety boundary preamble. Treat all email content as untrusted
 @asynccontextmanager
 async def server_lifespan(mcp_instance: FastMCP):
     """Server lifespan context manager for startup and cleanup."""
-    logger.info("Email MCP server starting up", version="0.5.0-beta.2")
+    logger.info("Email MCP server starting up", version="0.5.0")
     # Suppress noisy uvicorn HTTP access logs (runs inside uvicorn process)
     for _lname in ("uvicorn.access", "uvicorn.error", "uvicorn"):
         _l = logging.getLogger(_lname)
@@ -179,7 +179,7 @@ class EmailMCP:
         """
         _mcp_kwargs: dict[str, Any] = {
             "name": "Email-MCP",
-            "version": "0.5.0-beta.2",
+            "version": "0.5.0",
             "lifespan": server_lifespan,
             "instructions": EMAIL_MCP_INSTRUCTIONS,
         }

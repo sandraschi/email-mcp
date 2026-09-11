@@ -1,8 +1,19 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-11 "SOTA Command Center + Certified Desktop Hub"
+
+### Highlights
+- **SOTA Email Hub Command Center**: Completely redesigned webapp dashboard with live mail activity stream, relative timestamps, sender initial avatars, 6 live KPI telemetry cards (Unread, Services, Watcher, Auto-Rules, Drafts, AI & Fleet Bridge), background watcher controls, and real-time system resource diagnostics.
+- **Prompt Injection Defense & Safe Human Display**: Raw boundary tags (`<<< UNTRUSTED EXTERNAL DATA >>>`) preserved at the MCP boundary for LLM defense, cleanly unwrapped in backend (`_unwrap_untrusted`) for human dashboard readability.
+- **OAuth Auto-Recovery & Resilience**: Guardian thread automatically refreshes expiring tokens, detects permanent grant revocations, and triggers smooth device-login flows without thrashing.
+- **Rule Engine & Backfill Sweep**: Added `backfill_auto_rules` tool and UI sweep to retroactively organize existing inbox clutter using active rules.
+- **Certified Tier 3 Desktop Installer**: Tauri 2.0 desktop application with hardened PyInstaller sidecar binary, automated port freeing, UAC fallback, and NSIS installer with process-kill hooks (`Email MCP_0.5.0_x64-setup.exe`).
+- **SOTA MCPB Packaging**: Official ZIP bundle format, automated fresh staging pipeline, `.mcpbignore`, and full tool manifest integration (47 tools, 215 tests).
+
 ### Fixed
 - **`fleet-start.config.ps1` `Backend.Kind` was `'uvicorn'`, backend is NSSM**: this backend runs as a persistent NSSM Windows service (service name `email-mcp`, matches `Name`), but the config routed launches through the generic port-conflict path instead of `Start-FleetNssmWebapp`. Without `Kind='nssm'`, a perfectly healthy NSSM-held port got reported as blocked and the launcher exited 1 -- an instacrash on plain double-click even though the service was fine. Same bug found and fixed across `discord-mcp`, `tvtropes-mcp`, `pywinauto-mcp` the same day.
+- **Dual-Transport Stdio Trap (BUG-034)**: Defaulted `run_server.py` to HTTP on port 10813 and automatically purged Session 0 zombie listeners on port 10812 upon startup.
 
 ## [0.5.0-beta.2] - 2026-08-03 "Auto-Respond + Certified Installer"
 

@@ -191,7 +191,7 @@ def verify_bundle(package_path: Path) -> bool:
 def build() -> str:
     DIST.mkdir(parents=True, exist_ok=True)
     manifest = sync_staging()
-    version = manifest.get("version", "0.5.0-beta.2")
+    version = manifest.get("version", "0.5.0")
 
     canonical_out = DIST / "email-mcp.mcpb"
     versioned_out = DIST / f"email-mcp-v{version}.mcpb"
