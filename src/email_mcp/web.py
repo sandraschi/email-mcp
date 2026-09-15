@@ -214,6 +214,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             "contacts": any(n in tool_names for n in ("add_contact", "search_contacts")),
             "watcher": any(n in tool_names for n in ("start_watcher", "stop_watcher", "watcher_status")),
             "auto_respond": any(n in tool_names for n in ("add_auto_rule", "list_auto_rules", "backfill_auto_rules")),
+            "rag": "email_rag" in tool_names,
         }
 
     # ── Tools ────────────────────────────────────────────────────────────────
@@ -439,8 +440,12 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
         # 1. Check for Bridge process (tasklist is a Windows built-in, safe)
         try:
-            procs = subprocess.run(
-                ["tasklist", "/FI", "IMAGENAME eq protonmail-bridge*"], capture_output=True, text=True, timeout=5
+            procs = await asyncio.to_thread(
+                subprocess.run,
+                ["tasklist", "/FI", "IMAGENAME eq protonmail-bridge*"],
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if "protonmail" in procs.stdout.lower():
                 result["bridge_running"] = True
@@ -448,8 +453,12 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             pass
         if not result["bridge_running"]:
             try:
-                procs = subprocess.run(
-                    ["tasklist", "/FI", "IMAGENAME eq bridge*"], capture_output=True, text=True, timeout=5
+                procs = await asyncio.to_thread(
+                    subprocess.run,
+                    ["tasklist", "/FI", "IMAGENAME eq bridge*"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
                 )
                 if "bridge" in procs.stdout.lower():
                     result["bridge_running"] = True
@@ -585,6 +594,24 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 logger.warning("Dashboard stats: psutil telemetry failed", exc_info=True)
                 partial_errors.append("diagnostics")
 
+            # RAG vector store stats
+            rag_info = {}
+            try:
+                from .rag import embed_use_gpu
+                from .tools.rag_tools import get_rag_store
+
+                store = get_rag_store()
+                rag_info = {
+                    "total_chunks": store.count_documents(),
+                    "storage_mb": store.get_storage_size_mb(),
+                    "indexed_services": store.list_indexed_services(),
+                    "embedding_model": store.model_name,
+                    "gpu_accelerated": embed_use_gpu(),
+                }
+            except Exception:
+                logger.warning("Dashboard stats: rag_stats failed", exc_info=True)
+                partial_errors.append("rag")
+
             tools_count = len(await mcp_app.list_tools())
             return {
                 "unread_count": unread_count,
@@ -602,6 +629,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 "connectors": connectors_info,
                 "services": services,
                 "diagnostics": diag_info,
+                "rag": rag_info,
                 "recent_activity": recent_activity[:10],
                 "mcp_version": status_result.get("version", "0.5.0"),
                 "partial_errors": partial_errors,
@@ -1552,7 +1580,8 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
         gpu_info: dict[str, Any] = {"detected": False}
         try:
-            result = subprocess.run(
+            result = await asyncio.to_thread(
+                subprocess.run,
                 ["nvidia-smi", "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader"],
                 capture_output=True,
                 text=True,
@@ -2138,3 +2167,176 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         reply_subject = f"Re: {result.get('subject', '')}"
         entry = add_pending(result, reply_body, reply_subject, rule["id"], service)
         return {"success": True, "matched": True, "rule": rule["name"], "queued": True, "pending_id": entry["id"]}
+
+    # ── RAG Operations & Vector Store ─────────────────────────────────────────
+
+    _rag_jobs: dict[str, dict[str, Any]] = {}
+    _rag_tasks: set[asyncio.Task] = set()
+
+    async def _run_rag_sweep_job(
+        job_id: str,
+        service: str,
+        folder: str,
+        limit: int,
+        full_reindex: bool,
+    ) -> None:
+        from .rag import EmailIngestor, EmailVectorStore
+
+        _rag_jobs[job_id]["status"] = "running"
+        _rag_jobs[job_id]["phase"] = "scanning"
+
+        def _progress(current: int, total: int, phase: str = "") -> None:
+            if job_id in _rag_jobs:
+                _rag_jobs[job_id]["current"] = current
+                _rag_jobs[job_id]["total"] = total
+                if phase:
+                    _rag_jobs[job_id]["phase"] = phase
+
+        try:
+            svc_obj = getattr(server_instance, "services", {}).get(service) if server_instance else None
+            if not svc_obj:
+                raise ValueError(f"Service '{service}' not found or unconfigured")
+
+            store = EmailVectorStore()
+            ingestor = EmailIngestor()
+
+            res = await ingestor.sweep_service_folder(
+                service_obj=svc_obj,
+                service_name=service,
+                folder=folder,
+                vector_store=store,
+                limit=limit,
+                full_reindex=full_reindex,
+                progress_callback=_progress,
+            )
+
+            if res.get("success", False):
+                _rag_jobs[job_id]["status"] = "complete"
+                _rag_jobs[job_id]["phase"] = "completed"
+                _rag_jobs[job_id]["chunks"] = res.get("chunks_indexed", 0)
+                _rag_jobs[job_id]["emails_processed"] = res.get("emails_processed", 0)
+                _rag_jobs[job_id]["message"] = res.get("message", "Sweep completed")
+            else:
+                _rag_jobs[job_id]["status"] = "error"
+                _rag_jobs[job_id]["phase"] = "failed"
+                _rag_jobs[job_id]["error"] = res.get("error", "Sweep failed")
+        except Exception as exc:
+            logger.exception("RAG sweep job failed", job_id=job_id)
+            _rag_jobs[job_id]["status"] = "error"
+            _rag_jobs[job_id]["phase"] = "failed"
+            _rag_jobs[job_id]["error"] = str(exc)
+
+    @app.post("/api/rag/sweep")
+    @app.post("/api/reindex")
+    async def trigger_rag_sweep(
+        payload: dict[str, Any] = Body(default={}),
+        _user: str = Depends(authenticate),
+    ):
+        """Trigger an incremental or full vector sweep in the background.
+
+        Returns immediately with a job_id for polling.
+        """
+        job_id = str(uuid.uuid4())
+        service = payload.get("service", "default")
+        folder = payload.get("folder", "INBOX")
+        limit = max(1, min(int(payload.get("limit", 100)), 1000))
+        full_reindex = bool(payload.get("full_reindex", False) or payload.get("mode") == "full")
+
+        _rag_jobs[job_id] = {
+            "job_id": job_id,
+            "status": "queued",
+            "phase": "queued",
+            "service": service,
+            "folder": folder,
+            "full_reindex": full_reindex,
+            "current": 0,
+            "total": 0,
+            "chunks": 0,
+            "start_time": time.time(),
+            "error": None,
+        }
+
+        task = asyncio.create_task(_run_rag_sweep_job(job_id, service, folder, limit, full_reindex))
+        _rag_tasks.add(task)
+        task.add_done_callback(_rag_tasks.discard)
+
+        return {
+            "success": True,
+            "job_id": job_id,
+            "status": "queued",
+            "message": f"RAG sweep initiated for {service}:{folder} (full_reindex={full_reindex})",
+        }
+
+    @app.get("/api/rag/status/{job_id}")
+    @app.get("/api/reindex/{job_id}")
+    async def get_rag_status(job_id: str, _user: str = Depends(authenticate)):
+        """Check the status and running stats of an active or recent sweep job."""
+        if job_id not in _rag_jobs:
+            raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+        job = _rag_jobs[job_id]
+        elapsed = time.time() - job["start_time"]
+        return {
+            "job_id": job["job_id"],
+            "status": job["status"],
+            "phase": job["phase"],
+            "chunks": job.get("chunks", 0),
+            "emails_processed": job.get("emails_processed", 0),
+            "current": job.get("current", 0),
+            "total": job.get("total", 0),
+            "elapsed_seconds": round(elapsed, 1),
+            "error": job.get("error"),
+            "message": job.get("message"),
+        }
+
+    @app.get("/api/rag/stats")
+    async def get_rag_stats(_user: str = Depends(authenticate)):
+        """Retrieve telemetry and operational health of the RAG vector store."""
+        try:
+            from .rag import embed_use_gpu
+            from .tools.rag_tools import get_rag_store
+
+            store = get_rag_store()
+            return {
+                "success": True,
+                "total_chunks": store.count_documents(),
+                "storage_mb": store.get_storage_size_mb(),
+                "indexed_services": store.list_indexed_services(),
+                "embedding_model": store.model_name,
+                "gpu_accelerated": embed_use_gpu(),
+                "status": "healthy",
+            }
+        except Exception as exc:
+            return {"success": False, "error": str(exc), "status": "unavailable"}
+
+    @app.get("/api/rag/search")
+    async def rag_semantic_search(
+        q: str = "",
+        service: str | None = None,
+        folder: str | None = None,
+        limit: int = 10,
+        min_score: float = 0.35,
+        _user: str = Depends(authenticate),
+    ):
+        """Web search endpoint for neural email vector matching."""
+        if not q.strip():
+            raise HTTPException(status_code=422, detail="q (query) is required")
+        try:
+            from .tools.rag_tools import get_rag_store
+
+            store = get_rag_store()
+            results = store.search(
+                query=q.strip(),
+                limit=limit,
+                service=service if service and service != "all" else None,
+                folder=folder if folder and folder != "all" else None,
+                min_score=min_score,
+            )
+            return {
+                "success": True,
+                "query": q,
+                "count": len(results),
+                "results": results,
+            }
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
