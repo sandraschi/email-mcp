@@ -11,10 +11,7 @@ default:
 
 # Execute Ruff SOTA v13.1 linting
 lint:
-    Set-Location '{{justfile_directory()}}'
-    uv run ruff check .
-    Set-Location '{{justfile_directory()}}\webapp'
-    npx @biomejs/biome ci .
+    Set-Location '{{justfile_directory()}}'; uv run ruff check .; Set-Location '{{justfile_directory()}}\webapp'; npx @biomejs/biome ci .
 
 # Format code with Ruff
 fmt:
@@ -22,11 +19,7 @@ fmt:
 
 # Execute Ruff SOTA v13.1 fix and formatting
 fix:
-    Set-Location '{{justfile_directory()}}'
-    uv run ruff check . --fix --unsafe-fixes
-    uv run ruff format .
-    Set-Location '{{justfile_directory()}}\webapp'
-    npx @biomejs/biome check --write .
+    Set-Location '{{justfile_directory()}}'; uv run ruff check . --fix --unsafe-fixes; uv run ruff format .; Set-Location '{{justfile_directory()}}\webapp'; npx @biomejs/biome check --write .
 
 # Linting & formatting (SOTA mandatory)
 check: fmt lint
@@ -35,12 +28,7 @@ check: fmt lint
 
 # Automated verification (SOTA mandatory)
 test:
-    Set-Location '{{justfile_directory()}}'
-    uv run --extra test pytest tests -q
-    Write-Host 'Backend tests passed' -ForegroundColor Green
-    Set-Location '{{justfile_directory()}}\webapp'
-    npx playwright test
-    Write-Host 'E2E tests passed' -ForegroundColor Green
+    Set-Location '{{justfile_directory()}}'; uv run --extra test pytest tests -q; Write-Host 'Backend tests passed' -ForegroundColor Green; Set-Location '{{justfile_directory()}}\webapp'; npx playwright test; Write-Host 'E2E tests passed' -ForegroundColor Green
 
 # -- Build -----------------------------------------------------------------------
 
@@ -65,20 +53,14 @@ build-sidecar:
 
 # --- Build Tauri desktop app  sidecar must exist first ---
 build-native:
-    Set-Location '{{justfile_directory()}}\native'
-    $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
-    npm install
-    pwsh -NoProfile -File '{{justfile_directory()}}\native\build.ps1'
+    Set-Location '{{justfile_directory()}}\native'; $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"; npm install; pwsh -NoProfile -File '{{justfile_directory()}}\native\build.ps1'
 
 # Sidecar then Tauri release
 build-all: build-sidecar build-native
 
 # Build Tauri app in debug mode
 build-native-debug:
-    Set-Location '{{justfile_directory()}}\native'
-    $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
-    npm install
-    npx @tauri-apps/cli build --debug
+    Set-Location '{{justfile_directory()}}\native'; $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"; npm install; npx @tauri-apps/cli build --debug
 
 # -- Security -------------------------------------------------------------------
 
