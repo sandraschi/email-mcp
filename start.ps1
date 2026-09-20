@@ -64,7 +64,7 @@ function Require-Command {
         exit 1
     }
 }
-Require-Command 'uv' 'Astral.uv' 'uv (Python package manager)'
+Require-Command 'uv' 'astral-sh.uv' 'uv (Python package manager)'
 Require-Command 'node' 'OpenJS.NodeJS.LTS' 'Node.js LTS'
 Require-Command 'npm' 'OpenJS.NodeJS.LTS' 'npm'
 Require-Command 'just' 'Casey.Just' 'just (command runner)'
