@@ -56,7 +56,7 @@ function Require-Command {
         Write-Host "ERROR: winget unavailable. Install $Label manually ($WingetId)." -ForegroundColor Red
         exit 1
     }
-    winget install --id $WingetId --silent --accept-source-agreements --accept-package-agreements --disable-interactivity
+    winget install --id $WingetId --source winget --silent --accept-source-agreements --accept-package-agreements --disable-interactivity
     $env:PATH = [System.Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + `
                 [System.Environment]::GetEnvironmentVariable('PATH', 'User')
     if (-not (Get-Command $Cmd -ErrorAction SilentlyContinue)) {
