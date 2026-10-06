@@ -82,7 +82,7 @@ export function Topbar() {
 					data-testid="connection-status"
 					className={cn(
 						"mr-4 flex items-center gap-2 rounded-full px-3 py-1 text-xs border",
-						backendOnline === null && "text-slate-500 border-slate-700",
+						backendOnline === null && "text-slate-400 border-slate-700",
 						backendOnline === true &&
 							"text-emerald-500 border-emerald-500/20 bg-emerald-500/10",
 						backendOnline === false &&
@@ -139,7 +139,7 @@ export function Topbar() {
 							sideOffset={5}
 							align="end"
 						>
-							<DropdownMenu.Label className="px-2 py-1.5 text-xs font-semibold text-slate-500">
+							<DropdownMenu.Label className="px-2 py-1.5 text-xs font-semibold text-slate-400">
 								Switch Application
 							</DropdownMenu.Label>
 

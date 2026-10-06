@@ -1,6 +1,7 @@
 import {
 	BookOpen,
 	Bot,
+	Brain,
 	ChevronLeft,
 	ChevronRight,
 	Code2,
@@ -35,6 +36,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 		{ href: "/inbox", label: "Inbox", icon: Inbox },
 		{ href: "/mail", label: "Mail Reader", icon: Mail },
 		{ href: "/search", label: "Search", icon: Search },
+		{ href: "/rag", label: "RAG / Vectors", icon: Brain },
 		{ href: "/compose", label: "Compose", icon: PenSquare },
 		{ href: "/chat", label: "AI Chat", icon: Bot },
 		{ href: "/lab", label: "Mail Lab", icon: FlaskConical },
@@ -70,7 +72,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 				<button
 					type="button"
 					onClick={onToggle}
-					className="p-1.5 rounded-md text-slate-500 hover:bg-slate-800 hover:text-white transition-colors"
+					className="p-1.5 rounded-md text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
 					title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
 				>
 					{collapsed ? (

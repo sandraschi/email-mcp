@@ -187,17 +187,17 @@ export function AutoRespond() {
 			<div className="flex gap-2 border-b border-slate-800 pb-2">
 				<button
 					type="button"
-					className={`text-sm px-3 py-1.5 rounded-t ${tab === "rules" ? "text-white border-b-2 border-blue-500" : "text-slate-500 hover:text-slate-300"}`}
+					className={`text-sm px-3 py-1.5 rounded-t ${tab === "rules" ? "text-white border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-300"}`}
 					onClick={() => setTab("rules")}
 				>
 					Rules{" "}
 					{rules.length > 0 && (
-						<span className="text-xs text-slate-500">({rules.length})</span>
+						<span className="text-xs text-slate-400">({rules.length})</span>
 					)}
 				</button>
 				<button
 					type="button"
-					className={`text-sm px-3 py-1.5 rounded-t ${tab === "pending" ? "text-white border-b-2 border-amber-500" : "text-slate-500 hover:text-slate-300"}`}
+					className={`text-sm px-3 py-1.5 rounded-t ${tab === "pending" ? "text-white border-b-2 border-amber-500" : "text-slate-400 hover:text-slate-300"}`}
 					onClick={() => setTab("pending")}
 				>
 					Pending{" "}
@@ -423,7 +423,7 @@ export function AutoRespond() {
 					)}
 
 					{rules.length === 0 ? (
-						<p className="text-slate-500 text-sm italic py-6 text-center">
+						<p className="text-slate-400 text-sm italic py-6 text-center">
 							No rules yet. Add one to start auto-responding.
 						</p>
 					) : (
@@ -438,7 +438,7 @@ export function AutoRespond() {
 									/>
 									<div className="flex-1 min-w-0">
 										<p className="text-sm text-white truncate">{r.name}</p>
-										<p className="text-xs text-slate-500 truncate">
+										<p className="text-xs text-slate-400 truncate">
 											{r.match_field} ~/{r.match_pattern}/ &nbsp;→&nbsp;
 											{r.response_mode === "spoof" ? (
 												<>
@@ -470,7 +470,7 @@ export function AutoRespond() {
 									<Button
 										variant="ghost"
 										size="icon"
-										className="h-7 w-7 text-slate-500 hover:text-red-400"
+										className="h-7 w-7 text-slate-400 hover:text-red-400"
 										onClick={() => handleDelete(r.id)}
 									>
 										<Trash2 className="h-3.5 w-3.5" />
@@ -482,7 +482,7 @@ export function AutoRespond() {
 				</>
 			) : /* Pending tab */
 			pending.length === 0 ? (
-				<p className="text-slate-500 text-sm italic py-6 text-center">
+				<p className="text-slate-400 text-sm italic py-6 text-center">
 					No pending replies.
 				</p>
 			) : (
@@ -498,7 +498,7 @@ export function AutoRespond() {
 										</CardTitle>
 										<span className="text-xs text-amber-400 ml-2">pending</span>
 									</div>
-									<p className="text-xs text-slate-500">From: {p.email_from}</p>
+									<p className="text-xs text-slate-400">From: {p.email_from}</p>
 								</CardHeader>
 								<CardContent className="space-y-2">
 									<div className="text-xs text-slate-400 bg-slate-900/50 rounded p-2 max-h-[80px] overflow-y-auto">

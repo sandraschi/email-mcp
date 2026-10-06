@@ -123,7 +123,7 @@ export function ApiDocs() {
 								<code className="text-xs text-slate-300 font-mono w-52 shrink-0">
 									{ep.path}
 								</code>
-								<span className="text-xs text-slate-500">{ep.desc}</span>
+								<span className="text-xs text-slate-400">{ep.desc}</span>
 							</div>
 						))}
 					</div>
@@ -143,7 +143,7 @@ export function ApiDocs() {
 					/>
 				</CardContent>
 			</Card>
-			<p className="text-xs text-slate-600 text-center">
+			<p className="text-xs text-slate-400 text-center">
 				If the iframe is blank, the backend may not be running on port{" "}
 				{BACKEND_PORT}.{" "}
 				<a

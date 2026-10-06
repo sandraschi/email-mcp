@@ -11,6 +11,10 @@ export default {
       },
     },
     extend: {
+      fontSize: {
+        // xs 12px -> 13px: 12px UI copy on dark backgrounds is unreadable
+        xs: ["0.8125rem", { lineHeight: "1.25rem" }],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
