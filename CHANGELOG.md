@@ -1,6 +1,53 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-07
+
+### Added
+- **Semantic email search (RAG) backend**: `email_rag`, `sync_email_rag`, `email_rag_stats`
+  over a local LanceDB index with FastEmbed bge-small embeddings (`email_mcp.rag`: vector store,
+  paragraph-aware ingestor with HTML cleaning). Merges the backend that the dashboard's RAG page,
+  `/api/rag/stats` and the lancedb/fastembed dependencies already assumed. Tools are registered
+  only when `lancedb`/`fastembed` are importable (`_register_optional_rag`), so the server always
+  starts; they are **disabled in the desktop installer and the mcpb** (those do not bundle the
+  heavy dependencies). Enabling RAG there is tracked as the fleet "RAG add-on" standard
+  (`mcp-central-docs/standards/RAG_ADDON_STANDARD.md`, proposed).
+- `tests/test_version_consistency.py`: every version string must match `email_mcp.__version__`.
+
+### Fixed
+- **Installed desktop app killed the running email-mcp service.** The Tauri shell's `free_port`
+  killed whatever PID owned its backend port, and that port (10813) is the dev backend and the
+  NSSM `email-mcp` service port. The shell now uses its own claimed port 11252 (`email-mcp-native`),
+  and `free_port` only kills this app's own sidecar and other instances of the shell (never its
+  own PID, never an unknown port owner).
+- **Installed UI pointed at the wrong backend.** `webapp/src/lib/api.ts` hardcoded
+  `http://127.0.0.1:10813` and ignored `VITE_API_BASE`; it now reads it (default unchanged for
+  dev). The NSIS build bakes in 11252, the CSP matches, and `/api/status` reports the real port.
+- `run_server.py` killed anything listening on the dev frontend port 10812 at startup, also when
+  spawned by the desktop app; that service-mode cleanup is now skipped under `EMAIL_MCP_TAURI`.
+- The shell stops and reaps the sidecar on `ExitRequested` as well as `Exit`.
+- RAG search filters (`service`, `folder`) are quoted as SQL literals: an apostrophe used to
+  throw `invalid SQL predicate`, and a crafted value could widen the filter. RAG tools now use
+  real MCP annotations instead of the non-standard `{"readonly": True}`.
+- **Version drift**: the release version was a literal in ~10 source locations and 6 metadata
+  files (0.4.1 / 0.5.0 / 0.5.1 side by side; `uv.lock` said 0.5.0). Everything now reads or
+  matches `email_mcp.__version__` (0.6.0), and a test enforces it.
+- `uv.lock` was stale against `pyproject.toml` (lancedb/fastembed tree missing); refreshed.
+- The desktop backend must not freeze the RAG stack: `email-mcp-backend.spec` now excludes
+  lancedb/pyarrow/onnxruntime/fastembed/tokenizers/huggingface_hub, and `native/build.ps1` fails
+  a build whose backend exceeds 120 MB (a build with the stack present had produced a 197 MB
+  backend / 200 MB installer instead of 45 / 50 MB).
+- Webapp lint gate green: the 8 Biome errors in `rag.tsx` that had forced `--no-verify` commits
+  (labels bound to controls, `parseInt` radix, hook dependencies, stable list keys, keyboard
+  access for the clickable result row).
+
+### Known
+- The dashboard's RAG page shows "unavailable" in the desktop installer until the RAG add-on
+  exists.
+- Hardcoded Basic-auth credentials in `webapp/src/lib/api.ts` (present since before 0.5.0) are
+  still shipped inside the installer's JavaScript; moving to a per-install secret is not part of
+  this release.
+
 ## [0.5.1] - 2026-10-06
 
 ### Fixed
