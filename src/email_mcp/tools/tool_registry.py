@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 import structlog
 from fastmcp import FastMCP
 
+from email_mcp import __version__
 from email_mcp.mailing_lists import load_mailing_list_entries
 from email_mcp.sanitize import error_response, sanitize_text, wrap_untrusted_dict, wrap_untrusted_list
 from email_mcp.services.email_services import (
@@ -396,7 +397,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         return {
             "server": "Email-MCP",
-            "version": "0.5.0",
+            "version": __version__,
             "services": service_statuses,
             "total_services": len(service_statuses),
             "configured_services": configured_count,
@@ -439,7 +440,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
                 "approve_reply",
                 "auto_respond_now",
             ],
-            "message": f"Email MCP server v0.5.0 - {connected_count}/{len(service_statuses)} services connected",
+            "message": f"Email MCP server v{__version__} - {connected_count}/{len(service_statuses)} services connected",
         }
 
     @mcp.tool(annotations=_MUTATING)
@@ -635,7 +636,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         """
         return {
             "server": "Email-MCP",
-            "version": "0.5.0",
+            "version": __version__,
             "description": "Multi-service email platform supporting SMTP, APIs, local testing, webhooks, search, and AI features",
             "supported_services": {
                 "smtp": "Standard email providers (Gmail, Outlook, Yahoo, iCloud, ProtonMail)",

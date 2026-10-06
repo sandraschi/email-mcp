@@ -51,6 +51,8 @@ import httpx
 from fastapi import Body, Depends, FastAPI, HTTPException
 from fastmcp import FastMCP
 
+from email_mcp import __version__
+
 from . import oauth
 from .activity_log import ActivityLog, create_log_router
 from .ai import AIRouter
@@ -155,14 +157,14 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
     @app.get("/api/status")
     async def get_status(user: str = Depends(authenticate)):
-        return {"status": "connected", "user": user, "mcp": mcp_app.name, "version": "0.5.0"}
+        return {"status": "connected", "user": user, "mcp": mcp_app.name, "version": __version__}
 
     @app.get("/api/v1/health")
     async def health_v1():
         return {
             "status": "ok",
             "server": mcp_app.name,
-            "version": "0.5.0",
+            "version": __version__,
             "uptime_seconds": 0,
             "tool_count": len(await mcp_app.list_tools()),
         }
@@ -631,7 +633,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 "diagnostics": diag_info,
                 "rag": rag_info,
                 "recent_activity": recent_activity[:10],
-                "mcp_version": status_result.get("version", "0.5.0"),
+                "mcp_version": status_result.get("version", __version__),
                 "partial_errors": partial_errors,
             }
         except Exception as exc:
@@ -646,7 +648,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 "rules_count": 0,
                 "contacts_count": 0,
                 "recent_activity": [],
-                "mcp_version": "0.5.0",
+                "mcp_version": __version__,
                 "partial_errors": partial_errors,
                 "error": str(exc),
             }
