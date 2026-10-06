@@ -67,6 +67,9 @@ $sizeMB = (Get-Item $src).Length / 1MB
 if ($sizeMB -lt 5) {
     throw "Backend exe is only $([math]::Round($sizeMB, 1)) MB at $src -- PyInstaller produced an empty/broken binary"
 }
+if ($sizeMB -gt 120) {
+    throw "Backend exe is $([math]::Round($sizeMB, 1)) MB (> 120 MB): the RAG stack (lancedb/pyarrow/onnxruntime) leaked into the frozen backend. Check 'excludes' in ${RepoName}-backend.spec (RAG_ADDON_STANDARD.md)."
+}
 Write-Host "  Backend exe: $sizeMB MB"
 
 # Bundle .env.example (NOT .env - dev .env has personal credentials; the NSIS

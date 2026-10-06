@@ -55,7 +55,21 @@ a = Analysis(
 
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # The RAG stack is NOT frozen into the desktop sidecar (RAG_ADDON_STANDARD.md): it is hundreds
+    # of MB and cannot live in a onefile exe. email_mcp.server registers the RAG tools lazily and
+    # degrades when these are missing, so excluding them is safe - and it keeps the build
+    # independent of whatever happens to be installed in the venv (a re-synced venv once added
+    # ~150 MB, 197 MB backend / 200 MB installer instead of 47 / 49).
+    excludes=[
+        "lancedb",
+        "lance",
+        "pyarrow",
+        "fastembed",
+        "onnxruntime",
+        "tokenizers",
+        "huggingface_hub",
+        "hf_xet",
+    ],
     noarchive=True,
     optimize=0,
 )
