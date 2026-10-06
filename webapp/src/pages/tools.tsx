@@ -135,7 +135,7 @@ export function Tools() {
 		return (
 			<div className="flex flex-col items-center justify-center p-12 space-y-4">
 				<Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-				<p className="text-slate-500">Scanning for email tools...</p>
+				<p className="text-slate-400">Scanning for email tools...</p>
 			</div>
 		);
 	}
@@ -166,7 +166,7 @@ export function Tools() {
 									<CardTitle className="text-sm font-medium text-white">
 										{tool.name}
 									</CardTitle>
-									<CardDescription className="text-xs text-slate-500 line-clamp-2">
+									<CardDescription className="text-xs text-slate-400 line-clamp-2">
 										{tool.description || "No description"}
 									</CardDescription>
 								</div>

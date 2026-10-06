@@ -74,11 +74,11 @@ export function Skill() {
 				</CardHeader>
 				<CardContent className="space-y-4">
 					{loading ? (
-						<p className="text-slate-500 flex items-center gap-2">
+						<p className="text-slate-400 flex items-center gap-2">
 							<Loader2 className="h-4 w-4 animate-spin" /> Loading skills…
 						</p>
 					) : skills.length === 0 ? (
-						<p className="text-slate-500">No skills exposed by this server.</p>
+						<p className="text-slate-400">No skills exposed by this server.</p>
 					) : (
 						<>
 							<div className="flex gap-2 flex-wrap">
@@ -99,7 +99,7 @@ export function Skill() {
 								))}
 							</div>
 							{contentLoading ? (
-								<p className="text-slate-500 flex items-center gap-2">
+								<p className="text-slate-400 flex items-center gap-2">
 									<Loader2 className="h-4 w-4 animate-spin" /> Loading…
 								</p>
 							) : (

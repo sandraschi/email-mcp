@@ -20,6 +20,7 @@ import { Inbox } from "@/pages/inbox";
 import { Lab } from "@/pages/lab";
 import Logs from "@/pages/logs";
 import { MailReader } from "@/pages/mail-reader";
+import { RagPage } from "@/pages/rag";
 import { Rules } from "@/pages/rules";
 import { SearchPage } from "@/pages/search";
 import { Services } from "@/pages/services";
@@ -44,6 +45,7 @@ function App() {
 							<Route path="/compose" element={<Compose />} />
 							<Route path="/email" element={<EmailDetail />} />
 							<Route path="/search" element={<SearchPage />} />
+							<Route path="/rag" element={<RagPage />} />
 							<Route path="/mail" element={<MailReader />} />
 							<Route path="/chat" element={<Chat />} />
 							<Route path="/tools" element={<Tools />} />
