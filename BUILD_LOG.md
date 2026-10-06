@@ -39,6 +39,13 @@ Build regression caught by checking sizes, not by a test:
    'lancedb'`. (An earlier claim that the mcpb pack check proved this was wrong: that venv had
    lancedb installed.)
 
+6. **`build.ps1`'s frozen-binary smoke test passed while examining nothing.** It ran the sidecar on
+   hardcoded port 11999 (held by filesystem-mcp's running backend) and only checked "alive after
+   5 s": the server hit a bind error and exited within a second, yet it printed PASSED. Now a free
+   ephemeral port, a real `/api/v1/health` 200 probe, stderr in the failure message and
+   `taskkill /T`; tested with a passing and a failing binary. Same flaw in 34 of 168 fleet
+   `native/build.ps1` (pitfalls row 11).
+
 Process notes: `pack.ps1` runs `uv` without `UV_NO_SYNC` and re-syncs the venv, so run the NSIS
 build with `UV_NO_SYNC=1` or the build depends on venv state. `uv.lock` was stale against
 `pyproject.toml` at v0.5.1 (refreshed in this release). The pytest suite rewrites the tracked

@@ -83,19 +83,31 @@ if (Test-Path $envExample) {
 }
 
 Write-Host "  Smoke-testing frozen binary..." -ForegroundColor Yellow
-$testPort = 11999
-$oldPort = $env:MCP_PORT; $oldHost = $env:MCP_HOST
-$env:MCP_PORT = "$testPort"; $env:MCP_HOST = "127.0.0.1"
+# Free ephemeral port (a hardcoded one collided with a running fleet service, and the old check -
+# "still alive after 5 s" - printed PASSED even though the server had hit a bind error and shut
+# down) and a real HTTP health probe instead of liveness.
+$probe = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+$probe.Start(); $testPort = $probe.LocalEndpoint.Port; $probe.Stop()
+$oldPort = $env:MCP_PORT; $oldHost = $env:MCP_HOST; $oldTauri = $env:EMAIL_MCP_TAURI
+$env:MCP_PORT = "$testPort"; $env:MCP_HOST = "127.0.0.1"; $env:EMAIL_MCP_TAURI = "1"
 $testProc = Start-Process -FilePath $src -NoNewWindow -PassThru -RedirectStandardError "$Root\dist\pyi-crash.log"
-Start-Sleep -Seconds 5
-$env:MCP_PORT = $oldPort; $env:MCP_HOST = $oldHost
-if ($testProc.HasExited) {
-    $crash = Get-Content "$Root\dist\pyi-crash.log" -Raw
-    throw "Frozen binary crashed on launch (exit $($testProc.ExitCode)):`n$crash"
+$env:MCP_PORT = $oldPort; $env:MCP_HOST = $oldHost; $env:EMAIL_MCP_TAURI = $oldTauri
+$healthy = $false
+for ($i = 0; $i -lt 40 -and -not $testProc.HasExited; $i++) {
+    Start-Sleep -Milliseconds 500
+    try {
+        $r = Invoke-WebRequest "http://127.0.0.1:$testPort/api/v1/health" -UseBasicParsing -TimeoutSec 2
+        if ($r.StatusCode -eq 200) { $healthy = $true; break }
+    } catch { }
 }
-$testProc.Kill(); $testProc.Dispose()
+$exited = $testProc.HasExited
+if (-not $exited) { & taskkill.exe /F /T /PID $testProc.Id 2>&1 | Out-Null }  # /T: the onefile child too
+$crash = Get-Content "$Root\dist\pyi-crash.log" -Raw -ErrorAction SilentlyContinue
+if (-not $healthy) {
+    throw "Frozen binary did not answer /api/v1/health on port $testPort (exited=$exited):`n$crash"
+}
 Remove-Item "$Root\dist\pyi-crash.log" -Force -ErrorAction SilentlyContinue
-Write-Host "  Frozen binary smoke test PASSED" -ForegroundColor Green
+Write-Host "  Frozen binary smoke test PASSED (health 200 on port $testPort)" -ForegroundColor Green
 
 Copy-Item $src "$ResourceDir\${RepoName}-backend.exe" -Force
 Copy-Item $src "$DevDir\${RepoName}-backend-$Triple.exe" -Force
