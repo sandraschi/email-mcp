@@ -9,9 +9,12 @@ const AUTH_HEADER = `Basic ${btoa(`${AUTH_USER}:${AUTH_PASS}`)}`;
 const DEFAULT_TIMEOUT = 30_000; // 30 seconds
 
 // In Tauri production, the frontend is served from webview (origin: tauri.localhost)
-// but the backend runs on 127.0.0.1:10813. VITE_API_BASE bridges the gap.
-// In dev, Vite proxy handles it so API_BASE is empty.
-export const API_BASE = "http://127.0.0.1:10813";
+// but the backend runs on its own port, so VITE_API_BASE bridges the gap. The NSIS build sets it
+// to the installed app's dedicated port (11252, email-mcp-native); dev and the NSSM service use
+// the default 10813. It used to be hardcoded, which would have pointed the installed UI at the
+// service instead of its own sidecar.
+export const API_BASE: string =
+	import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:10813";
 
 function buildUrl(path: string): string {
 	if (path.startsWith("http")) return path;

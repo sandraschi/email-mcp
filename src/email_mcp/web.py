@@ -179,7 +179,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             cpu = mem = disk = None
         return {
             "success": True,
-            "backend": {"port": 10813, "status": "running"},
+            "backend": {"port": int(os.environ.get("MCP_PORT") or 10813), "status": "running"},
             "system": {"cpu_percent": cpu, "memory_percent": mem, "disk_percent": disk},
             "tools": {"total": len(await mcp_app.list_tools())},
             # email-mcp has no GUI/OCR surface -- these fields exist for schema
@@ -2339,4 +2339,3 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             }
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-

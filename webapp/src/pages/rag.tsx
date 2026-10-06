@@ -15,7 +15,7 @@ import {
 	Sparkles,
 	Zap,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,6 +45,7 @@ interface RagJobStatus {
 }
 
 interface SearchResultItem {
+	id: string;
 	email_id: string;
 	service: string;
 	folder: string;
@@ -80,7 +81,7 @@ export function RagPage() {
 
 	const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-	const loadStats = async () => {
+	const loadStats = useCallback(async () => {
 		try {
 			setLoadingStats(true);
 			const data = await fetchWithAuth("/api/rag/stats");
@@ -92,7 +93,7 @@ export function RagPage() {
 		} finally {
 			setLoadingStats(false);
 		}
-	};
+	}, []);
 
 	useEffect(() => {
 		loadStats();
@@ -101,7 +102,12 @@ export function RagPage() {
 				clearInterval(pollIntervalRef.current);
 			}
 		};
-	}, []);
+	}, [loadStats]);
+
+	const openEmail = (item: SearchResultItem) =>
+		navigate(
+			`/email?id=${encodeURIComponent(item.email_id)}&service=${item.service}&folder=${item.folder}`,
+		);
 
 	const triggerSweep = async (fullReindex: boolean) => {
 		setIsSweeping(true);
@@ -221,7 +227,9 @@ export function RagPage() {
 							<Layers className="h-4 w-4 text-purple-400" />
 						</div>
 						<div className="text-2xl font-bold text-white mt-2">
-							{loadingStats ? "..." : (stats?.total_chunks ?? 0).toLocaleString()}
+							{loadingStats
+								? "..."
+								: (stats?.total_chunks ?? 0).toLocaleString()}
 						</div>
 						<span className="text-xs text-slate-400 mt-1 block">
 							LanceDB neural passages
@@ -301,10 +309,14 @@ export function RagPage() {
 				<CardContent className="space-y-4">
 					<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 						<div>
-							<label className="text-xs text-slate-400 block mb-1">
+							<label
+								htmlFor="rag-service"
+								className="text-xs text-slate-400 block mb-1"
+							>
 								Email Service
 							</label>
 							<select
+								id="rag-service"
 								value={service}
 								onChange={(e) => setService(e.target.value)}
 								className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-3 py-2"
@@ -322,10 +334,14 @@ export function RagPage() {
 						</div>
 
 						<div>
-							<label className="text-xs text-slate-400 block mb-1">
+							<label
+								htmlFor="rag-folder"
+								className="text-xs text-slate-400 block mb-1"
+							>
 								Mailbox Folder
 							</label>
 							<select
+								id="rag-folder"
 								value={folder}
 								onChange={(e) => setFolder(e.target.value)}
 								className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-3 py-2"
@@ -339,15 +355,22 @@ export function RagPage() {
 						</div>
 
 						<div>
-							<label className="text-xs text-slate-400 block mb-1">
+							<label
+								htmlFor="rag-limit"
+								className="text-xs text-slate-400 block mb-1"
+							>
 								Message Scan Limit
 							</label>
 							<Input
+								id="rag-limit"
 								type="number"
 								value={limit}
 								onChange={(e) =>
 									setLimit(
-										Math.max(1, Math.min(1000, parseInt(e.target.value) || 10)),
+										Math.max(
+											1,
+											Math.min(1000, parseInt(e.target.value, 10) || 10),
+										),
 									)
 								}
 								className="bg-slate-900 border-slate-700 text-white"
@@ -420,7 +443,8 @@ export function RagPage() {
 										<span>Processing items...</span>
 										<span>
 											{activeJob.current} / {activeJob.total} (
-											{Math.round((activeJob.current / activeJob.total) * 100)}%)
+											{Math.round((activeJob.current / activeJob.total) * 100)}
+											%)
 										</span>
 									</div>
 									<div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
@@ -526,15 +550,20 @@ export function RagPage() {
 							)}
 
 							<div className="space-y-2">
-								{searchResults.map((item, idx) => (
+								{searchResults.map((item) => (
+									// biome-ignore lint/a11y/useSemanticElements: the row holds block-level content (div/h4/p), which a <button> cannot validly contain; role, tab stop and Enter/Space handling are provided
 									<div
-										key={idx}
+										key={item.id}
+										role="button"
+										tabIndex={0}
 										className="p-3.5 rounded-lg border border-slate-800 bg-slate-900/40 hover:bg-slate-900/70 transition-colors cursor-pointer"
-										onClick={() =>
-											navigate(
-												`/email?id=${encodeURIComponent(item.email_id)}&service=${item.service}&folder=${item.folder}`,
-											)
-										}
+										onClick={() => openEmail(item)}
+										onKeyDown={(e) => {
+											if (e.key === "Enter" || e.key === " ") {
+												e.preventDefault();
+												openEmail(item);
+											}
+										}}
 									>
 										<div className="flex items-start justify-between gap-3">
 											<div className="flex items-center gap-2">
