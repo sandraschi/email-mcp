@@ -69,6 +69,22 @@ root_logger.addHandler(stderr_handler)
 logger = structlog.get_logger(__name__)
 
 
+def _register_optional_rag(mcp: Any, server: Any) -> bool:
+    """Register the semantic-search tools if their heavy dependencies are installed.
+
+    lancedb / fastembed are not bundled in the MCPB or the desktop installer, so importing
+    the RAG module must never be able to stop the server from starting. Returns whether
+    the tools were registered.
+    """
+    try:
+        from email_mcp.tools.rag_tools import register_rag_tools
+    except ImportError as exc:
+        logger.info("Email RAG tools disabled (optional dependency missing)", reason=str(exc))
+        return False
+    register_rag_tools(mcp, server)
+    return True
+
+
 def _load_env_file() -> None:
     r"""Load .env without a dependency; real environment wins.
 
@@ -415,6 +431,7 @@ class EmailMCP:
         from email_mcp.tools.tool_registry import register_tools
 
         register_tools(self.mcp, self)
+        _register_optional_rag(self.mcp, self)
 
     def _register_prompts(self) -> None:
         """Register FastMCP 3.1 prompts (reusable message templates)."""
