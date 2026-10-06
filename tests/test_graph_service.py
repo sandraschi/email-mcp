@@ -317,3 +317,58 @@ async def test_oauth_401_raises_clear_error(service, monkeypatch):
     result = await service.check_inbox()
     assert result["success"] is False
     assert "reconnect" in result["error"].lower()
+
+
+def _search_hit(subject: str = "Release 1.0.4 published for onenote-mcp") -> tuple[int, dict]:
+    return (
+        200,
+        {
+            "value": [
+                {
+                    "id": "m9",
+                    "subject": subject,
+                    "from": {"emailAddress": {"address": "support@glama.ai"}},
+                    "receivedDateTime": "2026-09-29T08:15:04Z",
+                    "isRead": False,
+                }
+            ]
+        },
+    )
+
+
+async def test_search_custom_folder_uses_folder_endpoint(service, monkeypatch):
+    """Folder scoping must use the folder's messages collection: Graph $search
+    has no folder: operator (HTTP 400). Regression for the Glama digest."""
+    service._folder_map = {"glama": "AQMkADGlama-id"}
+    service._folder_map_ts = time.time()
+    fake = FakeAsyncClient([_search_hit()])
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: fake)
+    result = await service.search("onenote-mcp", folder="Glama")
+    assert result["success"] is True
+    assert result["count"] == 1
+    _, url, params, _ = fake.calls[0]
+    assert url == f"{GRAPH_BASE}/me/mailFolders/AQMkADGlama-id/messages"
+    assert params["$search"] == '"onenote-mcp"'
+    assert "folder:" not in params["$search"]
+
+
+async def test_search_well_known_folder_needs_no_map_fetch(service, monkeypatch):
+    """Well-known names resolve without any folder-listing HTTP call."""
+    fake = FakeAsyncClient([_search_hit("Invoice")])
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: fake)
+    result = await service.search("invoice", folder="Archive")
+    assert result["success"] is True
+    _, url, params, _ = fake.calls[0]
+    assert url == f"{GRAPH_BASE}/me/mailFolders/archive/messages"
+    assert params["$search"] == '"invoice"'
+
+
+async def test_search_default_folder_still_global(service, monkeypatch):
+    """INBOX search keeps the old /me/messages path (no regression)."""
+    fake = FakeAsyncClient([_search_hit("Invoice")])
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: fake)
+    result = await service.search("invoice", folder="INBOX")
+    assert result["success"] is True
+    _, url, params, _ = fake.calls[0]
+    assert url == f"{GRAPH_BASE}/me/messages"
+    assert params["$search"] == '"invoice"'

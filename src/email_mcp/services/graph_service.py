@@ -552,11 +552,13 @@ class GraphEmailService(EmailService):
                 "$top": str(min(limit, 50)),
                 "$select": "id,subject,from,receivedDateTime,isRead",
             }
+            # Graph $search has no folder: operator (HTTP 400) - scope via the
+            # folder's messages collection instead.
+            endpoint = "/me/messages"
             if folder and folder.strip().lower() not in ("inbox", ""):
-                low = folder.strip().lower()
-                fname = _WELL_KNOWN[low] if low in _WELL_KNOWN else folder.strip()
-                params["$search"] = f'"{query}" AND folder:"{fname}"'
-            _, data = await self._request("GET", "/me/messages", params=params)
+                folder_id = await self._resolve_folder(folder)
+                endpoint = f"/me/mailFolders/{folder_id}/messages"
+            _, data = await self._request("GET", endpoint, params=params)
             emails = [
                 {
                     "id": item.get("id", ""),
