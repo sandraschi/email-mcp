@@ -386,21 +386,21 @@ export function EmailDetail() {
 					</CardTitle>
 					<div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-400 mt-2">
 						<div>
-							<span className="text-slate-500">From:</span>{" "}
+							<span className="text-slate-400">From:</span>{" "}
 							<span className="text-slate-200">{email.from || "Unknown"}</span>
 						</div>
 						<div>
-							<span className="text-slate-500">To:</span>{" "}
+							<span className="text-slate-400">To:</span>{" "}
 							<span className="text-slate-200">{email.to || "—"}</span>
 						</div>
 						{email.cc && (
 							<div>
-								<span className="text-slate-500">CC:</span>{" "}
+								<span className="text-slate-400">CC:</span>{" "}
 								<span className="text-slate-200">{email.cc}</span>
 							</div>
 						)}
 						<div>
-							<span className="text-slate-500">Date:</span>{" "}
+							<span className="text-slate-400">Date:</span>{" "}
 							<span className="text-slate-200">{email.date || "Unknown"}</span>
 						</div>
 					</div>

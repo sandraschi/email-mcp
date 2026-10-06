@@ -535,7 +535,7 @@ export function Chat() {
 									>
 										{msg.role === "user" ? "You" : "Email Expert AI"}
 									</span>
-									<span className="text-xs text-slate-500">
+									<span className="text-xs text-slate-400">
 										{msg.ts
 											? new Date(msg.ts).toLocaleTimeString([], {
 													hour: "2-digit",
@@ -547,7 +547,7 @@ export function Chat() {
 										<button
 											type="button"
 											title="Read aloud"
-											className="text-slate-500 hover:text-blue-300"
+											className="text-slate-400 hover:text-blue-300"
 											onClick={() =>
 												speakText(msg.content).catch((e) => console.error(e))
 											}
@@ -569,7 +569,7 @@ export function Chat() {
 							<div className="h-8 w-8 rounded-full bg-blue-900/20 flex items-center justify-center border border-blue-800">
 								<Bot className="h-4 w-4 text-blue-400" />
 							</div>
-							<div className="flex items-center gap-2 text-slate-500 text-sm italic">
+							<div className="flex items-center gap-2 text-slate-400 text-sm italic">
 								<Loader2 className="h-3 w-3 animate-spin" /> Thinking...
 							</div>
 						</div>
@@ -580,7 +580,7 @@ export function Chat() {
 				<div className="border-t border-slate-800 bg-slate-900/30">
 					<button
 						type="button"
-						className="w-full flex items-center justify-between px-4 py-1.5 text-xs text-slate-500 hover:text-slate-300"
+						className="w-full flex items-center justify-between px-4 py-1.5 text-xs text-slate-400 hover:text-slate-300"
 						onClick={() => setShowWorkflows(!showWorkflows)}
 					>
 						<span className="flex items-center gap-1">
@@ -617,7 +617,7 @@ export function Chat() {
 									<div className="min-w-[160px]">
 										<label
 											htmlFor="wf-recipient"
-											className="text-xs text-slate-500 block mb-0.5"
+											className="text-xs text-slate-400 block mb-0.5"
 										>
 											Recipient
 										</label>
@@ -635,7 +635,7 @@ export function Chat() {
 									<div className="min-w-[120px]">
 										<label
 											htmlFor="wf-tone"
-											className="text-xs text-slate-500 block mb-0.5"
+											className="text-xs text-slate-400 block mb-0.5"
 										>
 											Tone
 										</label>
@@ -662,7 +662,7 @@ export function Chat() {
 									<div className="min-w-[120px]">
 										<label
 											htmlFor="wf-mood"
-											className="text-xs text-slate-500 block mb-0.5"
+											className="text-xs text-slate-400 block mb-0.5"
 										>
 											Mood
 										</label>
@@ -689,7 +689,7 @@ export function Chat() {
 									<div className="min-w-[100px]">
 										<label
 											htmlFor="wf-format"
-											className="text-xs text-slate-500 block mb-0.5"
+											className="text-xs text-slate-400 block mb-0.5"
 										>
 											Format
 										</label>

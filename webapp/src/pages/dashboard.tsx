@@ -269,7 +269,7 @@ export function Dashboard() {
 							<span className="font-semibold text-white bg-slate-800/80 px-2 py-0.5 rounded text-xs border border-slate-700">
 								{primaryAccount}
 							</span>
-							<span className="text-slate-500">•</span>
+							<span className="text-slate-400">•</span>
 							<span className="text-slate-400">Microsoft Graph OAuth</span>
 						</p>
 					</div>
@@ -581,7 +581,7 @@ export function Dashboard() {
 					<CardContent className="p-0 flex-1 divide-y divide-slate-800/60">
 						{filteredActivity.length === 0 ? (
 							<div className="p-12 text-center space-y-3">
-								<div className="mx-auto w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-slate-500">
+								<div className="mx-auto w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-slate-400">
 									<Inbox className="h-6 w-6" />
 								</div>
 								<p className="text-sm font-medium text-slate-300">
@@ -589,7 +589,7 @@ export function Dashboard() {
 										? "No unread messages right now."
 										: "No recent messages found."}
 								</p>
-								<p className="text-xs text-slate-500 max-w-sm mx-auto">
+								<p className="text-xs text-slate-400 max-w-sm mx-auto">
 									Your mailbox is up to date. You can run a background scan or
 									check your full inbox.
 								</p>
@@ -645,7 +645,7 @@ export function Dashboard() {
 														<span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
 													)}
 												</div>
-												<span className="text-xs text-slate-500 shrink-0 whitespace-nowrap">
+												<span className="text-xs text-slate-400 shrink-0 whitespace-nowrap">
 													{formatDate(email.date)}
 												</span>
 											</div>
@@ -663,17 +663,17 @@ export function Dashboard() {
 											<div className="flex items-center gap-2 pt-0.5">
 												<Badge
 													variant="outline"
-													className="border-slate-800 bg-slate-900 text-[10px] text-slate-400 py-0 px-1.5"
+													className="border-slate-800 bg-slate-900 text-xs text-slate-400 py-0 px-1.5"
 												>
 													{email._service || "default"}
 												</Badge>
-												<span className="text-[11px] text-slate-500 truncate">
+												<span className="text-xs text-slate-400 truncate">
 													{email.clean_from || email.from}
 												</span>
 											</div>
 										</div>
 
-										<ArrowRight className="h-4 w-4 text-slate-600 opacity-0 group-hover:opacity-100 group-hover:text-blue-400 transition-all shrink-0 mt-2" />
+										<ArrowRight className="h-4 w-4 text-slate-400 opacity-0 group-hover:opacity-100 group-hover:text-blue-400 transition-all shrink-0 mt-2" />
 									</button>
 								);
 							})
@@ -722,14 +722,14 @@ export function Dashboard() {
 										<span className="h-2 w-2 rounded-full bg-emerald-500" />
 										Microsoft Graph (Personal)
 									</span>
-									<Badge className="bg-blue-600/30 text-blue-300 border-blue-500/30 text-[10px]">
+									<Badge className="bg-blue-600/30 text-blue-300 border-blue-500/30 text-xs">
 										OAuth2 SASL
 									</Badge>
 								</div>
 								<div className="text-xs text-slate-400 space-y-1">
 									<div className="flex justify-between">
 										<span>Address:</span>
-										<span className="text-slate-200 font-mono text-[11px]">
+										<span className="text-slate-200 font-mono text-xs">
 											{primaryAccount}
 										</span>
 									</div>
@@ -755,7 +755,7 @@ export function Dashboard() {
 										<span className="h-2 w-2 rounded-full bg-emerald-500" />
 										Default Mail Gateway
 									</span>
-									<Badge className="bg-slate-800 text-slate-300 border-slate-700 text-[10px]">
+									<Badge className="bg-slate-800 text-slate-300 border-slate-700 text-xs">
 										SMTP / IMAP
 									</Badge>
 								</div>
@@ -831,7 +831,7 @@ export function Dashboard() {
 									<p className="text-xs font-medium text-slate-200">
 										{stats?.rules_count ?? 0} Active Rules
 									</p>
-									<p className="text-[11px] text-slate-400">
+									<p className="text-xs text-slate-400">
 										Filtering, notification hooks & auto-replies
 									</p>
 								</div>
@@ -864,7 +864,7 @@ export function Dashboard() {
 										AIWatcher Ingest
 									</span>
 								</div>
-								<span className="text-slate-400 font-mono text-[11px]">
+								<span className="text-slate-400 font-mono text-xs">
 									:10946 (Online)
 								</span>
 							</div>
@@ -877,7 +877,7 @@ export function Dashboard() {
 										RoboFang Bridge
 									</span>
 								</div>
-								<span className="text-slate-500 font-mono text-[11px]">
+								<span className="text-slate-400 font-mono text-xs">
 									:10871 (Tailnet)
 								</span>
 							</div>

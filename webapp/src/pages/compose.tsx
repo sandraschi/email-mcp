@@ -567,7 +567,7 @@ export function Compose() {
 					</CardHeader>
 					<CardContent>
 						{drafts.length === 0 ? (
-							<p className="text-slate-500 text-sm italic">No drafts</p>
+							<p className="text-slate-400 text-sm italic">No drafts</p>
 						) : (
 							<div className="space-y-1">
 								{drafts.map((d) => (
@@ -583,14 +583,14 @@ export function Compose() {
 											<span className="font-medium">
 												{d.subject || "(no subject)"}
 											</span>
-											<span className="text-slate-500 ml-2 text-xs">
+											<span className="text-slate-400 ml-2 text-xs">
 												→ {d.to || "no recipient"}
 											</span>
 										</button>
 										<Button
 											variant="ghost"
 											size="icon"
-											className="h-6 w-6 text-slate-600 hover:text-red-400"
+											className="h-6 w-6 text-slate-400 hover:text-red-400"
 											onClick={() => handleDeleteDraft(d.id)}
 										>
 											<Trash2 className="h-3 w-3" />
@@ -613,7 +613,7 @@ export function Compose() {
 					</CardHeader>
 					<CardContent>
 						{templates.length === 0 ? (
-							<div className="text-sm text-slate-500">
+							<div className="text-sm text-slate-400">
 								No templates yet. Save a template from Settings.
 							</div>
 						) : (
@@ -629,7 +629,7 @@ export function Compose() {
 											<p className="text-sm text-slate-300 truncate">
 												{t.name}
 											</p>
-											<p className="text-xs text-slate-500 truncate">
+											<p className="text-xs text-slate-400 truncate">
 												{t.subject || "(no subject)"}{" "}
 												{t.category ? `· [${t.category}]` : ""}
 											</p>
@@ -697,7 +697,7 @@ export function Compose() {
 									>
 										<User className="h-3 w-3 text-blue-400 shrink-0" />
 										<span className="truncate">{c.name || c.email}</span>
-										<span className="text-xs text-slate-500 ml-auto">
+										<span className="text-xs text-slate-400 ml-auto">
 											{c.email}
 										</span>
 									</button>
@@ -841,7 +841,7 @@ export function Compose() {
 
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-2">
-										<span className="text-xs text-slate-500">Model:</span>
+										<span className="text-xs text-slate-400">Model:</span>
 										<select
 											className="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1"
 											disabled
@@ -851,7 +851,7 @@ export function Compose() {
 										<Button
 											variant="ghost"
 											size="icon"
-											className="h-6 w-6 text-slate-500 hover:text-white"
+											className="h-6 w-6 text-slate-400 hover:text-white"
 											onClick={loadProviders}
 											disabled={loadingProviders}
 											title="Refresh providers"
@@ -1000,7 +1000,7 @@ export function Compose() {
 										onChange={(e) => setBulkRecipients(e.target.value)}
 									/>
 									{parseCount > 0 && (
-										<p className="text-xs text-slate-500 mt-1">
+										<p className="text-xs text-slate-400 mt-1">
 											{parseCount} recipient{parseCount !== 1 ? "s" : ""}{" "}
 											parsed.{" "}
 											{parseCount > 25 ? (
@@ -1033,7 +1033,7 @@ export function Compose() {
 									</div>
 								)}
 								<div className="flex items-center justify-between">
-									<span className="text-xs text-slate-500">
+									<span className="text-xs text-slate-400">
 										Uses current subject, body, and service
 									</span>
 									<Button
@@ -1114,7 +1114,7 @@ export function Compose() {
 						<Button
 							variant="ghost"
 							size="sm"
-							className="text-slate-500 hover:text-white text-xs h-7"
+							className="text-slate-400 hover:text-white text-xs h-7"
 							onClick={() => setShowSchedule(!showSchedule)}
 						>
 							<Clock className="h-3 w-3 mr-1" />{" "}
@@ -1166,7 +1166,7 @@ export function Compose() {
 						</Button>
 					</div>
 					{signature && (
-						<p className="text-xs text-slate-500 border-t border-slate-800 pt-2 mt-2">
+						<p className="text-xs text-slate-400 border-t border-slate-800 pt-2 mt-2">
 							Signature: {signature.slice(0, 80)}...
 						</p>
 					)}

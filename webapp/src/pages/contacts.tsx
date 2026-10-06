@@ -478,7 +478,7 @@ export function Contacts() {
 			<details className="group">
 				<summary className="text-sm text-slate-400 cursor-pointer hover:text-slate-200 list-none flex items-center gap-1">
 					<BookOpen className="h-4 w-4" /> Curated Public Lists{" "}
-					<span className="text-xs text-slate-600 group-open:rotate-180 transition-transform">
+					<span className="text-xs text-slate-400 group-open:rotate-180 transition-transform">
 						▼
 					</span>
 				</summary>
@@ -493,10 +493,10 @@ export function Contacts() {
 								key={lst.id}
 								className="flex items-center gap-3 py-2 px-3 rounded bg-slate-950/50 border border-slate-800"
 							>
-								<BookOpen className="h-4 w-4 text-slate-500 shrink-0" />
+								<BookOpen className="h-4 w-4 text-slate-400 shrink-0" />
 								<div className="flex-1 min-w-0">
 									<p className="text-sm text-white truncate">{lst.title}</p>
-									<p className="text-xs text-slate-500 truncate">
+									<p className="text-xs text-slate-400 truncate">
 										{lst.count} contacts — {lst.description}
 									</p>
 								</div>
@@ -526,7 +526,7 @@ export function Contacts() {
 
 			{/* Search */}
 			<div className="relative">
-				<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+				<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
 				<input
 					className="w-full bg-slate-900 border border-slate-700 rounded-md pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
 					placeholder="Search contacts..."
@@ -563,7 +563,7 @@ export function Contacts() {
 					<Loader2 className="h-8 w-8 animate-spin text-blue-500" />
 				</div>
 			) : contacts.length === 0 ? (
-				<p className="text-slate-500 text-center py-12 text-sm italic">
+				<p className="text-slate-400 text-center py-12 text-sm italic">
 					No contacts yet. Add one or import from CSV/vCard.
 				</p>
 			) : (
@@ -580,7 +580,7 @@ export function Contacts() {
 								<p className="text-sm text-white truncate">
 									{c.name || "(no name)"}
 								</p>
-								<p className="text-xs text-slate-500 truncate">
+								<p className="text-xs text-slate-400 truncate">
 									{c.email}
 									{c.phone ? ` · ${c.phone}` : ""}
 									{c.group ? ` · [${c.group}]` : ""}
@@ -589,7 +589,7 @@ export function Contacts() {
 							<Button
 								variant="ghost"
 								size="icon"
-								className="h-7 w-7 text-slate-500 hover:text-red-400"
+								className="h-7 w-7 text-slate-400 hover:text-red-400"
 								onClick={() => handleDelete(c.id)}
 								disabled={deleting === c.id}
 							>
