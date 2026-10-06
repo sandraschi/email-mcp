@@ -452,7 +452,7 @@ export function Settings() {
 								<div className="space-y-2">
 									<Label className="text-slate-300">
 										IMAP Server{" "}
-										<span className="text-slate-500 text-xs">(optional)</span>
+										<span className="text-slate-400 text-xs">(optional)</span>
 									</Label>
 									<Input
 										className="bg-slate-900 border-slate-700 text-white"
@@ -475,7 +475,7 @@ export function Settings() {
 					)}
 
 					{serviceType === "api" && (
-						<p className="text-sm text-slate-500">
+						<p className="text-sm text-slate-400">
 							For API services, use the{" "}
 							<a href="/services" className="text-blue-400 hover:underline">
 								Services page
@@ -484,7 +484,7 @@ export function Settings() {
 						</p>
 					)}
 					{serviceType === "webhook" && (
-						<p className="text-sm text-slate-500">
+						<p className="text-sm text-slate-400">
 							For webhook services, use the{" "}
 							<a href="/services" className="text-blue-400 hover:underline">
 								Services page
@@ -493,7 +493,7 @@ export function Settings() {
 						</p>
 					)}
 					{serviceType === "local" && (
-						<p className="text-sm text-slate-500">
+						<p className="text-sm text-slate-400">
 							For local test services, use the{" "}
 							<a href="/services" className="text-blue-400 hover:underline">
 								Services page
@@ -529,7 +529,7 @@ export function Settings() {
 						</Button>
 					</div>
 
-					<p className="text-xs text-slate-500">
+					<p className="text-xs text-slate-400">
 						Credentials are sent to the backend and configured at runtime. For
 						persistent config, set environment variables (see
 						docs/configuration.md).
@@ -550,7 +550,7 @@ export function Settings() {
 				</CardHeader>
 				<CardContent className="space-y-5">
 					{loadingProviders ? (
-						<div className="flex items-center gap-2 text-slate-500">
+						<div className="flex items-center gap-2 text-slate-400">
 							<Loader2 className="h-4 w-4 animate-spin" />
 							Probing Ollama and LM Studio...
 						</div>
@@ -585,7 +585,7 @@ export function Settings() {
 													{p.name}
 												</span>
 											</div>
-											<p className="text-xs text-slate-500">
+											<p className="text-xs text-slate-400">
 												{p.available === true
 													? (() => {
 															const chatCount = p.models.filter(
@@ -657,7 +657,7 @@ export function Settings() {
 									<div className="grid gap-2">
 										<Label className="text-slate-300">
 											Endpoint{" "}
-											<span className="text-slate-500 text-xs">
+											<span className="text-slate-400 text-xs">
 												(optional override)
 											</span>
 										</Label>
@@ -682,7 +682,7 @@ export function Settings() {
 												value={apiKey}
 												onChange={(e) => setApiKey(e.target.value)}
 											/>
-											<p className="text-xs text-slate-500">
+											<p className="text-xs text-slate-400">
 												Stored in process memory only — not persisted to disk.
 											</p>
 										</div>
@@ -774,7 +774,7 @@ export function Settings() {
 									className={`text-xs px-2 py-1 rounded-full border ${
 										st.authorized
 											? "text-emerald-400 border-emerald-900 bg-emerald-950/30"
-											: "text-slate-500 border-slate-700 bg-slate-900/40"
+											: "text-slate-400 border-slate-700 bg-slate-900/40"
 									}`}
 								>
 									{fam}: {st.authorized ? "authorized" : "not connected"}

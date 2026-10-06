@@ -626,7 +626,7 @@ export function Services() {
 					<CardTitle className="text-white text-sm">Quick Setup</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-3">
-					<p className="text-xs text-slate-500">
+					<p className="text-xs text-slate-400">
 						Select a provider, enter your email and password. Server details are
 						auto-configured.
 					</p>
@@ -773,7 +773,7 @@ export function Services() {
 						</div>
 					)}
 					{quickProvider === "gmail" && (
-						<p className="text-xs text-slate-500">
+						<p className="text-xs text-slate-400">
 							Gmail requires an{" "}
 							<a
 								className="text-blue-400 hover:underline"
@@ -914,7 +914,7 @@ export function Services() {
 											{isSecret && (
 												<button
 													type="button"
-													className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+													className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
 													onClick={() => toggleSecret(field.key)}
 												>
 													{show ? (
@@ -971,7 +971,7 @@ export function Services() {
 					<Loader2 className="h-8 w-8 animate-spin text-blue-500" />
 				</div>
 			) : Object.keys(services).length === 0 ? (
-				<p className="text-slate-500 text-center py-12">
+				<p className="text-slate-400 text-center py-12">
 					No services configured.
 				</p>
 			) : (
@@ -988,7 +988,7 @@ export function Services() {
 									/>
 									<div>
 										<CardTitle className="text-white text-sm">{name}</CardTitle>
-										<p className="text-xs text-slate-500">
+										<p className="text-xs text-slate-400">
 											{info.description || info.type}
 										</p>
 									</div>

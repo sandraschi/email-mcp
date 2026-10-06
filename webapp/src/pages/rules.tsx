@@ -348,7 +348,7 @@ export function Rules() {
 							</Button>
 						)}
 					</div>
-					<p className="text-xs text-slate-500 mt-1.5">
+					<p className="text-xs text-slate-400 mt-1.5">
 						Auto-watches every account configured in Settings and re-discovers
 						new ones automatically.{" "}
 						{watcherRunning || watcherPersisted
@@ -377,7 +377,7 @@ export function Rules() {
 				</CardHeader>
 				{showBackfill && (
 					<CardContent className="space-y-3">
-						<p className="text-xs text-slate-500">
+						<p className="text-xs text-slate-400">
 							Applies matching rules to mail already sitting in a folder
 							(mark-read / star / delete / move / spam only -- notify and
 							forward never fire here). Preview first.
@@ -474,7 +474,7 @@ export function Rules() {
 												<span className="truncate flex-1">
 													{r.subject || "(no subject)"}
 												</span>
-												<span className="text-slate-500 shrink-0">
+												<span className="text-slate-400 shrink-0">
 													{r.rule} -&gt; {r.action}
 													{r.reason ? ` (${r.reason})` : ""}
 												</span>
@@ -635,7 +635,7 @@ export function Rules() {
 			) : rules.length === 0 ? (
 				<div className="text-center py-12">
 					<Filter className="h-12 w-12 text-slate-700 mx-auto mb-3" />
-					<p className="text-slate-500 text-sm">
+					<p className="text-slate-400 text-sm">
 						No rules yet. Rules let you automatically process incoming emails.
 					</p>
 				</div>
@@ -648,7 +648,7 @@ export function Rules() {
 								key={rule.id}
 								className="flex items-center gap-3 py-2.5 px-3 rounded bg-slate-950/50 border border-slate-800 hover:border-slate-700 transition-colors"
 							>
-								<GripVertical className="h-4 w-4 text-slate-600 shrink-0 cursor-grab" />
+								<GripVertical className="h-4 w-4 text-slate-400 shrink-0 cursor-grab" />
 								<div
 									className={`h-2.5 w-2.5 rounded-full shrink-0 ${rule.enabled ? "bg-emerald-500" : "bg-slate-600"}`}
 								/>
@@ -663,22 +663,22 @@ export function Rules() {
 											</span>
 										)}
 										{rule.filter_target && (
-											<span className="text-xs text-slate-500">
+											<span className="text-xs text-slate-400">
 												→ {rule.filter_target}
 											</span>
 										)}
 									</div>
-									<p className="text-xs text-slate-500 mt-0.5">
+									<p className="text-xs text-slate-400 mt-0.5">
 										<span className="font-mono text-blue-300">
 											{rule.match_field}
 										</span>
-										<span className="text-slate-600"> ~/</span>
+										<span className="text-slate-400"> ~/</span>
 										<span className="text-emerald-300">
 											{rule.match_pattern}
 										</span>
-										<span className="text-slate-600">/</span>
+										<span className="text-slate-400">/</span>
 										{rule.priority != null && rule.priority !== 100 && (
-											<span className="text-slate-500 ml-2">
+											<span className="text-slate-400 ml-2">
 												prio {rule.priority}
 											</span>
 										)}
@@ -696,7 +696,7 @@ export function Rules() {
 								<Button
 									variant="ghost"
 									size="icon"
-									className="h-7 w-7 text-slate-500 hover:text-red-400"
+									className="h-7 w-7 text-slate-400 hover:text-red-400"
 									onClick={() => handleDelete(rule.id)}
 									disabled={deleting === rule.id}
 								>
