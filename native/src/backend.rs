@@ -14,7 +14,7 @@ use tauri::{AppHandle, Emitter, Manager};
 pub struct BackendProcess(pub Mutex<Option<Child>>);
 
 const BACKEND_NAME: &str = "email-mcp-backend.exe";
-const BACKEND_PORT: u16 = 10813;
+const BACKEND_PORT: u16 = 11252; // dedicated operator port (email-mcp-native in WEBAPP_PORTS.md); dev + NSSM service stay on 10813
 const ENV_PORT: &str = "MCP_PORT";
 const ENV_HOST: &str = "MCP_HOST";
 const ENV_TRANSPORT: &str = "MCP_TRANSPORT";
@@ -69,15 +69,43 @@ pub fn materialize_backend(app: &AppHandle) -> Result<PathBuf, String> {
 fn free_port(port: u16) {
     #[cfg(windows)]
     {
-        let script = format!(
-            "Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue \
-            | ForEach-Object {{ taskkill /F /PID `$_.OwningProcess /T 2>$null }}"
+        // Image-scoped kills only (TAURI_PRODUCTION_PITFALLS section 14/15). The old version killed
+        // whatever PID owned the port - which was the dev backend / the NSSM email-mcp service on
+        // 10813 - and never killed ourselves by luck only. Stale copies of THIS app's sidecar and
+        // stale other instances of the shell are fair game; any foreign owner of the port is left
+        // alone and surfaces as "backend not reachable" instead of a surprise kill.
+        let me = std::process::id();
+        let img_kill = format!(
+            "Stop-Process -Name 'email-mcp-backend' -Force -ErrorAction SilentlyContinue; \
+             Get-Process -Name 'email-mcp-native' -ErrorAction SilentlyContinue \
+             | Where-Object {{ $_.Id -ne {me} }} \
+             | Stop-Process -Force -ErrorAction SilentlyContinue; \
+             taskkill /F /IM email-mcp-backend.exe /T 2>$null"
         );
         let _ = Command::new("powershell.exe")
-            .args(["-NoProfile", "-Command", &script])
-            .stdout(Stdio::null()).stderr(Stdio::null())
+            .args(["-NoProfile", "-Command", &img_kill])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .status();
-        thread::sleep(Duration::from_millis(500));
+
+        let poll_script = format!(
+            "if (Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue) {{ 1 }} else {{ 0 }}"
+        );
+        for _ in 0..10 {
+            let occupied = Command::new("powershell.exe")
+                .args(["-NoProfile", "-Command", &poll_script])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .output()
+                .ok()
+                .and_then(|o| String::from_utf8(o.stdout).ok())
+                .and_then(|s| s.trim().parse::<u32>().ok())
+                .unwrap_or(1);
+            if occupied == 0 {
+                return;
+            }
+            thread::sleep(Duration::from_secs(1));
+        }
     }
 }
 

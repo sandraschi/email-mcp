@@ -12,20 +12,24 @@ sys.path.insert(0, ".")
 
 from email_mcp.server import main
 
-# LocalSystem has SeDebugPrivilege; clean up any session 0 zombies holding frontend port 10812
-try:
-    import re
-    import subprocess
+# Service mode only (LocalSystem has SeDebugPrivilege): clean up session 0 zombies holding the
+# dev frontend port 10812. Skipped when the Tauri shell spawned us (EMAIL_MCP_TAURI=1) - a
+# desktop app must never kill whatever listens on a port, that is the developer's own Vite
+# dev server (TAURI_PRODUCTION_PITFALLS section 15).
+if not os.environ.get("EMAIL_MCP_TAURI"):
+    try:
+        import re
+        import subprocess
 
-    res = subprocess.run(["netstat", "-ano", "-p", "tcp"], capture_output=True, text=True)
-    for line in res.stdout.splitlines():
-        if ":10812" in line and "LISTENING" in line:
-            m = re.search(r"(\d+)\s*$", line.strip())
-            if m:
-                target_pid = m.group(1)
-                subprocess.run(["taskkill", "/F", "/T", "/PID", target_pid], capture_output=True)
-except Exception:
-    pass
+        res = subprocess.run(["netstat", "-ano", "-p", "tcp"], capture_output=True, text=True)
+        for line in res.stdout.splitlines():
+            if ":10812" in line and "LISTENING" in line:
+                m = re.search(r"(\d+)\s*$", line.strip())
+                if m:
+                    target_pid = m.group(1)
+                    subprocess.run(["taskkill", "/F", "/T", "/PID", target_pid], capture_output=True)
+    except Exception:
+        pass
 
 port = os.environ.get("MCP_PORT") or os.environ.get("PORT") or os.environ.get("WEB_PORT")
 if not port and "--stdio" not in sys.argv:

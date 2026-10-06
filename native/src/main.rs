@@ -32,7 +32,9 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("error building tauri application")
         .run(|app, event| {
-            if let tauri::RunEvent::Exit = event {
+            // Stop and reap the sidecar on BOTH events (TAURI_PRODUCTION_PITFALLS G); a locked
+            // resources/*-backend.exe stalls the next install.
+            if matches!(event, tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }) {
                 if let Some(mut child) = app.state::<BackendProcess>().0.lock().unwrap().take() {
                     let _ = child.kill();
                     let _ = child.wait();
