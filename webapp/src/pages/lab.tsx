@@ -236,7 +236,7 @@ export function Lab() {
 				<CardHeader className="pb-2 flex flex-row items-center justify-between">
 					<CardTitle className="text-white text-sm flex items-center gap-2">
 						<Server
-							className={`h-4 w-4 ${serverRunning ? "text-emerald-400" : "text-slate-500"}`}
+							className={`h-4 w-4 ${serverRunning ? "text-emerald-400" : "text-slate-400"}`}
 						/>
 						SMTP Server
 					</CardTitle>
@@ -276,7 +276,7 @@ export function Lab() {
 						<Button
 							size="sm"
 							variant="ghost"
-							className="text-slate-500 hover:text-white h-7 text-xs"
+							className="text-slate-400 hover:text-white h-7 text-xs"
 							onClick={() => {
 								fetchStatus();
 								fetchEmails();
@@ -421,7 +421,7 @@ export function Lab() {
 						<Button
 							size="sm"
 							variant="ghost"
-							className="text-slate-500 hover:text-white h-7 text-xs"
+							className="text-slate-400 hover:text-white h-7 text-xs"
 							onClick={handleClear}
 							disabled={emails.length === 0}
 						>
@@ -431,7 +431,7 @@ export function Lab() {
 				</CardHeader>
 				<CardContent>
 					{emails.length === 0 ? (
-						<p className="text-slate-500 text-sm italic py-6 text-center">
+						<p className="text-slate-400 text-sm italic py-6 text-center">
 							No emails captured yet. Start the server and send some test
 							emails.
 						</p>
@@ -452,14 +452,14 @@ export function Lab() {
 											<p className="text-sm truncate text-white font-medium">
 												{email.subject}
 											</p>
-											<p className="text-xs text-slate-500 truncate">
+											<p className="text-xs text-slate-400 truncate">
 												{email.from} &nbsp;·&nbsp; {email.date}
 											</p>
 										</div>
 										<Button
 											variant="ghost"
 											size="icon"
-											className="h-7 w-7 shrink-0 text-slate-500 hover:text-blue-400"
+											className="h-7 w-7 shrink-0 text-slate-400 hover:text-blue-400"
 											onClick={(e) => {
 												e.stopPropagation();
 												handleForward(email.id);
@@ -479,22 +479,22 @@ export function Lab() {
 									{selectedEmail?.id === email.id && (
 										<div className="px-2 pb-3 pt-1 border-b border-slate-800">
 											{emailLoading ? (
-												<div className="flex items-center gap-2 text-slate-500 py-4">
+												<div className="flex items-center gap-2 text-slate-400 py-4">
 													<Loader2 className="h-4 w-4 animate-spin" />{" "}
 													Loading...
 												</div>
 											) : selectedEmail ? (
 												<div className="bg-slate-900/50 rounded-md p-3 space-y-2">
 													<div className="text-xs text-slate-400">
-														<span className="text-slate-500">From:</span>{" "}
+														<span className="text-slate-400">From:</span>{" "}
 														{selectedEmail.from}
 													</div>
 													<div className="text-xs text-slate-400">
-														<span className="text-slate-500">To:</span>{" "}
+														<span className="text-slate-400">To:</span>{" "}
 														{selectedEmail.to?.join(", ") || "—"}
 													</div>
 													<div className="text-xs text-slate-400">
-														<span className="text-slate-500">Date:</span>{" "}
+														<span className="text-slate-400">Date:</span>{" "}
 														{selectedEmail.date}
 													</div>
 													<div className="h-px bg-slate-800" />

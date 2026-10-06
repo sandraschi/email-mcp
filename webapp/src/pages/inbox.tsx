@@ -178,7 +178,7 @@ function FolderTree({
 							{hasChildren ? (
 								<button
 									type="button"
-									className="shrink-0 text-slate-500 hover:text-white p-0.5"
+									className="shrink-0 text-slate-400 hover:text-white p-0.5"
 									title={open ? "Collapse" : "Expand"}
 									onClick={(e) => {
 										e.stopPropagation();
@@ -197,7 +197,7 @@ function FolderTree({
 							<span className="shrink-0">{folderIcon(n.name, open)}</span>
 							<span className="flex-1 min-w-0 truncate">{n.name}</span>
 							{(n.unread ?? 0) > 0 && (
-								<span className="shrink-0 text-[10px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-full px-1.5 py-0.5">
+								<span className="shrink-0 text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-full px-1.5 py-0.5">
 									{n.unread}
 								</span>
 							)}
@@ -207,7 +207,7 @@ function FolderTree({
 										type="button"
 										title="Rename folder"
 										data-testid="folder-rename"
-										className="text-slate-500 hover:text-white p-0.5"
+										className="text-slate-400 hover:text-white p-0.5"
 										onClick={(e) => {
 											e.stopPropagation();
 											onRename(n.name);
@@ -219,7 +219,7 @@ function FolderTree({
 										type="button"
 										title="Delete folder"
 										data-testid="folder-delete"
-										className="text-slate-500 hover:text-red-400 p-0.5"
+										className="text-slate-400 hover:text-red-400 p-0.5"
 										onClick={(e) => {
 											e.stopPropagation();
 											onDelete(n.name);
@@ -504,12 +504,12 @@ export function Inbox() {
 					<Button
 						variant="ghost"
 						size="sm"
-						className={`text-xs ${autoRefresh ? "text-emerald-400" : "text-slate-500"} hover:text-emerald-300`}
+						className={`text-xs ${autoRefresh ? "text-emerald-400" : "text-slate-400"} hover:text-emerald-300`}
 						onClick={() => setAutoRefresh((r) => !r)}
 						title="Toggle auto-refresh (30s)"
 					>
 						<Clock
-							className={`h-3.5 w-3.5 mr-1 ${autoRefresh ? "text-emerald-400" : "text-slate-600"}`}
+							className={`h-3.5 w-3.5 mr-1 ${autoRefresh ? "text-emerald-400" : "text-slate-400"}`}
 						/>
 						{autoRefresh ? "Auto" : "Manual"}
 					</Button>
@@ -642,7 +642,7 @@ export function Inbox() {
 					</CardHeader>
 					<CardContent className="pt-0 space-y-0.5">
 						{folderTree.length === 0 ? (
-							<p className="text-slate-500 text-xs italic px-2 py-3">
+							<p className="text-slate-400 text-xs italic px-2 py-3">
 								No folders found.
 							</p>
 						) : (
@@ -696,7 +696,7 @@ export function Inbox() {
 					</CardHeader>
 					<CardContent>
 						{loading && emails.length === 0 && (
-							<div className="flex items-center gap-2 text-slate-500 py-8 justify-center">
+							<div className="flex items-center gap-2 text-slate-400 py-8 justify-center">
 								<Loader2 className="h-5 w-5 animate-spin" />
 								<span>Fetching mail...</span>
 							</div>
@@ -708,7 +708,7 @@ export function Inbox() {
 							</div>
 						)}
 						{!loading && !error && emails.length === 0 && (
-							<p className="text-slate-500 text-sm italic py-8 text-center">
+							<p className="text-slate-400 text-sm italic py-8 text-center">
 								No messages found.
 							</p>
 						)}
@@ -736,7 +736,7 @@ export function Inbox() {
 							>
 								<div className="mt-0.5 p-1.5 bg-slate-900 rounded shrink-0">
 									<Mail
-										className={`h-3.5 w-3.5 ${email.read ? "text-slate-500" : "text-blue-400"}`}
+										className={`h-3.5 w-3.5 ${email.read ? "text-slate-400" : "text-blue-400"}`}
 									/>
 								</div>
 								<div className="flex-1 min-w-0">
@@ -745,14 +745,14 @@ export function Inbox() {
 									>
 										{email.subject || "(No Subject)"}
 									</p>
-									<p className="text-xs text-slate-500 truncate">
+									<p className="text-xs text-slate-400 truncate">
 										{email.from} &nbsp;·&nbsp; {email.date}
 									</p>
 								</div>
 								<Button
 									variant="ghost"
 									size="icon"
-									className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-red-400 hover:bg-red-950/20"
+									className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-400 hover:bg-red-950/20"
 									onClick={(e) => handleDelete(e, email.id)}
 									disabled={deletingIds.has(email.id)}
 									title="Delete"

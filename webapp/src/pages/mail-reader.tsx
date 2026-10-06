@@ -132,17 +132,17 @@ function MailRow({
 					>
 						{email.from}
 					</p>
-					<span className="text-xs text-slate-500 shrink-0">
+					<span className="text-xs text-slate-400 shrink-0">
 						{timeAgo(email.date)}
 					</span>
 				</div>
 				<p
-					className={`text-xs truncate mt-0.5 ${email.read ? "text-slate-500" : "text-slate-300"}`}
+					className={`text-xs truncate mt-0.5 ${email.read ? "text-slate-400" : "text-slate-300"}`}
 				>
 					{email.subject || "(No Subject)"}
 				</p>
 				{email._service && (
-					<p className="text-[10px] text-blue-400 mt-0.5">{email._service}</p>
+					<p className="text-xs text-blue-400 mt-0.5">{email._service}</p>
 				)}
 			</div>
 			{onStar && (
@@ -152,7 +152,7 @@ function MailRow({
 						e.stopPropagation();
 						onStar(e, email.id);
 					}}
-					className={`p-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ${starred ? "opacity-100 text-amber-400" : "text-slate-600 hover:text-amber-400"}`}
+					className={`p-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ${starred ? "opacity-100 text-amber-400" : "text-slate-400 hover:text-amber-400"}`}
 				>
 					<Star className="h-3 w-3" />
 				</button>
@@ -164,7 +164,7 @@ function MailRow({
 						e.stopPropagation();
 						onArchive(e, email.id);
 					}}
-					className="p-1 text-slate-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 shrink-0"
+					className="p-1 text-slate-400 hover:text-blue-400 opacity-0 group-hover:opacity-100 shrink-0"
 					title="Archive"
 				>
 					<Archive className="h-3 w-3" />
@@ -176,7 +176,7 @@ function MailRow({
 					e.stopPropagation();
 					onSnooze(email.id);
 				}}
-				className="p-1 text-slate-600 hover:text-amber-400 opacity-0 group-hover:opacity-100 shrink-0"
+				className="p-1 text-slate-400 hover:text-amber-400 opacity-0 group-hover:opacity-100 shrink-0"
 				title="Snooze 30min"
 			>
 				<Clock className="h-3 w-3" />
@@ -184,7 +184,7 @@ function MailRow({
 			<button
 				type="button"
 				onClick={(e) => onDelete(e, email.id)}
-				className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0"
+				className="p-1 text-slate-400 hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0"
 			>
 				<Trash2 className="h-3 w-3" />
 			</button>
@@ -473,7 +473,7 @@ export function MailReader() {
 					</select>
 				)}
 				<div className="relative flex-1 max-w-xs">
-					<Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+					<Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
 					<input
 						data-testid="mail-reader-search"
 						className="w-full bg-slate-900 border border-slate-700 rounded-md pl-7 pr-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -497,7 +497,7 @@ export function MailReader() {
 				</label>
 				<button
 					type="button"
-					className={`p-1.5 rounded text-xs ${notifyEnabled ? "text-blue-400" : "text-slate-500 hover:text-white"}`}
+					className={`p-1.5 rounded text-xs ${notifyEnabled ? "text-blue-400" : "text-slate-400 hover:text-white"}`}
 					onClick={() => setNotifyEnabled(!notifyEnabled)}
 					title={notifyEnabled ? "Notifications on" : "Notifications off"}
 				>
@@ -509,7 +509,7 @@ export function MailReader() {
 				</button>
 				<button
 					type="button"
-					className={`p-1.5 rounded text-xs ${threaded ? "text-indigo-400" : "text-slate-500 hover:text-white"}`}
+					className={`p-1.5 rounded text-xs ${threaded ? "text-indigo-400" : "text-slate-400 hover:text-white"}`}
 					onClick={() => {
 						setThreaded(!threaded);
 						setExpandedThreads(new Set());
@@ -534,7 +534,7 @@ export function MailReader() {
 				</button>
 				<button
 					type="button"
-					className="p-1.5 text-slate-500 hover:text-white rounded"
+					className="p-1.5 text-slate-400 hover:text-white rounded"
 					onClick={fetchEmails}
 				>
 					<RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -553,7 +553,7 @@ export function MailReader() {
 								<Loader2 className="h-6 w-6 animate-spin text-blue-500" />
 							</div>
 						) : emails.length === 0 ? (
-							<div className="text-slate-500 text-sm text-center py-12 italic">
+							<div className="text-slate-400 text-sm text-center py-12 italic">
 								No messages
 							</div>
 						) : !threaded ? (
@@ -599,7 +599,7 @@ export function MailReader() {
 													<p className="text-sm text-white font-medium truncate">
 														{latest.subject || "(No Subject)"}
 													</p>
-													<span className="text-xs text-slate-500 shrink-0">
+													<span className="text-xs text-slate-400 shrink-0">
 														{timeAgo(latest.date)}
 													</span>
 												</div>
@@ -660,11 +660,11 @@ export function MailReader() {
 									<p className="text-sm text-white font-medium">
 										{selectedEmail.from}
 									</p>
-									<p className="text-xs text-slate-500">
+									<p className="text-xs text-slate-400">
 										to {selectedEmail.to || "—"}
 										{selectedEmail.cc ? `, cc ${selectedEmail.cc}` : ""}
 									</p>
-									<p className="text-xs text-slate-500">{selectedEmail.date}</p>
+									<p className="text-xs text-slate-400">{selectedEmail.date}</p>
 								</div>
 							</div>
 							{/* Attachments */}
@@ -683,10 +683,10 @@ export function MailReader() {
 												<span className="text-slate-300 truncate max-w-[150px]">
 													{att.filename}
 												</span>
-												<span className="text-slate-500 shrink-0">
+												<span className="text-slate-400 shrink-0">
 													({formatSize(att.size)})
 												</span>
-												<Download className="h-3 w-3 text-slate-500 ml-1" />
+												<Download className="h-3 w-3 text-slate-400 ml-1" />
 											</button>
 										))}
 									</div>
@@ -704,7 +704,7 @@ export function MailReader() {
 							)}
 						</div>
 					) : (
-						<div className="flex-1 flex items-center justify-center text-slate-500 text-sm italic">
+						<div className="flex-1 flex items-center justify-center text-slate-400 text-sm italic">
 							Select an email to read
 						</div>
 					)}

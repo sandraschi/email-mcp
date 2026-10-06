@@ -16,7 +16,7 @@ const LEVEL_COLORS: Record<string, string> = {
 	ERROR: "text-red-400 bg-red-950/40",
 	WARNING: "text-yellow-400 bg-yellow-950/40",
 	INFO: "text-blue-300 bg-blue-950/30",
-	DEBUG: "text-slate-500 bg-slate-900/30",
+	DEBUG: "text-slate-400 bg-slate-900/30",
 };
 
 export default function Logs() {
@@ -163,7 +163,7 @@ export default function Logs() {
 				</select>
 				<input
 					data-testid="logs-search"
-					className="h-8 w-48 rounded border border-slate-700 bg-slate-800 px-2 text-xs text-slate-300 placeholder:text-slate-500"
+					className="h-8 w-48 rounded border border-slate-700 bg-slate-800 px-2 text-xs text-slate-300 placeholder:text-slate-400"
 					placeholder="Search..."
 					value={search}
 					onChange={(e) => handleSearch(e.target.value)}
@@ -209,7 +209,7 @@ export default function Logs() {
 				>
 					Clear
 				</button>
-				<span className="text-xs text-slate-500 ml-auto">{total} entries</span>
+				<span className="text-xs text-slate-400 ml-auto">{total} entries</span>
 			</div>
 
 			<div
@@ -218,23 +218,23 @@ export default function Logs() {
 				className="h-[65vh] overflow-auto rounded-lg border border-slate-800 bg-slate-950 p-3 font-mono text-xs leading-relaxed"
 			>
 				{entries.length === 0 && !loading && (
-					<div className="text-slate-600 text-center py-12">No log entries</div>
+					<div className="text-slate-400 text-center py-12">No log entries</div>
 				)}
 				{entries.map((e) => (
 					<div
 						key={e.id}
 						className="flex gap-3 py-0.5 hover:bg-slate-900/50 rounded px-1"
 					>
-						<span className="text-slate-600 w-20 shrink-0">
+						<span className="text-slate-400 w-20 shrink-0">
 							{e.timestamp.split(".")[0].split("T")[1] || e.timestamp}
 						</span>
 						<span
-							className={`w-16 shrink-0 text-center rounded text-[10px] font-bold ${LEVEL_COLORS[e.level] || "text-slate-400"}`}
+							className={`w-16 shrink-0 text-center rounded text-xs font-bold ${LEVEL_COLORS[e.level] || "text-slate-400"}`}
 						>
 							{e.level}
 						</span>
 						{e.kind && (
-							<span className="text-slate-500 w-16 shrink-0">[{e.kind}]</span>
+							<span className="text-slate-400 w-16 shrink-0">[{e.kind}]</span>
 						)}
 						<span className="text-slate-300 break-all">{e.detail}</span>
 					</div>
@@ -242,7 +242,7 @@ export default function Logs() {
 				<div ref={endRef} />
 			</div>
 
-			<div className="flex items-center justify-between text-xs text-slate-500">
+			<div className="flex items-center justify-between text-xs text-slate-400">
 				<button
 					type="button"
 					className="px-3 py-1 rounded border border-slate-700 hover:bg-slate-800 disabled:opacity-30"
