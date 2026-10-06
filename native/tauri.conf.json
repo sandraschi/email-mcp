@@ -1,6 +1,6 @@
 {
   "productName": "Email MCP",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "identifier": "ai.fleet.email-mcp",
   "build": {
     "frontendDist": "../webapp/dist",

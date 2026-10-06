@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "email-mcp"
-version = "0.4.1"
+version = "0.6.0"
 description = "Multi-service email platform supporting SMTP/IMAP, SendGrid, Mailgun, Resend, local testing, and webhook integrations (FastMCP 3.2, Prefab UI)"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -14,7 +14,7 @@ authors = [
 ]
 dependencies = [
     "fastapi>=0.115.0",
-    "fastmcp>=3.2.0,<4",
+    "fastmcp>=3.4.4,<4",
     "pydantic>=2.0.0",
     "structlog>=24.0.0",
     "httpx>=0.25.0",
