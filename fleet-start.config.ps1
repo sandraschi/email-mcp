@@ -1,4 +1,4 @@
-﻿# Per-repo fleet start config for email-mcp
+# Per-repo fleet start config for email-mcp
 # Edit ports/backend target here - start.ps1 is fleet-standard.
 @{
     Name         = 'email-mcp'
@@ -7,9 +7,10 @@
     HealthPath   = '/health'
     WebRoot      = 'webapp'
     Backend = @{
-        Kind          = 'uvicorn'
+        Kind          = 'nssm'
         UvicornTarget = 'email_mcp.server:app'
         SyncExtras    = @('dev')
+        SyncOnStart  = $true
         Env           = @{ WEB_PORT = '10813' }
     }
     Frontend = @{
