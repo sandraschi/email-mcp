@@ -1,14 +1,23 @@
+# Managed by mcp-central-docs/scripts/set_fleet_dependabot.py (GITHUB_TRIAGE_STANDARD.md):
+# weekly, grouped, low noise. Edit the generator, not this file.
 version: 2
 updates:
+
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
-    reviewers:
-      - "sandraschi"
-    assignees:
-      - "sandraschi"
+      day: "monday"
+      time: "05:00"
+      timezone: "Europe/Vienna"
+    open-pull-requests-limit: 3
+    groups:
+      pip-updates:
+        applies-to: version-updates
+        patterns: ["*"]
+      pip-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    labels: ["dependencies"]
     commit-message:
-      prefix: "deps"
-      include: "scope"
+      prefix: "chore(deps)"
