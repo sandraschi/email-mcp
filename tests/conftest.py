@@ -29,6 +29,17 @@ def auth() -> dict[str, str]:
     return {"Authorization": AUTH_HEADER}
 
 
+@pytest.fixture(autouse=True)
+def _isolate_service_credentials(tmp_path, monkeypatch):
+    """Route service persistence to a temp file (BUG: integration tests hit the real app).
+
+    Without this, POST/PUT/DELETE /api/services in tests write to the real
+    src/service_credentials.json, and those phantom services load on the next
+    backend restart. Every test gets a fresh empty credentials file.
+    """
+    monkeypatch.setenv("EMAIL_MCP_CREDENTIALS_FILE", str(tmp_path / "test-service-credentials.json"))
+
+
 @pytest.fixture
 def smtp_config() -> dict:
     """A valid SMTP service configuration for testing."""
