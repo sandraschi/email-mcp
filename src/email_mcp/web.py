@@ -283,6 +283,12 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                     },
                 )
             )
+            if result.get("success"):
+                from email_mcp.persistence import save_persisted_service
+
+                save_persisted_service(
+                    payload["name"], payload["type"], payload["config"], payload.get("enabled", True)
+                )
             return result
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -309,6 +315,10 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                     },
                 )
             )
+            if result.get("success"):
+                from email_mcp.persistence import save_persisted_service
+
+                save_persisted_service(name, payload.get("type", cfg.get("type", "smtp")), cfg)
             return result
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -317,6 +327,10 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
     async def delete_service(name: str, _user: str = Depends(authenticate)):
         try:
             result = _extract_tool_result(await mcp_app.call_tool("remove_service", {"name": name}))
+            if result.get("success"):
+                from email_mcp.persistence import remove_persisted_service
+
+                remove_persisted_service(name)
             return result
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -431,6 +445,10 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 {"name": svc_name, "type": "smtp", "config": config},
             )
         )
+        if result.get("success"):
+            from email_mcp.persistence import save_persisted_service
+
+            save_persisted_service(svc_name, "smtp", config)
         return result
 
     @app.post("/api/services/check-bridge")

@@ -604,9 +604,8 @@ export function Settings() {
 					</div>
 
 					<p className="text-xs text-slate-400">
-						Credentials are sent to the backend and configured at runtime. For
-						persistent config, set environment variables (see
-						docs/configuration.md).
+						Credentials are saved on this PC and restored on restart. (Also
+						configurable via environment variables, see docs/configuration.md.)
 					</p>
 				</CardContent>
 			</Card>
@@ -688,9 +687,7 @@ export function Settings() {
 						</div>
 					)}
 					<p className="text-xs text-slate-400">
-						Connecting here configures Gmail at runtime (lost on backend
-						restart). For persistent config, set GMAIL_USER and
-						GMAIL_APP_PASSWORD in .env (see docs/configuration.md).
+						Connecting here saves Gmail on this PC and restores it on restart.
 					</p>
 				</CardContent>
 			</Card>

@@ -337,6 +337,25 @@ class EmailMCP:
         # Load some common pre-configured services
         self._load_preconfigured_services()
 
+        # Reload services the user saved via Settings / quick-setup / REST.
+        # Operator config (.env, EMAIL_SERVICES) wins: setdefault only.
+        from email_mcp.persistence import load_persisted_services
+
+        for name, entry in load_persisted_services().items():
+            if name not in self.services:
+                try:
+                    self.services[name] = EmailServiceFactory.create_service(
+                        EmailServiceConfig(
+                            name=name,
+                            type=entry.get("type", "smtp"),
+                            enabled=entry.get("enabled", True),
+                            config=entry.get("config", {}),
+                        )
+                    )
+                    logger.info("Restored persisted service", service=name)
+                except Exception as exc:
+                    logger.warning("Persisted service failed, skipped", service=name, error=str(exc))
+
     def _load_preconfigured_services(self) -> None:
         """Load commonly used email services if their API keys are available.
 

@@ -72,6 +72,9 @@ mcp-*/# Local configuration (DO NOT COMMIT)
 config.local.json
 credentials.json
 
+# Persisted service credentials (Settings-saved passwords - NEVER commit)
+src/service_credentials.json
+
 # Node.js / Vite
 node_modules/
 dist/

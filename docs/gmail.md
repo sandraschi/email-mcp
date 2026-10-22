@@ -36,15 +36,17 @@ export IMAP_USER="your-email@gmail.com"
 export IMAP_PASSWORD="your-gmail-app-password"
 ```
 
-### Configuration via Webapp (runtime only)
+### Configuration via Webapp (persistent)
 Go to **Settings → Gmail** in the dashboard, enter your Gmail address and app
-password, then **Connect Gmail**. This configures the `gmail` service
-immediately (lost on backend restart — set the env vars above to persist).
-Use **Test Connection** to verify IMAP reachability.
+password, then **Connect Gmail**. This saves the `gmail` service on this PC
+and restores it on every backend restart. **Test Connection** verifies IMAP
+reachability. Deleting the service in **Services** removes the saved credentials.
 
 The generic **Settings → Email Service Credentials** form and
-`POST /api/services/quick` with `{"provider": "gmail", ...}` do the same thing
-programmatically.
+`POST /api/services/quick` with `{"provider": "gmail", ...}` persist the same way.
+
+Precedence: explicit environment config (below) wins over Settings-saved
+credentials when both define the same service name.
 
 ### Configuration via MCP Tool
 ```
