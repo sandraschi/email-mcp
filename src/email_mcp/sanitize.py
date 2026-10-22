@@ -130,18 +130,95 @@ def wrap_untrusted_list(items: list[dict[str, Any]], source: str = "email") -> l
     return [wrap_untrusted_dict(item, source) for item in items]
 
 
-def error_response(error: str, error_type: str = "general", **kwargs: Any) -> dict[str, Any]:
+def error_response(
+    error: str,
+    error_type: str = "general",
+    message: str | None = None,
+    suggestions: list[str] | None = None,
+    recovery_options: list[str] | None = None,
+    dialogic: dict[str, Any] | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
     """Standard error response with auto-logging - ALWAYS use inside except blocks.
 
     Automatically logs the full traceback via logger.exception(), so no caller
     ever loses a traceback again. Add extra context via kwargs.
 
     ## Return Format
-    {"success": False, "error": str, "error_type": str, ...kwargs}
+    {"success": False, "error": str, "message": str, "error_type": str,
+     "suggestions": [...], "recovery_options": [...],
+     "dialogic": {"suggestion": str, "remediation": str, "context_dump": {...}},
+     ...kwargs}
 
     ## Examples
     except Exception as e:
         return error_response(str(e), "validation", field=field_name)
+    except asyncio.TimeoutError:
+        return timeout_response("check_inbox", 50.0, service=service)
     """
     logger.exception("%s [%s]", error, error_type)
-    return {"success": False, "error": error, "error_type": error_type, **kwargs}
+    payload: dict[str, Any] = {
+        "success": False,
+        "error": error,
+        "message": message or error,
+        "error_type": error_type,
+    }
+    if suggestions:
+        payload["suggestions"] = suggestions
+    if recovery_options:
+        payload["recovery_options"] = recovery_options
+    if dialogic is not None:
+        payload["dialogic"] = dialogic
+    payload.update(kwargs)
+    return payload
+
+
+def timeout_response(
+    tool: str,
+    timeout_s: float,
+    service: str | None = None,
+    **context: Any,
+) -> dict[str, Any]:
+    """Standard dialogic payload for a tool that exceeded its time budget.
+
+    Returned INSTEAD of hanging: the host must always get an answer before its
+    own timeout fires (host budget is 60s, tool budget is 50s). Follows
+    DIALOGIC_RETURNS.md: success/error/message + dialogic remediation block.
+
+    ## Return Format
+    {"success": False, "error": str, "message": str, "error_type": "timeout",
+     "suggestions": [...], "recovery_options": [...],
+     "dialogic": {"suggestion": str, "remediation": str, "context_dump": {...}}}
+    """
+    where = f" on service '{service}'" if service else ""
+    err = f"{tool} timed out after {timeout_s:g}s without answering{where}"
+    suggestion = (
+        f"{tool} did not finish within {timeout_s:g}s. The mail provider or local "
+        "store may be slow or unreachable; nothing was sent, moved, or deleted by "
+        "this timed-out call."
+    )
+    remediation = (
+        f"Retry {tool} with a smaller scope (lower limit, unread_only=True, or a "
+        "narrower folder), then check service health with email_status. If it keeps "
+        "timing out, restart the email-mcp server process."
+    )
+    return error_response(
+        err,
+        "timeout",
+        message=suggestion,
+        suggestions=[
+            "Retry with a smaller limit or a narrower folder.",
+            "Run email_status to check whether the service is connected.",
+            "If timeouts persist across tools, restart the email-mcp server.",
+        ],
+        recovery_options=[
+            f"{tool} with limit=10",
+            "email_status",
+            "check_inbox with unread_only=True",
+        ],
+        dialogic={
+            "suggestion": suggestion,
+            "remediation": remediation,
+            "context_dump": {"tool": tool, "timeout_s": timeout_s, "service": service, **context},
+        },
+    )

@@ -217,7 +217,7 @@ def graph_account() -> str | None:
     return None
 
 
-def _post(url: str, data: dict[str, str], timeout: float = 60.0) -> dict[str, Any]:
+def _post(url: str, data: dict[str, str], timeout: float = 45.0) -> dict[str, Any]:
     resp = httpx.post(url, data=data, timeout=timeout)
     resp.raise_for_status()
     return resp.json()

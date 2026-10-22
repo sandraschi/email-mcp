@@ -384,7 +384,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def check_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 mail.select(folder)
 
@@ -513,7 +513,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def fetch_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 mail.select(folder)
 
@@ -628,7 +628,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def delete_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 mail.select(folder)
 
@@ -658,7 +658,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def move_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 mail.select(from_folder)
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
@@ -692,7 +692,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def copy_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 mail.select(from_folder)
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
@@ -727,7 +727,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def forward_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 mail.select("INBOX")
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
@@ -776,7 +776,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def spam_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 mail.select(folder)
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
@@ -811,7 +811,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def mark_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 mail.select(folder)
 
@@ -845,7 +845,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def unmark_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 mail.select(folder)
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
@@ -877,7 +877,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def flag_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 mail.select(folder)
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
@@ -909,7 +909,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def unflag_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 mail.select(folder)
                 eid = email_id.encode() if isinstance(email_id, str) else email_id
@@ -936,7 +936,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def list_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 status, folders = mail.list()
                 mail.logout()
@@ -963,7 +963,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def create_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 status, _ = mail.create(folder)
                 mail.logout()
@@ -986,7 +986,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def delete_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 status, _ = mail.delete(folder)
                 mail.logout()
@@ -1009,7 +1009,7 @@ class SMTPEmailService(EmailService):
         try:
 
             def rename_sync():
-                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                mail = imaplib.IMAP4_SSL(self.imap_server, self.imap_port, timeout=25)
                 self._imap_auth(mail)
                 status, _ = mail.rename(old_name, new_name)
                 mail.logout()

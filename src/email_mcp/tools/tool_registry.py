@@ -40,9 +40,12 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
     - list_services: List available email services
     """
 
-    _READ_ONLY = {"readonly": True}
-    _MUTATING = {}
-    _DESTRUCTIVE = {"destructive": True}
+    # TOOL_DESIGN_STANDARDS sec 9 (2026-10-06 correction): use real MCP hint keys.
+    # The old {"readonly": ...} / {"destructive": ...} forms are silently ignored.
+    _READ_ONLY = {"readOnlyHint": True, "openWorldHint": True}  # list/get/search (talks to API)
+    _LOCAL_READONLY = {"readOnlyHint": True, "openWorldHint": False}  # status/help (local only)
+    _MUTATING = {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": True}
+    _DESTRUCTIVE = {"readOnlyHint": False, "destructiveHint": True, "openWorldHint": True}
 
     @mcp.tool(annotations=_MUTATING)
     async def send_email(
@@ -1070,7 +1073,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         try:
 
             def search_sync():
-                mail = imaplib.IMAP4_SSL(svc.imap_server, svc.imap_port)
+                mail = imaplib.IMAP4_SSL(svc.imap_server, svc.imap_port, timeout=25)
                 mail.login(svc.imap_user, svc.imap_password)
                 mail.select(folder)
 

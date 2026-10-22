@@ -111,14 +111,27 @@ def _extract_tool_result(result: Any) -> dict[str, Any]:
 
 
 async def _safe_call(mcp_app, tool_name: str, params: dict | None = None) -> dict:
-    """Call an MCP tool with guardrails. Raises HTTPException on failure."""
+    """Call an MCP tool with guardrails. Raises HTTPException on failure.
+
+    Bounded at 55s (inside the host 60s budget, outside the 50s tool guard)
+    so REST callers get a 504 with a dialogic payload instead of a hang.
+    """
     try:
-        result = await mcp_app.call_tool(tool_name, params or {})
+        result = await asyncio.wait_for(mcp_app.call_tool(tool_name, params or {}), timeout=55.0)
         return _extract_tool_result(result)
     except asyncio.CancelledError:
         raise
     except HTTPException:
         raise
+    except TimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                f"{tool_name} timed out after 55s. Suggestion: retry with a smaller "
+                "limit or narrower folder, then check service health. "
+                "Remediation: GET /api/services, then retry the call."
+            ),
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"{tool_name}: {exc}") from exc
 
@@ -1016,7 +1029,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             def fetch_attachment():
                 import imaplib
 
-                mail = imaplib.IMAP4_SSL(imap_server, imap_port)
+                mail = imaplib.IMAP4_SSL(imap_server, imap_port, timeout=25)
                 mail.login(imap_user, imap_password)
                 mail.select(folder)
                 eid = message_id.encode() if isinstance(message_id, str) else message_id

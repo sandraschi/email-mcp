@@ -9,6 +9,7 @@ search, folders, triage) work with service="graph" transparently.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import time
 from typing import Any
@@ -171,7 +172,10 @@ class GraphEmailService(EmailService):
         params: dict[str, Any] | None = None,
         json_body: dict[str, Any] | None = None,
     ) -> tuple[int, dict[str, Any]]:
-        token = self._token()
+        # BUG-078: oauth.get_token() may run a blocking 45s refresh on a stale
+        # token - keep it off the event loop. 40s provider budget sits inside
+        # the 50s tool guard (timeout_middleware) so failures stay dialogic.
+        token = await asyncio.to_thread(self._token)
         if not token:
             raise oauth.OAuthUnavailable(f"No Graph token for {self.user} - connect Outlook OAuth (Graph) first")
         headers = {
@@ -180,7 +184,7 @@ class GraphEmailService(EmailService):
         }
         if json_body is not None:
             headers["Content-Type"] = "application/json"
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=40.0) as client:
             resp = await client.request(
                 method,
                 f"{GRAPH_BASE}{path}",

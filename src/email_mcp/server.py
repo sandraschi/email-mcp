@@ -23,9 +23,9 @@ from typing import Any
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastmcp import Context, FastMCP
+from fastmcp import Client, Context, FastMCP
 from fastmcp.prompts import Message
-from fastmcp.server import create_proxy
+from fastmcp.server.providers.proxy import FastMCPProxy
 
 from email_mcp import __version__
 from email_mcp.services.email_services import (
@@ -36,6 +36,7 @@ from email_mcp.services.email_services import (
     SMTPEmailService,
     WebhookEmailService,
 )
+from email_mcp.timeout_middleware import ToolTimeoutMiddleware
 
 from . import oauth
 from .mailing_lists import load_mailing_list_entries
@@ -213,6 +214,8 @@ class EmailMCP:
         self.mcp = FastMCP(**_mcp_kwargs)
 
         # ── MCP Bridge (ProxyProvider) ────────────────────────────────────────────
+        # BUG-062: bare create_proxy(url) has no read timeout - one stalled
+        # forwarded call wedges the session. Bound client (55s < host 60s).
         _bridge_proxies: list[str] = []
         bridge_urls = os.getenv("MCP_BRIDGE_URLS", "")
         if bridge_urls:
@@ -220,10 +223,10 @@ class EmailMCP:
                 url = url.strip()
                 if url:
                     try:
-                        self.mcp.add_provider(create_proxy(url))
+                        self.mcp.add_provider(FastMCPProxy(client_factory=lambda u=url: Client(u, timeout=55)))
                         _bridge_proxies.append(url)
                     except Exception:
-                        pass
+                        logger.warning("Bridge provider failed, skipping", url=url)
 
         # Service registry
         # NOTE: Prefab tools gracefully skip if prefab-ui<0.18 is installed
@@ -241,6 +244,10 @@ class EmailMCP:
         self._register_sampling_and_agentic_tools()
         self._add_skills_provider()
         self._register_prefab_tools()
+
+        # BUG-062: bound every tools/call (50s < host 60s) so a stalled provider
+        # surfaces as a dialogic timeout payload instead of a wedged session.
+        self.mcp.add_middleware(ToolTimeoutMiddleware())
 
     def _load_default_services(self) -> None:
         """Load default SMTP/IMAP service from environment variables.
