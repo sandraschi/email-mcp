@@ -4,6 +4,7 @@ Endpoints:
     GET  /api/status              -- server health
     GET  /api/capabilities        -- feature flags for runtime gating
     GET  /api/tools               -- list MCP tools
+    POST /api/shutdown            -- graceful self-termination (confirm=true)
     GET  /api/stats               -- KPI stats for dashboard
     GET  /api/services            -- list + connectivity of all services
     GET  /api/services/{name}     -- single service config
@@ -59,6 +60,10 @@ from .ai import AIRouter
 from .auth import authenticate
 
 logger = logging.getLogger(__name__)
+
+# Strong references for fire-and-forget background tasks (RUF006: the event
+# loop only keeps weak refs - an unreferenced task may be GC'd mid-flight).
+_BACKGROUND_TASKS: set[asyncio.Task] = set()
 
 
 def _unwrap_untrusted(text: Any) -> str:
@@ -238,6 +243,33 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
     async def list_tools(_user: str = Depends(authenticate)):
         tools = await ai_router.get_tools_list()
         return {"tools": tools}
+
+    @app.post("/api/shutdown")
+    async def api_shutdown(payload: dict[str, Any] = Body(...), _user: str = Depends(authenticate)):
+        """Graceful self-termination (agent restart path).
+
+        Requires ``{"confirm": true}``. Responds first, then exits the process
+        ~1s later so the response flushes. Under NSSM the service restarts
+        automatically; a standalone backend stays down until relaunched.
+        """
+        if not payload.get("confirm"):
+            raise HTTPException(
+                status_code=400,
+                detail='confirm=true required - POST {"confirm": true} to shut down.',
+            )
+        logger.warning("Shutdown requested via POST /api/shutdown by %s", _user)
+
+        async def _die() -> None:
+            await asyncio.sleep(1.0)
+            os._exit(0)
+
+        _die_task = asyncio.create_task(_die())
+        _BACKGROUND_TASKS.add(_die_task)
+        _die_task.add_done_callback(_BACKGROUND_TASKS.discard)
+        return {
+            "status": "shutting_down",
+            "message": "email-mcp backend exiting in ~1s (NSSM restarts it automatically).",
+        }
 
     # ── Services ─────────────────────────────────────────────────────────────
 
