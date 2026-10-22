@@ -263,7 +263,12 @@ class GraphEmailService(EmailService):
         from_contains: str | None = None,
         subject_contains: str | None = None,
     ) -> dict[str, Any]:
-        """List messages from a folder."""
+        """List messages from a folder.
+
+        from_contains / subject_contains are pushed server-side via $filter
+        (client-side filtering over the newest 50 is useless in 10k+ mailboxes,
+        so the server must narrow before paging).
+        """
         if not self._ready():
             return {"success": False, "error": f"Graph not authorized for {self.name}"}
         try:
@@ -272,14 +277,43 @@ class GraphEmailService(EmailService):
                 "$orderby": "receivedDateTime desc",
                 "$select": "id,subject,from,receivedDateTime,isRead",
             }
+            clauses: list[str] = []
             if unread_only:
-                params["$filter"] = "isRead eq false"
+                clauses.append("isRead eq false")
+            search_query = ""
+            if from_contains or subject_contains:
+                # Folder-scoped $search accepts plain terms/phrases only (no KQL
+                # field operators like from: - those 400 here). Quote each part
+                # as a phrase; client-side substring filters below stay the net.
+                parts: list[str] = []
+                if from_contains:
+                    # Folder-scoped $search keeps addresses as one token, so a
+                    # bare local-part never matches; trailing wildcard fixes
+                    # fragments without changing full addresses.
+                    term = from_contains.strip().strip(chr(34))
+                    if "@" not in term and not term.endswith("*"):
+                        term += "*"
+                    parts.append(f'"{term}"')
+                if subject_contains:
+                    parts.append(f'"{subject_contains.strip().strip(chr(34))}"')
+                search_query = " ".join(parts)
+            if search_query:
+                params["$search"] = search_query
+                params.pop("$orderby", None)
+            elif clauses:
+                params["$filter"] = " and ".join(clauses)
             folder_id = await self._resolve_folder(folder)
             _, data = await self._request("GET", f"/me/mailFolders/{folder_id}/messages", params=params)
             emails = []
             for item in data.get("value", []):
                 frm = _from_str(item)
                 subject = sanitize_text(item.get("subject", ""))
+                # Client-side safety net: Graph $filter/$search cannot combine
+                # with unread_only, so re-apply unread + text filters here.
+                # (the "read" key is True when the message is UNREAD.)
+                is_unread = not item.get("isRead", False)
+                if unread_only and not is_unread:
+                    continue
                 if from_contains and from_contains.lower() not in frm.lower():
                     continue
                 if subject_contains and subject_contains.lower() not in subject.lower():
@@ -290,7 +324,7 @@ class GraphEmailService(EmailService):
                         "subject": subject or "(No Subject)",
                         "from": frm or "Unknown",
                         "date": item.get("receivedDateTime") or "Unknown",
-                        "read": not item.get("isRead", False),
+                        "read": is_unread,
                     }
                 )
                 if len(emails) >= limit:

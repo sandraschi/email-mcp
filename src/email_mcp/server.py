@@ -420,6 +420,30 @@ class EmailMCP:
             )
             self.services["slack"] = EmailServiceFactory.create_service(slack_config)
 
+        # Gmail via IMAP/SMTP with an App Password (Google rejects plain
+        # passwords). Set GMAIL_USER + GMAIL_APP_PASSWORD in .env, or connect
+        # once via webapp Settings -> Gmail. Service name: "gmail".
+        gmail_user = os.getenv("GMAIL_USER", "")
+        gmail_app_password = os.getenv("GMAIL_APP_PASSWORD", "")
+        if gmail_user and gmail_app_password:
+            gmail_config = EmailServiceConfig(
+                name="gmail",
+                type="smtp",
+                config={
+                    "smtp_server": "smtp.gmail.com",
+                    "smtp_port": 587,
+                    "smtp_user": gmail_user,
+                    "smtp_password": gmail_app_password,
+                    "smtp_from": gmail_user,
+                    "imap_server": "imap.gmail.com",
+                    "imap_port": 993,
+                    "imap_user": gmail_user,
+                    "imap_password": gmail_app_password,
+                },
+            )
+            self.services.setdefault("gmail", EmailServiceFactory.create_service(gmail_config))
+            logger.info("Gmail service auto-configured from GMAIL_USER", service="gmail")
+
         # Microsoft Graph service (OAuth2 device-code flow, Mail.Read/Mail.Send)
         if os.getenv("EMAIL_MCP_OAUTH_CLIENT_ID"):
             graph_user = os.getenv("GRAPH_USER") or os.getenv("IMAP_USER") or os.getenv("SMTP_USER") or ""

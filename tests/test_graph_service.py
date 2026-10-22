@@ -103,7 +103,9 @@ async def test_check_inbox(service, monkeypatch):
     monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: fake)
     result = await service.check_inbox(unread_only=True, limit=10)
     assert result["success"] is True
-    assert result["count"] == 2
+    # unread_only is enforced client-side too: the read message is dropped
+    # even though the mocked server ignores $filter.
+    assert result["count"] == 1
     assert result["emails"][0]["id"] == "m1"
     assert "ada@x.com" in result["emails"][0]["from"]
     _, url, params, headers = fake.calls[0]

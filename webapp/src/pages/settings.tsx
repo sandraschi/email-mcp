@@ -5,6 +5,7 @@ import {
 	Globe,
 	Key,
 	Loader2,
+	Mail,
 	Radio,
 	Server,
 } from "lucide-react";
@@ -82,6 +83,14 @@ export function Settings() {
 	const [serviceName, setServiceName] = useState("default");
 	const [serviceType, setServiceType] = useState("smtp");
 	const [_showEmailForm, _setShowEmailForm] = useState(true);
+	const [gmailEmail, setGmailEmail] = useState("");
+	const [gmailAppPassword, setGmailAppPassword] = useState("");
+	const [savingGmail, setSavingGmail] = useState(false);
+	const [testingGmail, setTestingGmail] = useState(false);
+	const [gmailTestResult, setGmailTestResult] = useState<{
+		ok: boolean;
+		msg: string;
+	} | null>(null);
 	const [oauthConfigured, setOauthConfigured] = useState(false);
 	const [oauthAuthorized, setOauthAuthorized] = useState(false);
 	const [oauthAccount, setOauthAccount] = useState("");
@@ -351,7 +360,72 @@ export function Settings() {
 		}
 	};
 
+	const handleConnectGmail = async () => {
+		if (!gmailEmail || !gmailAppPassword) {
+			toast("error", "Gmail address and app password are required");
+			return;
+		}
+		setSavingGmail(true);
+		setGmailTestResult(null);
+		try {
+			const data = await fetchWithAuth("/api/services/quick", {
+				method: "POST",
+				body: JSON.stringify({
+					provider: "gmail",
+					email: gmailEmail.trim(),
+					password: gmailAppPassword,
+				}),
+			});
+			if (data.success) {
+				toast("success", 'Gmail connected as service "gmail"');
+				setGmailAppPassword("");
+				const svcs = await fetchWithAuth("/api/services");
+				setEmailServices(svcs.services || {});
+			} else {
+				toast(
+					"error",
+					data.detail || data.message || data.error || "Gmail connect failed",
+				);
+			}
+		} catch (err: unknown) {
+			toast(
+				"error",
+				err instanceof Error ? err.message : "Gmail connect failed",
+			);
+		} finally {
+			setSavingGmail(false);
+		}
+	};
+
+	const handleTestGmail = async () => {
+		setTestingGmail(true);
+		setGmailTestResult(null);
+		try {
+			const data = await fetchWithAuth("/api/services/gmail/test", {
+				method: "POST",
+			});
+			const ok = data?.imap_connected === true || data?.connected === true;
+			setGmailTestResult({
+				ok,
+				msg: ok
+					? "Gmail IMAP reachable"
+					: data?.imap_error ||
+						data?.error ||
+						data?.detail ||
+						"Gmail not reachable",
+			});
+		} catch (err: unknown) {
+			setGmailTestResult({
+				ok: false,
+				msg: err instanceof Error ? err.message : "Test failed",
+			});
+		} finally {
+			setTestingGmail(false);
+		}
+	};
+
 	const currentService = emailServices[serviceName];
+	const gmailService = emailServices.gmail;
 
 	return (
 		<div className="space-y-6" data-testid="settings-page">
@@ -533,6 +607,90 @@ export function Settings() {
 						Credentials are sent to the backend and configured at runtime. For
 						persistent config, set environment variables (see
 						docs/configuration.md).
+					</p>
+				</CardContent>
+			</Card>
+
+			{/* ── Gmail ── */}
+			<Card className="border-slate-800 bg-slate-950/50">
+				<CardHeader>
+					<CardTitle className="text-white flex items-center gap-2">
+						<Mail className="h-4 w-4 text-red-400" />
+						Gmail
+					</CardTitle>
+					<CardDescription className="text-slate-400">
+						Connect a Gmail account with an app password. Google rejects plain
+						passwords — create one at Google Account → Security → 2-Step
+						Verification → App passwords.
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4" data-testid="gmail-card">
+					{gmailService && (
+						<div
+							className={`text-xs px-3 py-2 rounded border ${gmailService.connected ? "text-emerald-400 border-emerald-900 bg-emerald-950/20" : "text-amber-400 border-amber-900 bg-amber-950/20"}`}
+						>
+							{gmailService.connected ? "Connected" : "Not connected"} —{" "}
+							{gmailService.type} — {gmailService.description}
+						</div>
+					)}
+					<div className="grid gap-4 md:grid-cols-2">
+						<div className="space-y-2">
+							<Label className="text-slate-300">Gmail address</Label>
+							<Input
+								className="bg-slate-900 border-slate-700 text-white"
+								placeholder="you@gmail.com"
+								value={gmailEmail}
+								onChange={(e) => setGmailEmail(e.target.value)}
+								data-testid="gmail-email"
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label className="text-slate-300">App password</Label>
+							<Input
+								type="password"
+								className="bg-slate-900 border-slate-700 text-white"
+								placeholder="xxxx-xxxx-xxxx-xxxx"
+								value={gmailAppPassword}
+								onChange={(e) => setGmailAppPassword(e.target.value)}
+								data-testid="gmail-app-password"
+							/>
+						</div>
+					</div>
+					<div className="flex gap-2">
+						<Button
+							className="bg-emerald-600 hover:bg-emerald-700"
+							onClick={handleConnectGmail}
+							disabled={savingGmail}
+							data-testid="gmail-connect"
+						>
+							{savingGmail && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+							<Mail className="h-4 w-4 mr-1" /> Connect Gmail
+						</Button>
+						<Button
+							variant="outline"
+							className="border-slate-700 text-slate-300 hover:bg-slate-800"
+							onClick={handleTestGmail}
+							disabled={testingGmail || !gmailService}
+							data-testid="gmail-test"
+						>
+							{testingGmail && (
+								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+							)}
+							<Radio className="h-4 w-4 mr-1" /> Test Connection
+						</Button>
+					</div>
+					{gmailTestResult && (
+						<div
+							className={`text-xs px-3 py-2 rounded border ${gmailTestResult.ok ? "text-emerald-400 border-emerald-900 bg-emerald-950/20" : "text-amber-400 border-amber-900 bg-amber-950/20"}`}
+							data-testid="gmail-test-result"
+						>
+							{gmailTestResult.msg}
+						</div>
+					)}
+					<p className="text-xs text-slate-400">
+						Connecting here configures Gmail at runtime (lost on backend
+						restart). For persistent config, set GMAIL_USER and
+						GMAIL_APP_PASSWORD in .env (see docs/configuration.md).
 					</p>
 				</CardContent>
 			</Card>

@@ -12,7 +12,18 @@
 3. Copy the 16-character app password
 4. Use this password (NOT your regular Gmail password)
 
-### Configuration via Environment
+### Configuration via Environment (persistent, survives restarts)
+
+```bash
+GMAIL_USER="your-email@gmail.com"
+GMAIL_APP_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+```
+
+Set these in `.env` (see `.env.example`). The backend auto-configures a
+service named `gmail` on startup. Use it from any tool with `service="gmail"`,
+e.g. `check_inbox(service="gmail")`, `send_email(..., service="gmail")`.
+
+Legacy alternative: point the generic SMTP/IMAP vars at Gmail:
 
 ```bash
 export SMTP_SERVER="smtp.gmail.com"
@@ -25,8 +36,15 @@ export IMAP_USER="your-email@gmail.com"
 export IMAP_PASSWORD="your-gmail-app-password"
 ```
 
-### Configuration via Webapp
-Go to **Settings → Email Services** in the Email Hub dashboard and add an SMTP service with the credentials above.
+### Configuration via Webapp (runtime only)
+Go to **Settings → Gmail** in the dashboard, enter your Gmail address and app
+password, then **Connect Gmail**. This configures the `gmail` service
+immediately (lost on backend restart — set the env vars above to persist).
+Use **Test Connection** to verify IMAP reachability.
+
+The generic **Settings → Email Service Credentials** form and
+`POST /api/services/quick` with `{"provider": "gmail", ...}` do the same thing
+programmatically.
 
 ### Configuration via MCP Tool
 ```
