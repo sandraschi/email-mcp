@@ -45,6 +45,7 @@ import re
 import subprocess
 import time
 import uuid
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -1421,6 +1422,233 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         from .curated_lists import import_list
 
         return import_list(list_id)
+
+    # ── Mailing lists (user presets + 3-day crawl + distill) ──────────────
+
+    @app.get("/api/mailing-lists")
+    async def mailing_lists_list(_user: str = Depends(authenticate)):
+        from .mailing_lists_store import list_merged
+
+        presets, _readonly = list_merged()
+        return {"lists": presets, "count": len(presets)}
+
+    @app.post("/api/mailing-lists")
+    async def mailing_lists_add(
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .mailing_lists_store import upsert_user_preset
+
+        ok, err = upsert_user_preset(payload or {})
+        if not ok:
+            raise HTTPException(status_code=422, detail=err or "invalid preset")
+        return {"success": True, "id": str(payload.get("id", "")).strip()}
+
+    @app.put("/api/mailing-lists/{list_id}")
+    async def mailing_lists_update(
+        list_id: str,
+        payload: dict[str, Any] = Body(...),
+        _user: str = Depends(authenticate),
+    ):
+        from .mailing_lists_store import upsert_user_preset
+
+        body = dict(payload or {})
+        body["id"] = list_id
+        ok, err = upsert_user_preset(body)
+        if not ok:
+            raise HTTPException(status_code=422, detail=err or "invalid preset")
+        return {"success": True, "id": list_id}
+
+    @app.delete("/api/mailing-lists/{list_id}")
+    async def mailing_lists_delete(list_id: str, _user: str = Depends(authenticate)):
+        from .mailing_lists_store import delete_user_preset
+
+        ok, err = delete_user_preset(list_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail=err or "not found")
+        return {"success": True, "id": list_id}
+
+    @app.get("/api/mailing-lists/{list_id}/crawl")
+    async def mailing_lists_crawl(
+        list_id: str,
+        days: int = 3,
+        limit: int = 20,
+        _user: str = Depends(authenticate),
+    ):
+        """3-day crawl for a preset: search folder+sender, return newest first.
+
+        Uses check_inbox + server-side date filter (last `days` days).
+        """
+        from datetime import datetime, timedelta
+
+        from .mailing_lists_store import get_merged
+
+        preset = get_merged(list_id)
+        if not preset:
+            raise HTTPException(status_code=404, detail=f"preset {list_id!r} not found")
+        days = max(1, min(14, int(days or 3)))
+        limit = max(1, min(50, int(limit or 20)))
+        try:
+            raw = _extract_tool_result(
+                await mcp_app.call_tool(
+                    "check_inbox",
+                    {
+                        "service": preset.get("service", "default"),
+                        "folder": preset.get("folder", "INBOX"),
+                        "limit": limit,
+                        "unread_only": False,
+                        "from_contains": preset.get("from_contains") or None,
+                        "subject_contains": preset.get("subject_contains") or None,
+                    },
+                )
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        emails = raw.get("emails", []) if isinstance(raw, dict) else []
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+        out: list[dict[str, Any]] = []
+        for em in emails:
+            dt_raw = str(em.get("date", ""))
+            try:
+                # Graph dates are ISO-8601 with Z; fall back to keeping the row.
+                dt = datetime.fromisoformat(dt_raw.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=UTC)
+                if dt < cutoff:
+                    continue
+            except (ValueError, TypeError):
+                pass
+            if "subject" in em:
+                em["clean_subject"] = _unwrap_untrusted(em["subject"])
+                em["subject"] = em["clean_subject"]
+            if "from" in em:
+                em["clean_from"] = _unwrap_untrusted(em["from"])
+                em["from"] = em["clean_from"]
+            out.append(em)
+        return {
+            "success": True,
+            "list_id": list_id,
+            "preset": preset,
+            "days": days,
+            "count": len(out),
+            "emails": out,
+        }
+
+    @app.post("/api/mailing-lists/{list_id}/distill")
+    async def mailing_lists_distill(
+        list_id: str,
+        payload: dict[str, Any] = Body(default={}),
+        _user: str = Depends(authenticate),
+    ):
+        """Build a compact markdown digest for selected (or crawled) emails.
+
+        Body: {email_ids?: [str], days?: int, limit?: int,
+               push_aiwatcher?: bool, urgency_hint?: float}
+        Returns {report_md, items, pushed}.
+        """
+        from .mailing_lists_store import get_merged, strip_html_to_text
+
+        preset = get_merged(list_id)
+        if not preset:
+            raise HTTPException(status_code=404, detail=f"preset {list_id!r} not found")
+        body = payload or {}
+        email_ids: list[str] = list(body.get("email_ids") or [])
+        days = max(1, min(14, int(body.get("days", 3) or 3)))
+        push = bool(body.get("push_aiwatcher", False))
+        urgency_hint = body.get("urgency_hint", 7.0)
+        try:
+            urgency_hint = float(urgency_hint)
+        except (TypeError, ValueError):
+            urgency_hint = 7.0
+
+        service = str(preset.get("service", "default"))
+        folder = str(preset.get("folder", "INBOX"))
+
+        if not email_ids:
+            crawl = await mailing_lists_crawl(list_id, days=days, limit=int(body.get("limit", 10) or 10), _user=_user)  # type: ignore[arg-type]
+            email_ids = [str(e.get("id", "")) for e in crawl.get("emails", []) if e.get("id")]
+
+        items: list[dict[str, Any]] = []
+        for eid in email_ids[:20]:
+            try:
+                detail = _extract_tool_result(
+                    await mcp_app.call_tool(
+                        "fetch_email_detail",
+                        {"email_id": eid, "service": service, "folder": folder},
+                    )
+                )
+            except Exception:
+                continue
+            subject = _unwrap_untrusted(str(detail.get("subject", "(no subject)")))
+            sender = _unwrap_untrusted(str(detail.get("from", "")))
+            date = str(detail.get("date", ""))
+            text_body = str(detail.get("text_body", "") or "")
+            if len(text_body) < 200:
+                text_body = strip_html_to_text(str(detail.get("html_body", "") or detail.get("body", "")))
+            else:
+                text_body = text_body[:6000]
+            import re as _re
+
+            links = _re.findall(r"https?://[^\s\"'<>]+", text_body + " " + str(detail.get("html_body", "")))
+            seen: set[str] = set()
+            uniq_links: list[str] = []
+            for u in links:
+                u = u.rstrip(".,);]")
+                if u not in seen and "safelinks" not in u.lower():
+                    seen.add(u)
+                    uniq_links.append(u)
+                if len(uniq_links) >= 15:
+                    break
+            items.append(
+                {
+                    "id": eid,
+                    "subject": subject,
+                    "from": sender,
+                    "date": date,
+                    "summary": text_body[:1500],
+                    "links": uniq_links,
+                }
+            )
+
+        lines = [
+            f"# {list_id} digest - last {days}d ({len(items)} issues)",
+            "",
+        ]
+        for it in items:
+            lines.append(f"## {it['subject']}")
+            lines.append(f"- From: {it['from']} | Date: {it['date']}")
+            if it["summary"]:
+                lines.append("")
+                lines.append(it["summary"][:1200])
+            if it["links"]:
+                lines.append("")
+                lines.append("Links:")
+                lines.extend(f"- {u}" for u in it["links"][:10])
+            lines.append("")
+        report_md = "\n".join(lines)[:30000]
+
+        pushed: dict[str, Any] | None = None
+        if push and items:
+            try:
+                from email_mcp.connectors import push_aiwatcher
+
+                joined = "\n\n".join(f"## {i['subject']}\n{i['summary'][:800]}" for i in items[:5])
+                pushed = await push_aiwatcher(
+                    f"{list_id} digest - {len(items)} issues",
+                    joined[:4000],
+                    urgency_hint=urgency_hint,
+                )
+            except Exception as exc:
+                pushed = {"success": False, "error": str(exc)}
+
+        return {
+            "success": True,
+            "list_id": list_id,
+            "count": len(items),
+            "items": items,
+            "report_md": report_md,
+            "pushed": pushed,
+        }
 
     # ── Templates ─────────────────────────────────────────────────────────────
 

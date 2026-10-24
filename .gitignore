@@ -74,6 +74,7 @@ credentials.json
 
 # Persisted service credentials (Settings-saved passwords - NEVER commit)
 src/service_credentials.json
+src/mailing_lists_user.json
 
 # Node.js / Vite
 node_modules/
