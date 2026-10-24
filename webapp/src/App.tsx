@@ -20,6 +20,7 @@ import { Inbox } from "@/pages/inbox";
 import { Lab } from "@/pages/lab";
 import Logs from "@/pages/logs";
 import { MailReader } from "@/pages/mail-reader";
+import { MailingLists } from "@/pages/mailing-lists";
 import { RagPage } from "@/pages/rag";
 import { Rules } from "@/pages/rules";
 import { SearchPage } from "@/pages/search";
@@ -42,6 +43,7 @@ function App() {
 						<Routes>
 							<Route path="/" element={<Dashboard />} />
 							<Route path="/inbox" element={<Inbox />} />
+							<Route path="/mailing-lists" element={<MailingLists />} />
 							<Route path="/compose" element={<Compose />} />
 							<Route path="/email" element={<EmailDetail />} />
 							<Route path="/search" element={<SearchPage />} />

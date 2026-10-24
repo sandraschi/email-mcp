@@ -13,6 +13,7 @@ import {
 	List,
 	Mail,
 	MessageCircleReply,
+	Newspaper,
 	PenSquare,
 	Search,
 	Server,
@@ -34,6 +35,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 	const navItems = [
 		{ href: "/", label: "Dashboard", icon: LayoutDashboard },
 		{ href: "/inbox", label: "Inbox", icon: Inbox },
+		{ href: "/mailing-lists", label: "Mailing Lists", icon: Newspaper },
 		{ href: "/mail", label: "Mail Reader", icon: Mail },
 		{ href: "/search", label: "Search", icon: Search },
 		{ href: "/rag", label: "RAG / Vectors", icon: Brain },
