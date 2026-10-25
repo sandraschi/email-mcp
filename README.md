@@ -175,6 +175,15 @@ uv run ruff check src
 
 See [docs/quickstart.md](docs/quickstart.md) for full setup guide.
 
+## Bugs
+
+Bug reports and feature requests go to [GitHub Issues](../../issues) using the
+issue forms (a bug report needs version + reproducer from a throwaway or test
+account — never a real mailbox — no exceptions). Questions belong in
+[Discussions](../../discussions). Never post live mailbox content, tokens, or
+credentials — redact first; security-sensitive reports go through a
+[private advisory](../../security/advisories/new).
+
 ## License
 
 MIT

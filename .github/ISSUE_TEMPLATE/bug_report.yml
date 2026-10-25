@@ -1,0 +1,56 @@
+# ROUTING: bugs and feature requests live HERE (issue forms). Questions and
+# help requests belong in GitHub Discussions (Q&A). Security-sensitive reports
+# (credentials, private data, live mailboxes) must NEVER be filed publicly —
+# see the checkbox.
+name: Bug report
+description: Something does not work — file with a reproducer
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Search existing issues first** — duplicates get closed.
+        Questions and help requests belong in Discussions, not here.
+        If your report touches a real mailbox, REDACT addresses and content first. Never attach live credentials.
+  - type: input
+    id: version
+    attributes:
+      label: Repo version / commit
+      placeholder: e.g. commit hash (`git rev-parse --short HEAD`) or release tag
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: OS, MCP host, email service in use (gmail / graph / smtp / mailhog), how the server runs
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Called ... with service="...", folder="..." (or did ... in the webapp).
+        2. Observed ... (paste exact error text; use MailHog/a throwaway account, never a real mailbox).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+      placeholder: What you expected to happen, and what happened instead (paste exact error text).
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs / transcript
+      description: Paste the relevant excerpt with addresses redacted and secrets removed.
+  - type: checkboxes
+    id: private
+    attributes:
+      label: Private data check
+      options:
+        - label: This report contains no live mailbox content, secrets, or credentials (redact and rotate first — do not file publicly)
+          required: true
