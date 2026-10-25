@@ -434,6 +434,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
                 "watcher_status",
                 "add_contact",
                 "search_contacts",
+                "manage_contacts",
                 "run_workflow",
                 "add_auto_rule",
                 "list_auto_rules",
@@ -1281,6 +1282,137 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         from .contacts import search_contacts as _sc
 
         return {"contacts": _sc(query)}
+
+    @mcp.tool(annotations=_MUTATING)
+    async def manage_contacts(
+        operation: str,
+        contact_id: str = "",
+        query: str = "",
+        name: str = "",
+        email: str = "",
+        phone: str = "",
+        notes: str = "",
+        group: str = "",
+        updates: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Manage address-book contacts - full CRUD portmanteau (list/search/get/add/update/delete/groups).
+
+        [RATIONALE] Portmanteau keeps the surface compact: one tool with an
+        operation enum instead of 6 atomic contact tools. add_contact and
+        search_contacts remain as backward-compat aliases.
+
+        Operations:
+        - list: all contacts, sorted by name. No args.
+        - search: filter by name/email substring. Requires query.
+        - get: single contact by id. Requires contact_id.
+        - add: create contact. Requires name + email (phone/notes/group optional).
+        - update: patch contact. Requires contact_id + updates dict
+          (keys: name, email, phone, notes, group).
+        - delete: remove contact. Requires contact_id.
+        - groups: distinct group names. No args.
+
+        ## Return Format
+        {success, operation, contact/contacts/groups/count, message/error}
+
+        ## Examples
+        manage_contacts(operation="list")
+        manage_contacts(operation="search", query="sandra")
+        manage_contacts(operation="get", contact_id="abc123")
+        manage_contacts(operation="add", name="Sandra", email="sandra@example.com", group="Friends")
+        manage_contacts(operation="update", contact_id="abc123", updates={"phone": "555-0100"})
+        manage_contacts(operation="delete", contact_id="abc123")
+        """
+        from .contacts import (
+            delete_contact as _dc,
+        )
+        from .contacts import (
+            get_contact as _gc,
+        )
+        from .contacts import (
+            get_groups as _gg,
+        )
+        from .contacts import (
+            list_contacts as _lc,
+        )
+        from .contacts import (
+            search_contacts as _sc2,
+        )
+        from .contacts import (
+            update_contact as _uc,
+        )
+
+        op = (operation or "").strip().lower()
+        if op == "list":
+            contacts = _lc()
+            return {
+                "success": True,
+                "operation": "list",
+                "contacts": contacts,
+                "count": len(contacts),
+                "message": f"Found {len(contacts)} contact(s)",
+            }
+        if op == "search":
+            if not query.strip():
+                return {"success": False, "operation": "search", "error": "query is required for search"}
+            contacts = _sc2(query)
+            return {
+                "success": True,
+                "operation": "search",
+                "contacts": contacts,
+                "count": len(contacts),
+                "message": f"Found {len(contacts)} contact(s) for {query!r}",
+            }
+        if op == "get":
+            if not contact_id.strip():
+                return {"success": False, "operation": "get", "error": "contact_id is required for get"}
+            result = _gc(contact_id.strip())
+            return {"operation": "get", **result}
+        if op == "add":
+            if not name.strip() or not email.strip():
+                return {
+                    "success": False,
+                    "operation": "add",
+                    "error": "name and email are required for add",
+                }
+            from .contacts import add_contact as _ac2
+
+            result = _ac2(name, email, phone, notes, group)
+            return {"operation": "add", **result}
+        if op == "update":
+            if not contact_id.strip():
+                return {"success": False, "operation": "update", "error": "contact_id is required for update"}
+            patch = dict(updates or {})
+            # Allow top-level field shortcuts alongside updates dict
+            for k, v in (("name", name), ("email", email), ("phone", phone), ("notes", notes), ("group", group)):
+                if isinstance(v, str) and v.strip() and k not in patch:
+                    patch[k] = v
+            if not patch:
+                return {
+                    "success": False,
+                    "operation": "update",
+                    "error": "updates dict (or name/email/phone/notes/group) is required",
+                }
+            result = _uc(contact_id.strip(), patch)
+            return {"operation": "update", **result}
+        if op == "delete":
+            if not contact_id.strip():
+                return {"success": False, "operation": "delete", "error": "contact_id is required for delete"}
+            result = _dc(contact_id.strip())
+            return {"operation": "delete", **result}
+        if op == "groups":
+            groups = _gg()
+            return {
+                "success": True,
+                "operation": "groups",
+                "groups": groups,
+                "count": len(groups),
+                "message": f"Found {len(groups)} group(s)",
+            }
+        return {
+            "success": False,
+            "operation": op or "unknown",
+            "error": f"Unknown operation {operation!r}. Use list, search, get, add, update, delete, groups.",
+        }
 
     @mcp.tool(annotations=_MUTATING)
     async def run_workflow(

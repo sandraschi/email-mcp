@@ -54,6 +54,14 @@ def search_contacts(query: str) -> list[dict[str, Any]]:
     return [c for c in _CONTACTS if q in (c.get("name", "") or "").lower() or q in (c.get("email", "") or "").lower()]
 
 
+def get_contact(contact_id: str) -> dict[str, Any]:
+    _load()
+    for c in _CONTACTS:
+        if c.get("id") == contact_id:
+            return {"success": True, "contact": c}
+    return {"success": False, "error": f"Contact {contact_id!r} not found"}
+
+
 def add_contact(name: str, email: str, phone: str = "", notes: str = "", group: str = "") -> dict[str, Any]:
     _load()
     email_n = _normalize_email(email)
