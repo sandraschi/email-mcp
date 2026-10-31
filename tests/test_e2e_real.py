@@ -99,7 +99,9 @@ async def _http_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
 async def servers() -> AsyncIterator[None]:
     """Start real SMTP + HTTP servers, yield, tear down."""
     _captured_emails.clear()
-    smtp_ctrl = Controller(CaptureHandler(), hostname="127.0.0.1", port=SMTP_PORT)
+    # NOTE (2026-10-30): default ready_timeout (5 s) is too short on a loaded
+    # Windows box (measured 12+ s to ready); the app code is fine.
+    smtp_ctrl = Controller(CaptureHandler(), hostname="127.0.0.1", port=SMTP_PORT, ready_timeout=30)
     smtp_ctrl.start()
 
     http_srv = await asyncio.start_server(_http_handler, "127.0.0.1", HTTP_PORT)
