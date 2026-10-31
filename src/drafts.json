@@ -418,5 +418,25 @@
     "html": null,
     "service": "default",
     "updated_at": 1792671392
+  },
+  "35faf3df": {
+    "id": "35faf3df",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1793352858
+  },
+  "f6792b4c": {
+    "id": "f6792b4c",
+    "to": "a@b.com",
+    "cc": "",
+    "subject": "Test",
+    "body": "Hello",
+    "html": null,
+    "service": "default",
+    "updated_at": 1793397813
   }
 }

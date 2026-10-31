@@ -56,7 +56,7 @@ from fastmcp import FastMCP
 from email_mcp import __version__
 
 from . import oauth
-from .activity_log import ActivityLog, create_log_router
+from .activity_log import ActivityLog, attach_activity_handler, create_log_router
 from .ai import AIRouter
 from .auth import authenticate
 
@@ -169,6 +169,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
     """Register all SOTA web endpoints for the Email MCP dashboard."""
     ai_router = AIRouter(mcp_app)
     mcp_log = ActivityLog()
+    # WEBAPP_LOGS_PAGE.md §4: bridge stdlib/structlog records into the ring
+    # buffer so /api/logs and the Logs page show live server + tool lines.
+    attach_activity_handler(mcp_log)
     app.include_router(create_log_router(mcp_log), prefix="/api")
     _load_drafts()
 
@@ -250,8 +253,10 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         """Graceful self-termination (agent restart path).
 
         Requires ``{"confirm": true}``. Responds first, then exits the process
-        ~1s later so the response flushes. Under NSSM the service restarts
-        automatically; a standalone backend stays down until relaunched.
+        ~1s later so the response flushes. Exits with code 1 because that is
+        the NSSM recovery trigger ("Restart on exit code 1"): under NSSM this
+        is effectively a RESTART; a standalone backend stays down until
+        relaunched.
         """
         if not payload.get("confirm"):
             raise HTTPException(
@@ -262,14 +267,17 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
 
         async def _die() -> None:
             await asyncio.sleep(1.0)
-            os._exit(0)
+            # Exit code 1 (not 0): NSSM only auto-restarts this service on
+            # exit code 1. os._exit(0) used to leave the service STOPPED
+            # with no recovery — the "shutdown kills the API" bug.
+            os._exit(1)
 
         _die_task = asyncio.create_task(_die())
         _BACKGROUND_TASKS.add(_die_task)
         _die_task.add_done_callback(_BACKGROUND_TASKS.discard)
         return {
             "status": "shutting_down",
-            "message": "email-mcp backend exiting in ~1s (NSSM restarts it automatically).",
+            "message": "email-mcp backend exiting in ~1s with code 1 (service manager restarts it; standalone stays down).",
         }
 
     # ── Services ─────────────────────────────────────────────────────────────
@@ -381,12 +389,54 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         payload: dict[str, Any] = Body(...),
         _user: str = Depends(authenticate),
     ):
-        """Quick-setup a provider with email + password only."""
+        """Quick-setup a provider with email + password only.
+
+        The ``throwaway`` provider needs neither: it mints a fresh
+        receive-only address via mail.tm (see docs/throwaway.md).
+        """
         provider = payload.get("provider", "").strip().lower()
         email = payload.get("email", "").strip()
         password = payload.get("password", "").strip()
-        if not provider or not email or not password:
-            raise HTTPException(status_code=422, detail="provider, email, and password are required")
+        if not provider:
+            raise HTTPException(status_code=422, detail="provider is required")
+        if provider == "throwaway":
+            from email_mcp.services.disposable_service import DisposableEmailService
+
+            domain = (payload.get("domain") or "").strip() or None
+            base = (payload.get("name") or "").strip() or "throwaway"
+            try:
+                config = await DisposableEmailService.mint(
+                    domain=domain,
+                    prefix=(re.sub(r"[^a-z0-9-]", "-", base.lower())[:24] or "throwaway"),
+                )
+            except Exception as exc:
+                raise HTTPException(status_code=502, detail=f"throwaway mint failed: {exc}") from exc
+            svc_name = base
+            configured: dict[str, Any] = {"success": False, "message": "no name available"}
+            for attempt in range(1, 7):
+                candidate = base if attempt == 1 else f"{base}-{attempt}"
+                configured = _extract_tool_result(
+                    await mcp_app.call_tool(
+                        "configure_service",
+                        {"name": candidate, "type": "disposable", "config": config},
+                    )
+                )
+                if configured.get("success"):
+                    svc_name = candidate
+                    break
+                if "already exists" not in str(configured.get("message", "")):
+                    return configured
+            else:
+                return configured
+            from email_mcp.persistence import save_persisted_service
+
+            save_persisted_service(svc_name, "disposable", config)
+            configured["service"] = svc_name
+            configured["address"] = config["address"]
+            configured["message"] = f"Throwaway address {config['address']} ready as '{svc_name}' (receive-only)"
+            return configured
+        if not email or not password:
+            raise HTTPException(status_code=422, detail="email and password are required for this provider")
 
         PROFILES: dict[str, dict[str, Any]] = {
             "gmail": {
@@ -565,47 +615,144 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
         return result
 
     # ── Stats (dashboard KPIs) ───────────────────────────────────────────────
+    # Short-TTL cache: /api/stats fans out to live mail fetches across every
+    # connected service, so a cold call costs seconds. The dashboard polls every
+    # 60s -- serve a fresh-enough snapshot instead of re-scanning mailboxes.
+    _stats_cache: dict[str, Any] = {"payload": None, "at": 0.0}
+    # TTL exceeds the dashboard's 60s auto-refresh so polls are cache hits;
+    # manual Refresh passes ?fresh=1 to bypass. Watcher toggles invalidate.
+    _STATS_TTL_S = 90.0
+
+    def _invalidate_stats_cache() -> None:
+        _stats_cache["payload"] = None
+        _stats_cache["at"] = 0.0
 
     @app.get("/api/stats")
-    async def get_stats(_user: str = Depends(authenticate)):
+    async def get_stats(fresh: bool = False, _user: str = Depends(authenticate)):
         partial_errors: list[str] = []
         try:
+            now = time.monotonic()
+            if not fresh and _stats_cache["payload"] is not None and (now - _stats_cache["at"]) < _STATS_TTL_S:
+                return _stats_cache["payload"]
             status_result = _extract_tool_result(await mcp_app.call_tool("email_status"))
             unread_count = 0
             recent_activity: list[dict[str, Any]] = []
 
             services = status_result.get("services", {})
-            for svc_name, svc_info in services.items():
-                if svc_info.get("connected") and svc_info.get("type") in ("smtp", "local", "graph", "imap"):
-                    try:
-                        # 1. Fetch unread count
-                        unread_res = _extract_tool_result(
-                            await mcp_app.call_tool(
+
+            # Per-service inbox fetches run concurrently, each bounded by
+            # _SERVICE_STATS_TIMEOUT_S so one hanging IMAP backend (e.g. gmail)
+            # caps /api/stats latency instead of stalling it serially.
+            _SERVICE_STATS_TIMEOUT_S = 10.0
+
+            async def _fetch_service_stats(
+                svc_name: str,
+            ) -> tuple[int, list[dict[str, Any]]]:
+                svc_unread = 0
+                svc_recent: list[dict[str, Any]] = []
+                try:
+                    unread_raw, recent_raw = await asyncio.wait_for(
+                        asyncio.gather(
+                            mcp_app.call_tool(
                                 "check_inbox",
                                 {"service": svc_name, "unread_only": True, "limit": 100},
-                            )
-                        )
-                        if unread_res.get("success"):
-                            unread_count += unread_res.get("count", 0)
-
-                        # 2. Fetch recent activity (both read and unread for rich feed)
-                        recent_res = _extract_tool_result(
-                            await mcp_app.call_tool(
+                            ),
+                            mcp_app.call_tool(
                                 "check_inbox",
                                 {"service": svc_name, "unread_only": False, "limit": 10},
-                            )
-                        )
-                        if recent_res.get("success"):
-                            for email in recent_res.get("emails", []):
-                                email["_service"] = svc_name
-                                email["clean_subject"] = _unwrap_untrusted(email.get("subject", ""))
-                                email["clean_from"] = _unwrap_untrusted(email.get("from", ""))
-                                email["subject"] = email["clean_subject"]
-                                email["from"] = email["clean_from"]
-                                recent_activity.append(email)
-                    except Exception:
-                        logger.warning("Dashboard stats: inbox fetch failed for service %r", svc_name, exc_info=True)
-                        partial_errors.append(f"inbox:{svc_name}")
+                            ),
+                        ),
+                        timeout=_SERVICE_STATS_TIMEOUT_S,
+                    )
+                    unread_res = _extract_tool_result(unread_raw)
+                    if unread_res.get("success"):
+                        svc_unread += unread_res.get("count", 0)
+                    recent_res = _extract_tool_result(recent_raw)
+                    if recent_res.get("success"):
+                        for email in recent_res.get("emails", []):
+                            email["_service"] = svc_name
+                            email["clean_subject"] = _unwrap_untrusted(email.get("subject", ""))
+                            email["clean_from"] = _unwrap_untrusted(email.get("from", ""))
+                            email["subject"] = email["clean_subject"]
+                            email["from"] = email["clean_from"]
+                            svc_recent.append(email)
+                except TimeoutError:
+                    logger.warning(
+                        "Dashboard stats: inbox fetch timed out for service %r (%.0fs budget)",
+                        svc_name,
+                        _SERVICE_STATS_TIMEOUT_S,
+                    )
+                    partial_errors.append(f"inbox:{svc_name}:timeout")
+                except Exception:
+                    logger.warning("Dashboard stats: inbox fetch failed for service %r", svc_name, exc_info=True)
+                    partial_errors.append(f"inbox:{svc_name}")
+                return svc_unread, svc_recent
+
+            # Max 2 concurrent service fetches: a full burst at Graph/IMAP
+            # gets throttled and is slower than a capped fan-out.
+            _stats_svc_sem = asyncio.Semaphore(2)
+            # Slow non-mail sections get their own cap so one wedged probe
+            # (Tailnet peer, first-time embedding-model load) can't stall stats.
+            _SECTION_TIMEOUT_S = 8.0
+
+            async def _fetch_connectors() -> dict[str, Any]:
+                try:
+                    from .connectors import connector_health
+
+                    return await asyncio.wait_for(connector_health(), timeout=_SECTION_TIMEOUT_S)
+                except TimeoutError:
+                    logger.warning("Dashboard stats: connectors probe timed out")
+                    partial_errors.append("connectors:timeout")
+                    return {}
+                except Exception:
+                    logger.warning("Dashboard stats: connectors probe failed", exc_info=True)
+                    partial_errors.append("connectors")
+                    return {}
+
+            def _load_rag_info() -> dict[str, Any]:
+                # Sync (blocks while the embedding model loads on first call),
+                # so callers run it via asyncio.to_thread.
+                try:
+                    from .rag import embed_use_gpu
+                    from .tools.rag_tools import get_rag_store
+
+                    store = get_rag_store()
+                    return {
+                        "total_chunks": store.count_documents(),
+                        "storage_mb": store.get_storage_size_mb(),
+                        "indexed_services": store.list_indexed_services(),
+                        "embedding_model": store.model_name,
+                        "gpu_accelerated": embed_use_gpu(),
+                    }
+                except Exception:
+                    logger.warning("Dashboard stats: rag_stats failed", exc_info=True)
+                    partial_errors.append("rag")
+                    return {}
+
+            async def _fetch_service_stats_capped(
+                svc_name: str,
+            ) -> tuple[int, list[dict[str, Any]]]:
+                async with _stats_svc_sem:
+                    return await _fetch_service_stats(svc_name)
+
+            # Slow sections (live mail fan-out, connector probes, vector-store
+            # init) run concurrently so cold latency ~= slowest, not the sum.
+            connectors_task = asyncio.create_task(_fetch_connectors())
+            rag_task = asyncio.create_task(asyncio.to_thread(_load_rag_info))
+
+            eligible_services = [
+                svc_name
+                for svc_name, svc_info in services.items()
+                if svc_info.get("connected") and svc_info.get("type") in ("smtp", "local", "graph", "imap")
+            ]
+            if eligible_services:
+                for svc_unread, svc_recent in await asyncio.gather(
+                    *(_fetch_service_stats_capped(name) for name in eligible_services)
+                ):
+                    unread_count += svc_unread
+                    recent_activity.extend(svc_recent)
+            connectors_info = await connectors_task
+            rag_info = await rag_task
 
             # Watcher daemon status
             watcher_info = {}
@@ -637,15 +784,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 logger.warning("Dashboard stats: list_contacts failed", exc_info=True)
                 partial_errors.append("contacts_count")
 
-            # Connectors summary
-            connectors_info = {}
-            try:
-                from .connectors import check_all_connectors
-
-                connectors_info = await check_all_connectors()
-            except Exception:
-                logger.warning("Dashboard stats: check_all_connectors failed", exc_info=True)
-                partial_errors.append("connectors")
+            # (connectors_info already resolved from connectors_task above)
 
             # Diagnostics telemetry
             diag_info = {}
@@ -660,26 +799,11 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 logger.warning("Dashboard stats: psutil telemetry failed", exc_info=True)
                 partial_errors.append("diagnostics")
 
-            # RAG vector store stats
-            rag_info = {}
-            try:
-                from .rag import embed_use_gpu
-                from .tools.rag_tools import get_rag_store
-
-                store = get_rag_store()
-                rag_info = {
-                    "total_chunks": store.count_documents(),
-                    "storage_mb": store.get_storage_size_mb(),
-                    "indexed_services": store.list_indexed_services(),
-                    "embedding_model": store.model_name,
-                    "gpu_accelerated": embed_use_gpu(),
-                }
-            except Exception:
-                logger.warning("Dashboard stats: rag_stats failed", exc_info=True)
-                partial_errors.append("rag")
+            # (rag_info already resolved from rag_task above -- vector-store
+            # init runs in a worker thread so it never blocks the event loop)
 
             tools_count = len(await mcp_app.list_tools())
-            return {
+            payload = {
                 "unread_count": unread_count,
                 "connected_services": status_result.get("connected_services", 0),
                 "total_services": status_result.get("total_services", 0),
@@ -700,6 +824,9 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 "mcp_version": status_result.get("version", __version__),
                 "partial_errors": partial_errors,
             }
+            _stats_cache["payload"] = payload
+            _stats_cache["at"] = time.monotonic()
+            return payload
         except Exception as exc:
             logger.exception("Dashboard stats: total failure")
             return {
@@ -2297,7 +2424,7 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
                 ai_router = AIRouter(mcp_app)
             except Exception:
                 ai_router = None
-        return start_watcher(
+        result = start_watcher(
             interval_s,
             webhook_url,
             services,
@@ -2306,12 +2433,16 @@ def setup_webapp(app: FastAPI, mcp_app: FastMCP, server_instance: Any = None) ->
             ai_router=ai_router,
             server_instance=server_instance,
         )
+        _invalidate_stats_cache()
+        return result
 
     @app.post("/api/watcher/stop")
     async def watcher_stop(_user: str = Depends(authenticate)):
         from .watcher import stop_watcher
 
-        return stop_watcher()
+        result = stop_watcher()
+        _invalidate_stats_cache()
+        return result
 
     @app.get("/api/watcher/status")
     async def watcher_status(_user: str = Depends(authenticate)):
