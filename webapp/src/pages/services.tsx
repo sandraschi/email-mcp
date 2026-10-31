@@ -159,6 +159,20 @@ const FIELD_DEFS: Record<string, FieldDef[]> = {
 			secret: false,
 		},
 	],
+	disposable: [
+		{
+			key: "address",
+			label: "Throwaway Address",
+			placeholder: "auto-minted if blank",
+			secret: false,
+		},
+		{
+			key: "password",
+			label: "Account Password",
+			placeholder: "auto-minted if blank",
+			secret: true,
+		},
+	],
 };
 
 const SERVICE_TYPE_LABELS: Record<string, string> = {
@@ -166,6 +180,7 @@ const SERVICE_TYPE_LABELS: Record<string, string> = {
 	api: "Transactional API",
 	local: "Local Testing",
 	webhook: "Webhook",
+	disposable: "Throwaway (mail.tm)",
 };
 
 const PRESETS = [
@@ -223,6 +238,12 @@ const PRESETS = [
 		prompt:
 			"Discord webhook. Sends email as Discord embed. Needs a webhook URL from Server Settings → Integrations.",
 	},
+	{
+		label: "Throwaway",
+		type: "disposable",
+		prompt:
+			"Throwaway receive-only address via mail.tm (free, no account). Mints a fresh address; read it in Inbox, delete the service when done. Cannot send.",
+	},
 ];
 
 export function Services() {
@@ -237,7 +258,16 @@ export function Services() {
 	const [testingAdd, setTestingAdd] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set());
 	const [quickProvider, setQuickProvider] = useState<
-		"gmail" | "outlook" | null
+		| "gmail"
+		| "outlook"
+		| "protonmail"
+		| "yahoo"
+		| "icloud"
+		| "zoho"
+		| "gmx"
+		| "fastmail"
+		| "throwaway"
+		| null
 	>(null);
 	const [quickEmail, setQuickEmail] = useState("");
 	const [quickPassword, setQuickPassword] = useState("");
@@ -506,8 +536,35 @@ export function Services() {
 			| "icloud"
 			| "zoho"
 			| "gmx"
-			| "fastmail",
+			| "fastmail"
+			| "throwaway",
 	) => {
+		// Throwaway: mint a fresh receive-only address (no email/password needed)
+		if (provider === "throwaway") {
+			setQuickProvider(provider);
+			setQuickSettingUp(true);
+			try {
+				const data = await fetchWithAuth("/api/services/quick", {
+					method: "POST",
+					body: JSON.stringify({ provider }),
+				});
+				if (data.success) {
+					toast(
+						"success",
+						`Throwaway ${data.address} ready — find it in Inbox under “${data.service}”.`,
+					);
+					setQuickProvider(null);
+					loadServices();
+				} else {
+					toast("error", data.message || data.error || "Setup failed");
+				}
+			} catch (err: unknown) {
+				toast("error", err instanceof Error ? err.message : "Setup failed");
+			} finally {
+				setQuickSettingUp(false);
+			}
+			return;
+		}
 		if (!quickEmail.trim() || !quickPassword.trim()) {
 			toast("error", "Enter email and password first");
 			return;
@@ -519,7 +576,7 @@ export function Services() {
 		if (provider === "protonmail" && !bridgeStatus.bridge_running) {
 			toast(
 				"error",
-				"ProtonMail SMTP/IMAP requires a paid subscription (Mail Plus €3.99/mo). Free accounts cannot connect via third-party apps.",
+				"ProtonMail SMTP/IMAP requires a paid subscription (roughly €5/mo — see proton.me/mail/pricing). Free accounts cannot connect via third-party apps.",
 			);
 			setQuickSettingUp(false);
 			return;
@@ -675,6 +732,12 @@ export function Services() {
 								label: "Fastmail",
 								color: "border-rose-700 hover:border-rose-500 text-rose-300",
 							},
+							{
+								id: "throwaway",
+								label: "Throwaway",
+								color:
+									"border-lime-700 hover:border-lime-500 text-lime-300",
+							},
 						].map((p) => (
 							<button
 								type="button"
@@ -721,6 +784,13 @@ export function Services() {
 					)}
 					{quickProvider && (
 						<div className="flex gap-2 items-end flex-wrap">
+							{quickProvider === "throwaway" && (
+								<p className="text-xs text-slate-400 flex-1 min-w-[220px]">
+									Mints a fresh receive-only address via mail.tm (free, no
+									account). Read it in Inbox, delete the service when done.
+								</p>
+							)}
+							{quickProvider !== "throwaway" && (
 							<div className="min-w-[220px] flex-1">
 								<Label className="text-slate-400 text-xs">
 									{quickProvider === "gmail"
@@ -734,6 +804,8 @@ export function Services() {
 									onChange={(e) => setQuickEmail(e.target.value)}
 								/>
 							</div>
+							)}
+							{quickProvider !== "throwaway" && (
 							<div className="min-w-[180px] flex-1">
 								<Label className="text-slate-400 text-xs">
 									{quickProvider === "gmail" ? "App Password" : "Password"}
@@ -751,12 +823,15 @@ export function Services() {
 									/>
 								</div>
 							</div>
+							)}
 							<Button
 								size="sm"
 								className="bg-blue-600 hover:bg-blue-700 h-8 text-xs"
 								onClick={() => handleQuickSetup(quickProvider)}
 								disabled={
-									quickSettingUp || !quickEmail.trim() || !quickPassword.trim()
+									quickSettingUp ||
+									(quickProvider !== "throwaway" &&
+										(!quickEmail.trim() || !quickPassword.trim()))
 								}
 							>
 								{quickSettingUp ? (

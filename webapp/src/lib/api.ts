@@ -22,6 +22,52 @@ function buildUrl(path: string): string {
 	return `${API_BASE}${normalized}`;
 }
 
+export async function fetchRawWithAuth(
+	url: string,
+	options: RequestInit = {},
+	timeoutMs = DEFAULT_TIMEOUT,
+): Promise<Response> {
+	const resolvedUrl = buildUrl(url);
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+	const headers = {
+		...options.headers,
+		Authorization: AUTH_HEADER,
+		"Content-Type": "application/json",
+	};
+
+	try {
+		const response = await fetch(resolvedUrl, {
+			...options,
+			headers,
+			signal: controller.signal,
+		});
+		clearTimeout(timer);
+
+		if (response.status === 401) {
+			throw new Error(
+				"Unauthorized: Please check your credentials in the backend.",
+			);
+		}
+
+		if (!response.ok) {
+			const text = await response.text().catch(() => "");
+			throw new Error(
+				`API Error ${response.status}: ${text || response.statusText}`,
+			);
+		}
+
+		return response;
+	} catch (err) {
+		clearTimeout(timer);
+		if (err instanceof DOMException && err.name === "AbortError") {
+			throw new Error(`Request timed out after ${timeoutMs / 1000}s: ${url}`);
+		}
+		throw err;
+	}
+}
+
 export async function fetchWithAuth(
 	url: string,
 	options: RequestInit = {},

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API_BASE } from "../lib/api";
+import { fetchRawWithAuth, fetchWithAuth } from "../lib/api";
 
 type LogEntry = {
 	id: string;
@@ -49,7 +49,7 @@ export default function Logs() {
 			if (search) params.set("search", search);
 			if (opts.after_id) params.set("after_id", opts.after_id);
 			try {
-				const r = await fetch(`${API_BASE}/api/logs?${params}`);
+				const r = await fetchRawWithAuth(`/api/logs?${params}`);
 				const d = await r.json();
 				if (opts.tail && opts.after_id) {
 					setEntries((prev) => [...prev, ...d.entries].slice(-200));
@@ -106,7 +106,7 @@ export default function Logs() {
 		if (level) params.set("level", level);
 		if (kind) params.set("kind", kind);
 		if (search) params.set("search", search);
-		const r = await fetch(`${API_BASE}/api/logs/export?${params}`);
+		const r = await fetchRawWithAuth(`/api/logs/export?${params}`);
 		const blob = await r.blob();
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement("a");
@@ -117,7 +117,7 @@ export default function Logs() {
 	};
 
 	const handleClear = async () => {
-		await fetch(`${API_BASE}/api/logs`, { method: "DELETE" });
+		await fetchWithAuth(`/api/logs`, { method: "DELETE" });
 		setShowClear(false);
 		setEntries([]);
 		setTotal(0);
