@@ -5,10 +5,54 @@
 """
 
 import _strptime  # noqa: F401
+import faulthandler
 import os
 import sys
 
+# Crash tripwire: dump the Python traceback to stderr on segfault/abort so a
+# silent native death (onnxruntime, IMAP C-ext) leaves evidence in the NSSM logs.
+faulthandler.enable()
+
 sys.path.insert(0, ".")
+
+
+def _prune_rotated_logs(keep_days: int = 14, keep_min: int = 10) -> None:
+    """Delete rotated service-*.log files older than keep_days.
+
+    NSSM rotates the live log on every service start and never cleans up
+    (yesterday: 928 files / 208 MB). Keep the newest keep_min files
+    regardless of age so a quiet box never loses its last evidence.
+    Never breaks startup: all errors are swallowed.
+    """
+    try:
+        import time
+
+        repo_root = os.path.dirname(os.path.abspath(__file__))
+        log_dir = os.path.join(repo_root, "logs")
+        if not os.path.isdir(log_dir):
+            return
+        cutoff = time.time() - keep_days * 86400
+        rotated = []
+        for name in os.listdir(log_dir):
+            if name.startswith("service-") and name.endswith(".log") and os.path.isfile(os.path.join(log_dir, name)):
+                # Live NSSM targets have no timestamp infix; only prune rotated ones.
+                if "-20" in name:
+                    rotated.append(name)
+        rotated.sort()
+        # Only old files beyond the newest keep_min are eligible.
+        doomed = [
+            n for n in rotated[: max(0, len(rotated) - keep_min)] if os.path.getmtime(os.path.join(log_dir, n)) < cutoff
+        ]
+        for name in doomed:
+            try:
+                os.remove(os.path.join(log_dir, name))
+            except OSError:
+                pass
+    except Exception:
+        pass
+
+
+_prune_rotated_logs()
 
 from email_mcp.server import main
 

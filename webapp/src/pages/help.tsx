@@ -106,6 +106,24 @@ function EmailSystemsTab() {
 				"Use mail.protonmail.com:587 for SMTP and mail.protonmail.com:993 for IMAP. Enable access in ProtonMail settings.",
 		},
 		{
+			name: "Throwaway (mail.tm)",
+			desc: "Free burner address, receive-only, no account. Full guide: docs/throwaway.md.",
+			howto:
+				"Services → Quick Setup → Throwaway → Mint address. Read it in Inbox, delete the service when done. Cannot send.",
+		},
+		{
+			name: "Proton Mail — why pay",
+			desc: "Roughly €5/mo (Mail Plus — verify at proton.me/mail/pricing). You are the customer, not the product.",
+			howto:
+				"Paid plan buys zero-access encryption, Swiss jurisdiction, direct SMTP/IMAP, Bridge, custom domain. Free tier is webmail-only and cannot plug into email-mcp.",
+		},
+		{
+			name: "Proton Mail — provenance & community",
+			desc: "CERN 2013, crowdfunded, user-funded, Geneva. Open source + audited.",
+			howto:
+				"Built post-Snowden by CERN scientists; no VC. r/ProtonMail, published transparency reports, bug bounty. Full story: docs/protonmail.md.",
+		},
+		{
 			name: "SendGrid",
 			desc: "Transactional email API for high-volume sending.",
 			howto:

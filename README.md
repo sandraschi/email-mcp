@@ -36,6 +36,25 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 | **Transactional APIs** | SendGrid, Mailgun, Resend, Amazon SES | [docs/api-services.md](docs/api-services.md) |
 | **Local Testing** | MailHog, Mailpit, MailCatcher, Inbucket | [docs/local-testing.md](docs/local-testing.md) |
 | **Webhooks** | Slack, Discord, Telegram | [docs/webhook-integrations.md](docs/webhook-integrations.md) |
+| **Throwaway (mail.tm)** | Burner addresses, receive-only, no account needed | [docs/throwaway.md](docs/throwaway.md) |
+
+### Why Proton Mail?
+
+Born at CERN in 2013 as the post-Snowden answer to mass surveillance —
+crowdfunded, user-funded ever since (no VC), headquartered in Geneva under
+Swiss privacy law. End-to-end encrypted by default with a zero-access
+architecture: Proton mathematically *cannot* read your mail, even under
+court order. Clients and Bridge are open source and independently audited,
+with an unusually technical community (r/ProtonMail) and published
+transparency reports.
+
+The tradeoff is honest: Gmail is free because **you are the product** (ad
+profiling, content scanning); Proton costs roughly **€5/month** (Mail Plus —
+verify at [proton.me/mail/pricing](https://proton.me/mail/pricing))
+because **you are the customer**. That buys direct SMTP/IMAP, Bridge,
+custom domains, and SimpleLogin aliases. The free tier (webmail only, no
+SMTP/IMAP/Bridge since late 2023) can't plug into email-mcp — for that you
+need the paid plan. Full story: [docs/protonmail.md](docs/protonmail.md).
 
 ## Documentation
 
@@ -53,6 +72,7 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 | [docs/outlook.md](docs/outlook.md) | Outlook/Hotmail — Graph API (OAuth) + SMTP/IMAP |
 | [docs/connectors.md](docs/connectors.md) | aiwatcher + robofang fleet event connectors |
 | [docs/protonmail.md](docs/protonmail.md) | ProtonMail Bridge & direct access |
+| [docs/throwaway.md](docs/throwaway.md) | Throwaway burner addresses (mail.tm) |
 | [docs/api-services.md](docs/api-services.md) | SendGrid, Mailgun, Resend, SES |
 | [docs/local-testing.md](docs/local-testing.md) | MailHog, Mailpit for dev |
 | [docs/webhook-integrations.md](docs/webhook-integrations.md) | Slack, Discord, Telegram |
@@ -77,7 +97,7 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 - **Contact import**: CSV, vCard, Google People API, Microsoft Graph API + curated lists (US Congress, EU, Austria)
 - **Creative Workflows**: 7 AI letter presets with ASCII art and SVG card output
 - **Folder management**: create, rename, delete IMAP folders from the webapp
-- **Quick Setup**: one-click Gmail/Outlook/Yahoo/iCloud/ProtonMail/Zoho/GMX/Fastmail with email+password
+- **Quick Setup**: one-click Gmail/Outlook/Yahoo/iCloud/ProtonMail/Zoho/GMX/Fastmail with email+password, plus one-click Throwaway burner addresses (no account needed)
 
 ## Web Dashboard
 
@@ -114,7 +134,7 @@ For Claude Desktop setup, MCPB packaging, and manual configuration see [docs/qui
 | `email_status` | Test connectivity |
 | `list_services` | List configured services |
 | `configure_service` / `remove_service` | Manage services |
-| `quick_setup` | One-click Gmail/Outlook/Yahoo/iCloud |
+| `quick_setup` (REST `/api/services/quick`) | One-click Gmail/Outlook/Yahoo/iCloud/Throwaway |
 | `list_folders` / `create_folder` / `delete_folder` / `rename_folder` | IMAP folder CRUD |
 | `email_help` | Usage help and documentation |
 | `mailing_lists_catalog` | List newsletter presets |
@@ -174,6 +194,15 @@ uv run ruff check src
 ```
 
 See [docs/quickstart.md](docs/quickstart.md) for full setup guide.
+
+## Bugs
+
+Bug reports and feature requests go to [GitHub Issues](../../issues) using the
+issue forms (a bug report needs version + reproducer from a throwaway or test
+account — never a real mailbox — no exceptions). Questions belong in
+[Discussions](../../discussions). Never post live mailbox content, tokens, or
+credentials — redact first; security-sensitive reports go through a
+[private advisory](../../security/advisories/new).
 
 ## License
 

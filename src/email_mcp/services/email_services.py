@@ -1482,5 +1482,9 @@ class EmailServiceFactory:
             from email_mcp.services.graph_service import GraphEmailService
 
             return GraphEmailService(config)
+        elif service_type == "disposable":
+            from email_mcp.services.disposable_service import DisposableEmailService
+
+            return DisposableEmailService(config)
         else:
             raise ValueError(f"Unknown email service type: {service_type}")

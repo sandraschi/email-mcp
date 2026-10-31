@@ -159,3 +159,12 @@ async def connector_health() -> dict[str, Any]:
         }
 
     return result
+
+
+async def check_all_connectors() -> dict[str, Any]:
+    """Legacy name for the full connector health summary.
+
+    web.py (dashboard stats) imports this name; it delegates to
+    connector_health() so the import never breaks again.
+    """
+    return await connector_health()

@@ -461,7 +461,7 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
         Args:
             name: Unique name for the service (e.g., "my-sendgrid", "dev-mailhog")
-            type: Service type - "smtp", "api", "local", or "webhook"
+            type: Service type - "smtp", "api", "local", "webhook", "graph", or "disposable"
             config: Service-specific configuration dictionary
             enabled: Whether the service should be enabled (default: True)
 
@@ -1675,9 +1675,14 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
 
     @mcp.tool(annotations=_DESTRUCTIVE)
     async def email_shutdown(confirm: bool = False) -> dict[str, Any]:
-        """Gracefully shut down the Email MCP server.
+        """Restart the Email MCP server (under NSSM) or shut it down (standalone).
 
         Requires confirm=True to prevent accidental termination.
+        Exits with code 1, which is the NSSM recovery trigger ("Restart on
+        exit code 1"), so a service-managed backend comes back on its own;
+        a standalone backend stays down until relaunched. (SIGTERM was
+        dropped: on Windows its exit code does not reliably trigger NSSM
+        recovery, which used to leave the service STOPPED.)
 
         ## Return Format
         {"success": bool, "message": str}
@@ -1693,9 +1698,8 @@ def register_tools(mcp: FastMCP, server: EmailMCP) -> None:
         async def _shutdown():
             await asyncio.sleep(0.5)
             import os
-            import signal
 
-            os.kill(os.getpid(), signal.SIGTERM)
+            os._exit(1)
 
         _shutdown_task = asyncio.create_task(_shutdown())  # noqa: RUF006
-        return {"success": True, "message": "Server shutting down..."}
+        return {"success": True, "message": "Server shutting down (exit 1 — service manager restarts it)..."}

@@ -143,9 +143,9 @@ export function Dashboard() {
 	const [triggeringAction, setTriggeringAction] = useState(false);
 	const wasOkRef = useRef<boolean | null>(null);
 
-	const fetchStats = useCallback(async () => {
+	const fetchStats = useCallback(async (fresh = false) => {
 		try {
-			const data = await fetchWithAuth("/api/stats");
+			const data = await fetchWithAuth(`/api/stats${fresh ? "?fresh=1" : ""}`);
 			setStats(data);
 			setBackendOk(true);
 			if (data?.error && wasOkRef.current !== false) {
@@ -186,7 +186,7 @@ export function Dashboard() {
 	const handleManualRefresh = async () => {
 		setRefreshing(true);
 		try {
-			await fetchStats();
+			await fetchStats(true);
 			toast("success", "Dashboard statistics refreshed");
 		} catch {
 			toast("error", "Failed to refresh statistics");

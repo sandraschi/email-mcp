@@ -65,13 +65,17 @@ class ToolTimeoutMiddleware(Middleware):
         call_next: CallNext[Any, Any],
     ) -> Any:
         tool_name, args = _tool_name_and_args(context.message)
+        # WEBAPP_LOGS_PAGE.md §4: every tool call lands in the ring buffer
+        # with kind=tool_call (INFO on success, ERROR on failure).
+        extra = {"kind": "tool_call", "tool": tool_name}
         try:
-            return await asyncio.wait_for(call_next(context), timeout=self.timeout_s)
+            result = await asyncio.wait_for(call_next(context), timeout=self.timeout_s)
         except TimeoutError:
             logger.warning(
                 "tool timeout: %s exceeded %.0fs budget - returning dialogic failure",
                 tool_name,
                 self.timeout_s,
+                extra=extra,
             )
             payload = timeout_response(
                 tool_name,
@@ -79,3 +83,11 @@ class ToolTimeoutMiddleware(Middleware):
                 service=args.get("service") if isinstance(args, dict) else None,
             )
             return ToolResult(structured_content=payload, is_error=True)
+        except Exception:
+            logger.exception("tool error: %s raised - returning failure", tool_name, extra=extra)
+            raise
+        if bool(getattr(result, "is_error", False)):
+            logger.warning("tool_call %s (error)", tool_name, extra=extra)
+        else:
+            logger.info("tool_call %s (ok)", tool_name, extra=extra)
+        return result
